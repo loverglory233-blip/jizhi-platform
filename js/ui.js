@@ -5,16 +5,26 @@
 
 import { AgentProfiles } from './agents.js';
 
-export function renderHeader(state, onStageChange, onSpeedChange, onUserChange) {
+export function renderHeader(state, currentUser, announcements, onStageChange, onSpeedChange, onLogout, onSwitchTeacher) {
   const header = document.getElementById('app-header');
   const elapsedMin = Math.floor(state.timer.elapsedSeconds / 60);
   const remainingMin = Math.max(0, 150 - elapsedMin);
+  const latestAnn = announcements && announcements.length > 0 ? announcements[0] : null;
 
   header.innerHTML = `
     <div class="brand-section">
       <div class="brand-logo">集智 JIZHI</div>
-      <div class="brand-badge">SSRL 多智能体写作</div>
+      <div class="brand-badge">🎓 学生端 (${currentUser ? currentUser.name : '学生'})</div>
     </div>
+
+    <!-- Teacher Announcement Ticker Bar -->
+    ${latestAnn ? `
+      <div class="announcement-ticker" title="教师实时即时广播">
+        <span class="ticker-icon">📢 教师即时广播:</span>
+        <span class="ticker-text">${latestAnn.text}</span>
+        <span class="ticker-time">(${latestAnn.time})</span>
+      </div>
+    ` : ''}
 
     <div class="stage-nav">
       <button class="stage-btn ${state.currentStage === 'stage1' ? 'active' : ''}" data-stage="stage1">
@@ -37,11 +47,14 @@ export function renderHeader(state, onStageChange, onSpeedChange, onUserChange) 
         <option value="5" ${state.timer.speed === 5 ? 'selected' : ''}>5x 快进</option>
         <option value="10" ${state.timer.speed === 10 ? 'selected' : ''}>10x 演示模式</option>
       </select>
-      <div class="user-switcher">
-        <span style="font-size:11px; color:#94a3b8;">切换视角:</span>
-        <button class="user-avatar-btn ${state.currentUser === 'A' ? 'active' : ''}" data-user="A">👨‍🎓 A</button>
-        <button class="user-avatar-btn ${state.currentUser === 'B' ? 'active' : ''}" data-user="B">👩‍🎓 B</button>
-        <button class="user-avatar-btn ${state.currentUser === 'C' ? 'active' : ''}" data-user="C">🧑‍🎓 C</button>
+      
+      <div style="display:flex; gap:6px;">
+        <button id="btn-switch-teacher-view" style="background:rgba(99,102,241,0.2); border:1px solid #6366f1; color:#a5b4fc; padding:4px 8px; border-radius:6px; font-size:11px; cursor:pointer;">
+          👩‍🏫 切换教师端
+        </button>
+        <button id="btn-user-logout" style="background:rgba(239,68,68,0.2); border:1px solid #ef4444; color:#fca5a5; padding:4px 8px; border-radius:6px; font-size:11px; cursor:pointer;">
+          退出
+        </button>
       </div>
     </div>
   `;
@@ -51,12 +64,14 @@ export function renderHeader(state, onStageChange, onSpeedChange, onUserChange) 
     btn.addEventListener('click', () => onStageChange(btn.dataset.stage));
   });
 
-  header.querySelectorAll('.user-avatar-btn').forEach(btn => {
-    btn.addEventListener('click', () => onUserChange(btn.dataset.user));
-  });
-
   const speedSelect = header.querySelector('#speed-select');
   speedSelect.addEventListener('change', (e) => onSpeedChange(Number(e.target.value)));
+
+  const btnLogout = header.querySelector('#btn-user-logout');
+  if (btnLogout) btnLogout.addEventListener('click', () => onLogout());
+
+  const btnSwitch = header.querySelector('#btn-switch-teacher-view');
+  if (btnSwitch) btnSwitch.addEventListener('click', () => onSwitchTeacher());
 }
 
 export function renderCanvas(state, handlers) {
@@ -177,7 +192,7 @@ function renderStage2Canvas(canvas, state, handlers) {
 
       <div style="flex:1; margin-top:12px; display:flex; flex-direction:column; gap:10px;">
         <div style="font-size:12px; color:#94a3b8; display:flex; justify-content:space-between;">
-          <span>负责成员: <b>${state.members[activeSec.assignedTo].name}</b></span>
+          <span>负责成员: <b>${state.members[activeSec.assignedTo] ? state.members[activeSec.assignedTo].name : activeSec.assignedTo}</b></span>
           <span>预估时长: ${activeSec.targetTime}m</span>
         </div>
         
@@ -186,7 +201,7 @@ function renderStage2Canvas(canvas, state, handlers) {
 
       <!-- Real-time Contribution Stats -->
       <div style="margin-top:14px; background:rgba(15,23,42,0.6); padding:12px; border-radius:8px; border:1px solid var(--border-glass);">
-        <div style="font-size:12px; font-weight:600; margin-bottom:8px; color:#cbd5e1; display:flex; justify-space-between;">
+        <div style="font-size:12px; font-weight:600; margin-bottom:8px; color:#cbd5e1; display:flex; justify-content:space-between;">
           <span>📊 小组贡献度统计 (群体感知)</span>
           <span>总字数: ${s2.memberContributions.A.words + s2.memberContributions.B.words + s2.memberContributions.C.words} 字</span>
         </div>
@@ -197,7 +212,7 @@ function renderStage2Canvas(canvas, state, handlers) {
             <div class="contrib-segment" style="width:${s2.memberContributions.B.percentage}%; background:#06b6d4;"></div>
             <div class="contrib-segment" style="width:${s2.memberContributions.C.percentage}%; background:#f59e0b;"></div>
           </div>
-          <div style="display:flex; justify-content:space-around; font-size:11px; color:#94a3b8; margin-top:4px;">
+          <div style="display:flex; justify-around; font-size:11px; color:#94a3b8; margin-top:4px;">
             <span style="color:#818cf8;">● A: ${s2.memberContributions.A.words}字 (${s2.memberContributions.A.percentage}%)</span>
             <span style="color:#22d3ee;">● B: ${s2.memberContributions.B.words}字 (${s2.memberContributions.B.percentage}%)</span>
             <span style="color:#fbbf24;">● C: ${s2.memberContributions.C.words}字 (${s2.memberContributions.C.percentage}%)</span>
@@ -232,7 +247,7 @@ function renderStage3Canvas(canvas, state, handlers) {
       <div style="display:flex; flex-direction:column; gap:12px;">
         ${s3.feedbackItems.map(item => `
           <div style="background:rgba(15,23,42,0.6); padding:12px; border-radius:8px; border:1px solid ${item.role === 'opponent' ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'};">
-            <div style="display:flex; justify-space-between; align-items:center; margin-bottom:6px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
               <span style="font-weight:700; color:${item.role === 'opponent' ? '#f87171' : '#4ade80'};">
                 ${item.role === 'opponent' ? '🔴 质疑要点' : '🟢 肯定要点'}: ${item.title}
               </span>
@@ -279,6 +294,7 @@ function renderStage3Canvas(canvas, state, handlers) {
 
 export function renderChat(state, onSendMessage) {
   const stream = document.getElementById('chat-stream');
+  if (!stream) return;
   const logs = state.chatLogs[state.currentStage] || [];
 
   stream.innerHTML = logs.map(msg => {
