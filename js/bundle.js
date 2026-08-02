@@ -18,6 +18,9 @@
       speed: 1,
       isRunning: true
     },
+    teacherActiveTab: 'view_architecture', // 'view_architecture', 'view_publishing', 'view_monitoring'
+    activeClassId: 'class_101',
+    activeMonitorGroupId: 'group_1',
     members: {
       'A': { id: 'A', name: '李明 (学生A)', roleTitle: '组长 · 论文结构', avatar: '👨‍🎓', color: '#818cf8', studentCode: 'A' },
       'B': { id: 'B', name: '王芳 (学生B)', roleTitle: '组员 · 文献综述', avatar: '👩‍🎓', color: '#22d3ee', studentCode: 'B' },
@@ -154,7 +157,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
   };
 
   /* ==========================================================================
-     2. HELPER FUNCTIONS (REAL FILE DOWNLOAD)
+     2. HELPER FUNCTIONS (REAL FILE DOWNLOAD & PARSING)
      ========================================================================== */
   function downloadFileBlob(filename, textContent = null) {
     const defaultContent = `====================================================\n【集智 JIZHI 平台 - 教学资源文件】\n文件名: ${filename}\n下载时间: ${new Date().toLocaleString()}\n课程名称: 《现代教育技术》期末协作写作研究设计\n====================================================\n\n【文件核心规范摘要】\n1. 结构完整性：论文方案需具备研究背景、问题假设、文献综述、研究设计、反思及参考文献。\n2. 变量操作化：研究假设 H1、H2 需在第四章给出对应的测量量表与操作化说明。\n3. 群体感知：通过可视化字数贡献比与同伴互动进行自律与共享调节 (SSRL)。`;
@@ -168,6 +171,67 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  }
+
+  function parseCSVText(text) {
+    const lines = text.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    const result = [];
+    lines.forEach((line, idx) => {
+      if (idx === 0 && (line.includes('姓名') || line.includes('账号') || line.includes('username'))) return;
+      const parts = line.split(/[,，\t\s]+/).map(p => p.trim()).filter(Boolean);
+      if (parts.length >= 2) {
+        result.push({
+          name: parts[0],
+          username: parts[1],
+          studentCode: parts[2] || parts[1],
+          customPassword: parts[3] || '123'
+        });
+      }
+    });
+    return result;
+  }
+
+  function parseXLSXOrCSVFile(file, callback) {
+    if (file.name.endsWith('.csv') || file.type.includes('csv')) {
+      const reader = new FileReader();
+      reader.onload = (e) => callback(parseCSVText(e.target.result));
+      reader.readAsText(file);
+    } else {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          if (window.XLSX) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = window.XLSX.read(data, { type: 'array' });
+            const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+            const json = window.XLSX.utils.sheet_to_json(firstSheet, { header: 1 });
+            const students = [];
+            json.forEach((row, idx) => {
+              if (row && row.length >= 2) {
+                const strRow = row.map(cell => String(cell).trim());
+                if (idx === 0 && (strRow[0].includes('姓名') || strRow[1].includes('账号'))) return;
+                students.push({
+                  name: strRow[0],
+                  username: strRow[1] || strRow[0],
+                  studentCode: strRow[2] || strRow[1] || strRow[0],
+                  customPassword: strRow[3] || '123'
+                });
+              }
+            });
+            callback(students);
+          } else {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+            script.onload = () => parseXLSXOrCSVFile(file, callback);
+            script.onerror = () => alert('⚠️ 无法加载 SheetJS，请尝试将 Excel 保存为 .csv 格式后重新上传！');
+            document.head.appendChild(script);
+          }
+        } catch (err) {
+          alert('⚠️ XLSX 文件解析异常，请另存为 CSV 文件后导入！');
+        }
+      };
+      reader.readAsArrayBuffer(file);
+    }
   }
 
   /* ==========================================================================
@@ -228,7 +292,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
   };
 
   /* ==========================================================================
-     4. AUTH & DATABASE MANAGER (ENHANCED FOR TEACHER CLASS & GROUP MANAGEMENT)
+     4. AUTH & DATABASE MANAGER
      ========================================================================== */
   const STORAGE_KEY_USER = 'jizhi_current_user';
   const STORAGE_KEY_USERS_DB = 'jizhi_users_db_v2';
@@ -243,7 +307,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       code: 'MET-2026-01',
       studentIds: ['u_studentA', 'u_studentB', 'u_studentC'],
       groups: [
-        { id: 'group_1', name: '第1小组 (AI与协作写作研究组)', members: ['u_studentA', 'u_studentB', 'u_studentC'], topic: '协作学习中的“搭便车”现象：基于注意力分配与AI感知视角' }
+        { id: 'group_1', name: '第1小组 (AI与协作写作研究组)', members: ['u_studentA', 'u_studentB', 'u_studentC'] }
       ]
     }
   ];
@@ -262,8 +326,8 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       classId: 'class_101',
       className: '《现代教育技术》2026春01班',
       durationMinutes: 150,
-      startTime: '2026-08-02 20:00',
-      deadline: '2026-08-02 22:30',
+      startTime: '2026-08-03 14:00',
+      deadline: '2026-08-03 16:30',
       status: 'in_progress',
       createdAt: new Date().toLocaleDateString(),
       instructions: '请在150分钟内，以小组为单位完成一份包含研究背景与意义、研究问题与假设、文献综述、研究设计与方法、不足与反思及参考文献的高质量研究方案。',
@@ -320,7 +384,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
         return { success: true, user };
       }
-      return { success: false, message: '账号或密码错误 (默认密码均为 123)' };
+      return { success: false, message: '账号或密码错误 (默认密码统一定为 123)' };
     }
     logout() {
       sessionStorage.removeItem(STORAGE_KEY_USER);
@@ -334,9 +398,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         name: className || '新教学班',
         code: classCode || ('MET-2026-' + (classes.length + 1).toString().padStart(2, '0')),
         studentIds: [],
-        groups: [
-          { id: 'group_' + Date.now(), name: '第1小组', members: [], topic: '协作学习中的 AI 干预研究' }
-        ]
+        groups: []
       };
       classes.unshift(newClass);
       localStorage.setItem(STORAGE_KEY_CLASSES, JSON.stringify(classes));
@@ -344,25 +406,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       return newClass;
     }
 
-    createGroup(classId, groupName, topic = '协作学习课题研究') {
-      const classes = this.getClasses();
-      const cls = classes.find(c => c.id === classId) || classes[0];
-      if (cls) {
-        if (!cls.groups) cls.groups = [];
-        const newGroup = {
-          id: 'group_' + Date.now(),
-          name: groupName || `第${cls.groups.length + 1}小组`,
-          members: [],
-          topic: topic
-        };
-        cls.groups.push(newGroup);
-        localStorage.setItem(STORAGE_KEY_CLASSES, JSON.stringify(classes));
-        if (window.app && window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
-        return newGroup;
-      }
-    }
-
-    addStudent(name, username, studentCode, classId, groupId, role = 'student') {
+    addStudentToClass(name, username, studentCode, classId, customPassword = null) {
       const users = this.getUsers();
       const classes = this.getClasses();
       const cleanUsername = username.trim().toLowerCase();
@@ -374,36 +418,23 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         id: existingIndex !== -1 ? users[existingIndex].id : 'u_student_' + Date.now() + Math.floor(Math.random() * 1000),
         username: cleanUsername,
         email: `${cleanUsername}@jizhi.edu`,
-        password: '123', // 默认密码 123
+        password: (customPassword && customPassword.trim()) ? customPassword.trim() : '123',
         name: name.trim(),
-        role: role === 'teacher' ? 'teacher' : 'student',
+        role: 'student',
         studentCode: (studentCode || cleanUsername).trim(),
         avatar: avatar,
         classId: classId || 'class_101',
-        groupId: groupId || 'group_1'
+        groupId: existingIndex !== -1 ? users[existingIndex].groupId : null
       };
 
       if (existingIndex !== -1) users[existingIndex] = newUser;
       else users.push(newUser);
-
       localStorage.setItem(STORAGE_KEY_USERS_DB, JSON.stringify(users));
 
-      // Update class & group mapping
       const targetClass = classes.find(c => c.id === newUser.classId) || classes[0];
       if (targetClass) {
         if (!targetClass.studentIds) targetClass.studentIds = [];
         if (!targetClass.studentIds.includes(newUser.id)) targetClass.studentIds.push(newUser.id);
-
-        if (!targetClass.groups) targetClass.groups = [];
-        let targetGroup = targetClass.groups.find(g => g.id === newUser.groupId);
-        if (!targetGroup && targetClass.groups.length > 0) {
-          targetGroup = targetClass.groups[0];
-          newUser.groupId = targetGroup.id;
-        }
-        if (targetGroup) {
-          if (!targetGroup.members) targetGroup.members = [];
-          if (!targetGroup.members.includes(newUser.id)) targetGroup.members.push(newUser.id);
-        }
         localStorage.setItem(STORAGE_KEY_CLASSES, JSON.stringify(classes));
       }
 
@@ -411,50 +442,85 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       return newUser;
     }
 
-    importStudentsBatch(batchText, defaultClassId = 'class_101') {
-      const lines = batchText.split('\n').map(l => l.trim()).filter(Boolean);
+    batchAddStudentsToClass(studentList, classId) {
       let count = 0;
-      const classes = this.getClasses();
-      let targetClass = classes.find(c => c.id === defaultClassId) || classes[0];
-
-      lines.forEach(line => {
-        // Delimited by comma, tab, space, or Chinese comma
-        const parts = line.split(/[,，\t\s]+/).map(p => p.trim()).filter(Boolean);
-        if (parts.length >= 2) {
-          const name = parts[0];
-          const username = parts[1];
-          const studentCode = parts[2] || username;
-          const groupName = parts[3] || '第1小组';
-          const roleStr = parts[4] || (parts[3] === '组长' ? '组长' : '组员');
-
-          // Find or create group under targetClass
-          if (!targetClass.groups) targetClass.groups = [];
-          let targetGroup = targetClass.groups.find(g => g.name === groupName || g.id === groupName);
-          if (!targetGroup) {
-            targetGroup = {
-              id: 'group_' + Date.now() + Math.floor(Math.random() * 1000),
-              name: groupName.includes('组') ? groupName : (groupName + '小组'),
-              members: [],
-              topic: '协作学习课题研究'
-            };
-            targetClass.groups.push(targetGroup);
-          }
-
-          this.addStudent(
-            name,
-            username,
-            studentCode,
-            targetClass.id,
-            targetGroup.id,
-            roleStr.includes('长') ? 'leader' : 'student'
-          );
+      studentList.forEach(st => {
+        if (st.name && st.username) {
+          this.addStudentToClass(st.name, st.username, st.studentCode || st.username, classId, st.customPassword);
           count++;
         }
       });
-
-      localStorage.setItem(STORAGE_KEY_CLASSES, JSON.stringify(classes));
-      if (window.app && window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
       return count;
+    }
+
+    createGroup(classId, groupName) {
+      const classes = this.getClasses();
+      const cls = classes.find(c => c.id === classId) || classes[0];
+      if (cls) {
+        if (!cls.groups) cls.groups = [];
+        const newGroup = {
+          id: 'group_' + Date.now(),
+          name: groupName || `第${cls.groups.length + 1}小组`,
+          members: []
+        };
+        cls.groups.push(newGroup);
+        localStorage.setItem(STORAGE_KEY_CLASSES, JSON.stringify(classes));
+        if (window.app && window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
+        return newGroup;
+      }
+    }
+
+    getAvailableStudentsForGroup(classId, editingGroupId = null) {
+      const users = this.getUsers();
+      const classes = this.getClasses();
+      const cls = classes.find(c => c.id === classId) || classes[0];
+      if (!cls) return [];
+
+      const classStudents = users.filter(u => u.role !== 'teacher' && u.classId === classId);
+      const assignedUserIdsInOtherGroups = new Set();
+      if (cls.groups) {
+        cls.groups.forEach(g => {
+          if (g.id !== editingGroupId && g.members) {
+            g.members.forEach(mId => assignedUserIdsInOtherGroups.add(mId));
+          }
+        });
+      }
+      return classStudents.filter(s => !assignedUserIdsInOtherGroups.has(s.id));
+    }
+
+    updateGroupMembers(classId, groupId, groupName, selectedUserIds = [], leaderUserId = null) {
+      const classes = this.getClasses();
+      const cls = classes.find(c => c.id === classId) || classes[0];
+      if (!cls) return;
+
+      if (!cls.groups) cls.groups = [];
+      let group = cls.groups.find(g => g.id === groupId);
+      if (!group) {
+        group = { id: groupId || ('group_' + Date.now()), name: groupName, members: [] };
+        cls.groups.push(group);
+      } else {
+        group.name = groupName;
+      }
+
+      group.members = selectedUserIds;
+      localStorage.setItem(STORAGE_KEY_CLASSES, JSON.stringify(classes));
+
+      const users = this.getUsers();
+      users.forEach(u => {
+        if (selectedUserIds.includes(u.id)) {
+          u.groupId = group.id;
+          u.classId = classId;
+          if (u.id === leaderUserId) {
+            u.studentCode = 'A';
+          }
+        } else if (u.groupId === group.id) {
+          u.groupId = null;
+        }
+      });
+      localStorage.setItem(STORAGE_KEY_USERS_DB, JSON.stringify(users));
+
+      if (window.app && window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
+      return group;
     }
 
     deleteStudent(userId) {
@@ -475,6 +541,21 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       if (window.app && window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
     }
 
+    deleteGroup(classId, groupId) {
+      const classes = this.getClasses();
+      const cls = classes.find(c => c.id === classId) || classes[0];
+      if (cls && cls.groups) {
+        cls.groups = cls.groups.filter(g => g.id !== groupId);
+        localStorage.setItem(STORAGE_KEY_CLASSES, JSON.stringify(classes));
+      }
+      const users = this.getUsers();
+      users.forEach(u => {
+        if (u.groupId === groupId) u.groupId = null;
+      });
+      localStorage.setItem(STORAGE_KEY_USERS_DB, JSON.stringify(users));
+      if (window.app && window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
+    }
+
     getGroupMembersForWorkspace(groupId = 'group_1') {
       const users = this.getUsers();
       const groupUsers = users.filter(u => u.groupId === groupId && u.role !== 'teacher');
@@ -484,7 +565,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       const membersObj = {};
       if (groupUsers.length > 0) {
         groupUsers.forEach((u, idx) => {
-          const letterCode = u.studentCode && u.studentCode.length === 1 ? u.studentCode.toUpperCase() : String.fromCharCode(65 + idx);
+          const letterCode = (u.studentCode && u.studentCode.length === 1) ? u.studentCode.toUpperCase() : String.fromCharCode(65 + idx);
           membersObj[letterCode] = {
             id: letterCode,
             name: u.name,
@@ -502,22 +583,35 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       return membersObj;
     }
 
+    // 发布任务带显式起止时间控制
     createTask(title, classId, instructions, resources = [], startTime = null, deadline = null, durationMinutes = 150) {
       const tasks = this.getTasks();
       const classes = this.getClasses();
       const targetClass = classes.find(c => c.id === classId) || classes[0];
       const now = new Date();
-      const defaultStart = startTime ? startTime.replace('T', ' ') : now.toISOString().slice(0, 16).replace('T', ' ');
+      
+      const formatTime = (d) => {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        const hours = String(d.getHours()).padStart(2, '0');
+        const mins = String(d.getMinutes()).padStart(2, '0');
+        return `${year}-${month}-${day} ${hours}:${mins}`;
+      };
+
+      const defaultStart = startTime ? startTime.replace('T', ' ') : formatTime(now);
       let defaultDeadline = deadline ? deadline.replace('T', ' ') : '';
       if (!defaultDeadline) {
         const dObj = new Date(now.getTime() + (parseInt(durationMinutes) || 150) * 60 * 1000);
-        defaultDeadline = dObj.toISOString().slice(0, 16).replace('T', ' ');
+        defaultDeadline = formatTime(dObj);
       }
+
       const newTask = {
         id: 'task_' + Date.now(),
-        title, classId, className: targetClass.name,
+        title, classId, className: targetClass ? targetClass.name : '教学班',
         durationMinutes: parseInt(durationMinutes) || 150,
-        startTime: defaultStart, deadline: defaultDeadline,
+        startTime: defaultStart,
+        deadline: defaultDeadline,
         status: 'in_progress', createdAt: new Date().toLocaleDateString(),
         instructions, resources
       };
@@ -526,6 +620,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       if (window.app && window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
       return newTask;
     }
+
     publishAnnouncement(taskId, title, content, attachment = null) {
       const announcements = this.getAnnouncements();
       const tasks = this.getTasks();
@@ -542,6 +637,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       if (window.app && window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
       return newAnn;
     }
+
     markAnnouncementRead(annId, groupId = 'group_1') {
       const announcements = this.getAnnouncements();
       const ann = announcements.find(a => a.id === annId);
@@ -552,6 +648,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         if (window.app && window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
       }
     }
+
     exportGroupChatLogsToExcel(groupId = 'group_1', chatLogsState = null) {
       const currentChatLogs = chatLogsState || JSON.parse(localStorage.getItem('jizhi_sync_chat_v3')) || {};
       let csvContent = '\uFEFF名字,时间,内容\n';
@@ -586,7 +683,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.setAttribute('href', url);
-      link.setAttribute('download', `第2小组_学术对话记录表_${new Date().toISOString().slice(0, 10)}.csv`);
+      link.setAttribute('download', `第1小组_学术对话与写作记录表_${new Date().toISOString().slice(0, 10)}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
@@ -594,7 +691,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
   }
 
   /* ==========================================================================
-     5. QUAD-REDUNDANT CROSS-BROWSER & INCOGNITO CLOUD SYNC ENGINE v6 (WITH GROUP ISOLATION)
+     5. QUAD-REDUNDANT CROSS-BROWSER CLOUD SYNC ENGINE v6
      ========================================================================== */
   class CloudSyncEngine {
     constructor(app) {
@@ -602,7 +699,6 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       this.lastTimestamp = 0;
       this.isPushing = false;
       this.updateScopeKeys();
-      
       this.initWebSocket();
       this.initPolling();
     }
@@ -799,6 +895,15 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         localStorage.setItem('jizhi_sync_current_stage_v3', this.app.state.currentStage);
         localStorage.setItem('jizhi_sync_final_submitted', this.app.state.isFinalSubmitted);
         this.app.renderStudentWorkspace();
+
+        // 强行刷新教师端实时监控同屏
+        if (this.app.authManager.getCurrentUser()?.role === 'teacher') {
+          const mainEl = document.getElementById('app');
+          if (mainEl && this.app.state.teacherActiveTab === 'view_monitoring') {
+            const liveDocEl = document.getElementById('teacher-live-doc-mirror');
+            if (liveDocEl) liveDocEl.value = this.app.state.stage2.unifiedContent;
+          }
+        }
       }
     }
   }
@@ -865,324 +970,545 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
   }
 
   /* ==========================================================================
-     7. TEACHER PORTAL RENDERER (CLASS, GROUP & BATCH STUDENT MANAGEMENT)
+     7. TEACHER PORTAL RENDERER (LIVE WORKSPACE MIRROR & SCROLL FIX)
      ========================================================================== */
   function renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView) {
     const currentUser = authManager.getCurrentUser();
     const tasks = authManager.getTasks();
     const announcements = authManager.getAnnouncements();
     const classes = authManager.getClasses();
+    const activeTab = state.teacherActiveTab || 'view_architecture';
+    const activeClassId = state.activeClassId || (classes[0] ? classes[0].id : 'class_101');
+    const activeClass = classes.find(c => c.id === activeClassId) || classes[0] || { id: 'class_101', name: '默认班级', groups: [] };
+
     const allUsers = authManager.getUsers();
-    const students = allUsers.filter(u => u.role !== 'teacher');
+    const classStudents = allUsers.filter(u => u.role !== 'teacher' && u.classId === activeClass.id);
+
+    // 同屏监控选中的小组 ID
+    const activeMonitorGId = state.activeMonitorGroupId || (activeClass.groups && activeClass.groups[0] ? activeClass.groups[0].id : 'group_1');
+    const activeMonitorGroup = (activeClass.groups || []).find(g => g.id === activeMonitorGId) || { id: 'group_1', name: '第1小组' };
+    const monitorMembersObj = authManager.getGroupMembersForWorkspace(activeMonitorGId);
+    const monitorMembersList = Object.values(monitorMembersObj);
 
     container.innerHTML = `
-      <div class="teacher-portal-layout">
-        <header class="teacher-header">
+      <div class="teacher-portal-layout" style="min-height:100vh; height:auto; overflow-y:auto !important; background:#0b0f19; padding:0; display:flex; flex-direction:column;">
+        <!-- 全屏头部导航 -->
+        <header class="teacher-header" style="padding:16px 32px; background:rgba(15,23,42,0.9); border-bottom:1px solid rgba(255,255,255,0.1); width:100%; flex-shrink:0;">
           <div class="brand-section">
-            <div class="brand-logo">集智 JIZHI</div>
-            <div class="brand-badge teacher-badge">👩‍🏫 教师端管理中心 (全局云同步中 🟢)</div>
+            <div class="brand-logo" style="font-size:24px; font-weight:800; background:linear-gradient(135deg, #818cf8, #38bdf8); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">集智 JIZHI 教师端</div>
+            <div class="brand-badge teacher-badge" style="background:rgba(16,185,129,0.15); color:#34d399; border:1px solid rgba(16,185,129,0.3); padding:4px 12px; border-radius:12px; font-size:12px; font-weight:700;">👩‍🏫 全局实时教务控制中心 🟢</div>
           </div>
-          <div class="teacher-info">
-            <span>班级管理: <b>${classes[0] ? classes[0].name : '现代教育技术班'}</b></span>
-            <span>主讲教师: <b>${currentUser.name}</b></span>
-            <button id="btn-switch-student-preview" class="header-icon-btn" style="background:rgba(99,102,241,0.2); color:#a5b4fc;">👀 切换至学生协作视角</button>
-            <button id="btn-logout" class="header-icon-btn logout">退出登录</button>
+          <div class="teacher-info" style="display:flex; align-items:center; gap:20px;">
+            <span style="font-size:14px; color:#cbd5e1;">当前班级: <b style="color:#38bdf8;">${activeClass.name}</b></span>
+            <span style="font-size:14px; color:#cbd5e1;">教师: <b>${currentUser.name}</b></span>
+            <button id="btn-switch-student-preview" class="header-icon-btn" style="background:rgba(99,102,241,0.2); color:#a5b4fc; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:700;">👀 切换至学生视角</button>
+            <button id="btn-logout" class="header-icon-btn logout" style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:8px 16px; border-radius:8px; font-size:13px; font-weight:700;">退出登录</button>
           </div>
         </header>
 
-        <main class="teacher-content">
-          <section class="teacher-left-panel">
+        <!-- 三大界面导航卡片 -->
+        <div style="padding:16px 32px 0 32px; background:#0b0f19; width:100%; flex-shrink:0;">
+          <div style="display:flex; gap:16px; width:100%; background:rgba(30,41,59,0.8); padding:8px; border-radius:16px; border:1px solid rgba(255,255,255,0.12); box-shadow:0 8px 30px rgba(0,0,0,0.5);">
+            <button class="teacher-tab-nav ${activeTab === 'view_architecture' ? 'active' : ''}" data-tab="view_architecture" style="flex:1; padding:14px; border-radius:12px; font-size:15px; font-weight:800; cursor:pointer; border:none; color:white; background:${activeTab === 'view_architecture' ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'transparent'}; transition:all 0.3s ease;">
+              🛠️ 界面一：基础架构管理 (班级 / 学生 / 小组)
+            </button>
+            <button class="teacher-tab-nav ${activeTab === 'view_publishing' ? 'active' : ''}" data-tab="view_publishing" style="flex:1; padding:14px; border-radius:12px; font-size:15px; font-weight:800; cursor:pointer; border:none; color:white; background:${activeTab === 'view_publishing' ? 'linear-gradient(135deg, #ec4899, #8b5cf6)' : 'transparent'}; transition:all 0.3s ease;">
+              📢 界面二：任务与通知发布 (含起止时间控制与附件上传)
+            </button>
+            <button class="teacher-tab-nav ${activeTab === 'view_monitoring' ? 'active' : ''}" data-tab="view_monitoring" style="flex:1; padding:14px; border-radius:12px; font-size:15px; font-weight:800; cursor:pointer; border:none; color:white; background:${activeTab === 'view_monitoring' ? 'linear-gradient(135deg, #10b981, #059669)' : 'transparent'}; transition:all 0.3s ease;">
+              🖥️ 界面三：学生实际操作同屏实时监控终端 (实操同屏)
+            </button>
+          </div>
+        </div>
 
-            <!-- 1. 班级与小组成员架构管理卡片 -->
-            <div class="card broadcast-card" style="border-top:4px solid #8b5cf6;">
-              <div class="card-title">
-                <span>🏫 班级/小组架构管理与学生批量导入 (默认密码 123)</span>
-                <div style="display:flex; gap:8px;">
-                  <button id="btn-open-create-class" class="teacher-action-btn indigo">+ 创建班级</button>
-                  <button id="btn-open-create-group" class="teacher-action-btn indigo">+ 创建小组</button>
-                  <button id="btn-open-add-student" class="teacher-action-btn green">+ 增加单名学生</button>
-                  <button id="btn-open-batch-import" style="background:linear-gradient(135deg, #ec4899, #8b5cf6); border:none; color:white; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 0 10px rgba(236,72,153,0.3);">
-                    📥 批量导入学生
-                  </button>
+        <!-- 主内容区域 (完全允许向下滚动) -->
+        <main style="flex:1; padding:24px 32px 40px 32px; width:100%; overflow-y:visible;">
+
+          <!-- =================== 界面一：基础架构管理 (可无限向下滚动) =================== -->
+          ${activeTab === 'view_architecture' ? `
+            <div style="display:flex; flex-direction:column; gap:24px; width:100%;">
+
+              <!-- 1. 班级管理 -->
+              <div class="card" style="border-top:4px solid #6366f1; width:100%; padding:24px;">
+                <div class="card-title" style="margin-bottom:16px;">
+                  <span style="font-size:18px; font-weight:800;">🎓 教学班级管理 (${classes.length} 个班级)</span>
+                  <button id="btn-v1-create-class" class="teacher-action-btn indigo" style="padding:8px 18px; font-size:13px; font-weight:700;">+ 创建全新教学班</button>
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px;">
+                  ${classes.map(c => {
+                    const isSelected = c.id === activeClass.id;
+                    const cStds = allUsers.filter(u => u.role !== 'teacher' && u.classId === c.id);
+                    return `
+                      <div style="background:${isSelected ? 'rgba(99,102,241,0.18)' : 'rgba(15,23,42,0.7)'}; border:1px solid ${isSelected ? '#6366f1' : 'rgba(255,255,255,0.08)'}; border-radius:14px; padding:18px; display:flex; justify-content:space-between; align-items:center;">
+                        <div>
+                          <div style="font-size:16px; font-weight:800; color:${isSelected ? '#a5b4fc' : '#f8fafc'};">🏫 ${c.name}</div>
+                          <div style="font-size:12px; color:#cbd5e1; margin-top:6px;">代码: ${c.code || 'MET'} | 学生: ${cStds.length}人 | 小组: ${(c.groups || []).length}个</div>
+                        </div>
+                        <button class="btn-select-class" data-id="${c.id}" style="background:${isSelected ? 'rgba(16,185,129,0.2)' : 'var(--accent-indigo)'}; border:1px solid ${isSelected ? '#10b981' : 'transparent'}; color:${isSelected ? '#34d399' : 'white'}; padding:8px 16px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">
+                          ${isSelected ? '✅ 当前主班' : '切换'}
+                        </button>
+                      </div>
+                    `;
+                  }).join('')}
                 </div>
               </div>
 
-              <!-- 班级与小组信息概览 -->
-              <div style="margin-bottom:12px; background:rgba(15,23,42,0.6); padding:12px; border-radius:10px; border:1px solid rgba(255,255,255,0.08);">
-                <div style="font-size:13px; font-weight:700; color:#38bdf8; margin-bottom:8px; display:flex; justify-content:space-between;">
-                  <span>🏫 当前教学班级列表:</span>
-                  <span style="color:#cbd5e1; font-size:11px;">共 ${classes.length} 个班级 | 全班 ${students.length} 名学生</span>
+              <!-- 2. 学生账号管理与导入 -->
+              <div class="card" style="border-top:4px solid #ec4899; width:100%; padding:24px;">
+                <div class="card-title" style="margin-bottom:16px;">
+                  <span style="font-size:18px; font-weight:800;">👨‍🎓 学生账号管理 (当前班级: ${activeClass.name})</span>
+                  <div style="display:flex; gap:10px;">
+                    <button id="btn-v1-add-student" class="teacher-action-btn green" style="padding:8px 16px; font-size:13px; font-weight:700;">+ 单条创建学生账号</button>
+                    <button id="btn-v1-import-file" style="background:linear-gradient(135deg, #ec4899, #8b5cf6); border:none; color:white; padding:8px 18px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;">
+                      📥 上传 XLSX / CSV 文件导入
+                    </button>
+                  </div>
                 </div>
-                <div style="display:flex; gap:10px; flex-wrap:wrap;">
-                  ${classes.map(c => `
-                    <div style="background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.3); padding:8px 12px; border-radius:8px; font-size:12px;">
-                      <div style="font-weight:700; color:#a5b4fc;">🏫 ${c.name} (${c.code || 'MET'})</div>
-                      <div style="color:#94a3b8; font-size:11px; margin-top:2px;">
-                        小组数: ${c.groups ? c.groups.length : 0} | 关联组名: ${(c.groups || []).map(g => g.name).join(', ')}
+                <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px; margin-bottom:14px; font-size:13px; color:#cbd5e1; display:flex; justify-content:space-between; align-items:center;">
+                  <div>💡 <b>密码说明：</b> 创建学生时可指定自定义密码（留空统一定为 <code style="color:#34d399;">123</code>）。建立后直接放入班级学生池。</div>
+                  <span style="color:#f472b6; font-weight:800; font-size:14px;">池内学生: ${classStudents.length} 人</span>
+                </div>
+                <div style="border:1px solid rgba(255,255,255,0.1); border-radius:12px; overflow:hidden;">
+                  <table class="monitor-table" style="font-size:13px;">
+                    <thead><tr><th>姓名</th><th>拼音账号 (用户名)</th><th>学号</th><th>当前归属小组</th><th>密码</th><th>操作</th></tr></thead>
+                    <tbody>
+                      ${classStudents.length === 0 ? '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:24px;">当前班级暂无学生账号，请点击右上角按钮创建！</td></tr>' : ''}
+                      ${classStudents.map(s => {
+                        const grp = activeClass.groups ? activeClass.groups.find(g => g.id === s.groupId) : null;
+                        return `
+                          <tr>
+                            <td><b>${s.avatar || '👤'} ${s.name}</b></td>
+                            <td><span style="color:#38bdf8; font-family:monospace; font-weight:600;">${s.username}</span></td>
+                            <td>${s.studentCode || s.username}</td>
+                            <td>${grp ? `<span class="phase-pill p1" style="font-size:12px;">${grp.name}</span>` : '<span style="color:#94a3b8;">⏳ 待划分小组</span>'}</td>
+                            <td><span style="color:#34d399; font-family:monospace; font-weight:700;">${s.password || '123'}</span></td>
+                            <td><button class="delete-student-btn" data-id="${s.id}" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; padding:4px 10px; border-radius:6px; font-size:12px; cursor:pointer;">移除</button></td>
+                          </tr>
+                        `;
+                      }).join('')}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <!-- 3. 小组划分 -->
+              <div class="card" style="border-top:4px solid #10b981; width:100%; padding:24px;">
+                <div class="card-title" style="margin-bottom:16px;">
+                  <span style="font-size:18px; font-weight:800;">👥 小组划分 (当前班级: ${activeClass.name})</span>
+                  <button id="btn-v1-create-group" class="teacher-action-btn green" style="padding:8px 18px; font-size:13px; font-weight:700;">+ 新建小组并勾选组员</button>
+                </div>
+                <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px; margin-bottom:14px; font-size:13px; color:#cbd5e1;">
+                  💡 <b>班级互斥划分规则：</b>已归属于本班级其他小组的学生会自动隐藏，避免重复挂组。跨班级独立计算。
+                </div>
+                <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(360px, 1fr)); gap:16px;">
+                  ${(activeClass.groups || []).length === 0 ? '<div style="color:#94a3b8; padding:20px; font-size:14px;">当前班级暂无小组。</div>' : ''}
+                  ${(activeClass.groups || []).map(grp => {
+                    const groupMembers = classStudents.filter(s => (grp.members || []).includes(s.id));
+                    return `
+                      <div style="background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:14px; padding:18px;">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                          <span style="font-size:16px; font-weight:800; color:#34d399;">👥 ${grp.name}</span>
+                          <div style="display:flex; gap:8px;">
+                            <button class="btn-edit-group-members" data-gid="${grp.id}" style="background:var(--accent-indigo); border:none; color:white; padding:6px 12px; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">⚙️ 勾选组员</button>
+                            <button class="btn-delete-group" data-gid="${grp.id}" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; padding:6px 10px; border-radius:6px; font-size:12px; cursor:pointer;">✕ 解散</button>
+                          </div>
+                        </div>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px; font-size:13px;">
+                          ${groupMembers.length === 0 ? '<span style="color:#94a3b8; font-size:12px;">⚠️ 暂未勾选成员</span>' : ''}
+                          ${groupMembers.map(m => `
+                            <span style="background:rgba(52,211,153,0.15); border:1px solid rgba(52,211,153,0.3); color:#34d399; padding:4px 10px; border-radius:6px;">
+                              ${m.avatar || '👤'} ${m.name} ${m.studentCode === 'A' ? '<b style="color:#fbbf24;">(组长)</b>' : ''}
+                            </span>
+                          `).join('')}
+                        </div>
                       </div>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+
+            </div>
+          ` : ''}
+
+          <!-- =================== 界面二：任务与通知发布 (明确起止时间 + 文件上传) =================== -->
+          ${activeTab === 'view_publishing' ? `
+            <div style="display:flex; flex-direction:column; gap:24px; width:100%;">
+
+              <!-- 1. 发布写作任务 -->
+              <div class="card" style="border-top:4px solid #38bdf8; width:100%; padding:24px;">
+                <div class="card-title" style="margin-bottom:16px;">
+                  <span style="font-size:18px; font-weight:800;">📌 课程协作写作任务集中发布中心 (含起止时间控制)</span>
+                  <button id="btn-v2-open-task-modal" class="teacher-action-btn indigo" style="padding:8px 18px; font-size:13px; font-weight:700;">+ 发布全新写作任务</button>
+                </div>
+                <div style="display:flex; flex-direction:column; gap:14px;">
+                  ${tasks.map(t => `
+                    <div style="background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.1); padding:18px; border-radius:14px;">
+                      <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <span style="font-size:17px; font-weight:800; color:#38bdf8;">📌 ${t.title}</span>
+                        <span class="status-badge active" style="background:rgba(56,189,248,0.15); color:#38bdf8; border:1px solid rgba(56,189,248,0.3); padding:4px 12px; border-radius:12px; font-size:12px; font-weight:700;">受众班级: ${t.className}</span>
+                      </div>
+                      <div style="font-size:13px; color:#cbd5e1; margin:10px 0; display:flex; gap:20px; background:rgba(30,41,59,0.6); padding:10px 16px; border-radius:8px; border-left:4px solid #38bdf8;">
+                        <span>📅 <b>开始时间:</b> <span style="color:#a5b4fc; font-weight:700;">${t.startTime || '即时开启'}</span></span>
+                        <span>⌛ <b>截止时间:</b> <span style="color:#fca5a5; font-weight:700;">${t.deadline || '无硬性限制'}</span></span>
+                        <span>⏱️ <b>预估时长:</b> ${t.durationMinutes} 分钟</span>
+                      </div>
+                      <div style="font-size:13px; color:#cbd5e1; line-height:1.6;">${t.instructions}</div>
                     </div>
                   `).join('')}
                 </div>
               </div>
 
-              <!-- 学生名册管理表格 -->
-              <div style="max-height:240px; overflow-y:auto; border:1px solid rgba(255,255,255,0.1); border-radius:8px;">
-                <table class="monitor-table" style="font-size:12px;">
-                  <thead>
-                    <tr><th>姓名</th><th>拼音账号(用户名)</th><th>学号/编号</th><th>所属班级与小组</th><th>角色</th><th>默认密码</th><th>操作</th></tr>
-                  </thead>
-                  <tbody>
-                    ${students.map(s => {
-                      const cls = classes.find(c => c.id === s.classId) || classes[0];
-                      const grp = cls && cls.groups ? cls.groups.find(g => g.id === s.groupId) : null;
+              <!-- 2. 发布课堂广播通知 (文件上传) -->
+              <div class="card" style="border-top:4px solid #a855f7; width:100%; padding:24px;">
+                <div class="card-title" style="margin-bottom:16px;">
+                  <span style="font-size:18px; font-weight:800;">📢 课堂即时广播通知发布 (含随附教学资源文件上传)</span>
+                  <button id="btn-v2-open-ann-modal" class="teacher-action-btn green" style="padding:8px 18px; font-size:13px; font-weight:700;">
+                    + 发布新通知 (选择/拖拽上传资源文件)
+                  </button>
+                </div>
+                <div class="announcement-history-list" style="display:flex; flex-direction:column; gap:14px;">
+                  ${announcements.map(a => `
+                    <div style="background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.1); padding:16px; border-radius:12px;">
+                      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
+                        <span style="font-weight:800; color:#38bdf8; font-size:15px;">${a.title}</span>
+                        <span style="font-size:12px; color:#94a3b8;">${a.time} | 关联任务: ${a.taskTitle}</span>
+                      </div>
+                      <div style="font-size:13px; color:#cbd5e1; margin-bottom:8px; line-height:1.6;">${a.content}</div>
+                      ${a.attachment ? `
+                        <div style="font-size:12px; color:#c084fc; background:rgba(139,92,246,0.15); border:1px solid rgba(139,92,246,0.3); padding:6px 12px; border-radius:8px; display:inline-flex; align-items:center; gap:8px;">
+                          <span>📎 随附资源文件: <b>${a.attachment.name}</b> (${a.attachment.size})</span>
+                        </div>
+                      ` : ''}
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+            </div>
+          ` : ''}
+
+          <!-- =================== 界面三：学生实际操作同屏实时监控终端 (实操同屏) =================== -->
+          ${activeTab === 'view_monitoring' ? `
+            <div style="display:flex; flex-direction:column; gap:20px; width:100%;">
+
+              <!-- 顶栏: 监控小组选择器与全盘按钮 -->
+              <div class="card" style="border-top:4px solid #10b981; width:100%; padding:20px; display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center; gap:14px;">
+                  <span style="font-size:18px; font-weight:800; color:#34d399;">🖥️ 实际操作实时监控终端:</span>
+                  <div style="display:flex; gap:8px;">
+                    ${(activeClass.groups || []).map(g => {
+                      const isSel = g.id === activeMonitorGId;
                       return `
-                        <tr>
-                          <td><b>${s.avatar || '👤'} ${s.name}</b></td>
-                          <td><span style="color:#38bdf8; font-family:monospace;">${s.username}</span></td>
-                          <td>${s.studentCode || s.username}</td>
-                          <td><span class="phase-pill p1" style="font-size:10px;">${cls ? cls.name : '01班'} - ${grp ? grp.name : '第1小组'}</span></td>
-                          <td>${s.studentCode === 'A' || s.username === 'liming' ? '<b style="color:#fbbf24;">⭐ 组长</b>' : '组员'}</td>
-                          <td><span style="color:#34d399; font-family:monospace;">123</span></td>
-                          <td><button class="delete-student-btn" data-id="${s.id}" style="background:rgba(239,68,68,0.2); border:1px solid rgba(239,68,68,0.4); color:#f87171; padding:2px 6px; border-radius:4px; font-size:10px; cursor:pointer;">移除</button></td>
-                        </tr>
+                        <button class="btn-switch-monitor-group ${isSel ? 'active' : ''}" data-gid="${g.id}" style="background:${isSel ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(30,41,59,0.8)'}; border:1px solid ${isSel ? '#10b981' : 'rgba(255,255,255,0.1)'}; color:white; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;">
+                          👥 同屏监控: ${g.name} ${isSel ? '🟢' : ''}
+                        </button>
                       `;
                     }).join('')}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-
-            <!-- 2. 课堂任务通知发布卡片 -->
-            <div class="card broadcast-card" style="margin-top:16px;">
-              <div class="card-title">
-                <span>📢 课堂任务即时通知发布 (含文件资源上传 & 小组已读追踪)</span>
-                <button id="btn-open-ann-modal" class="teacher-action-btn green">+ 发布新通知 (含随附资源文件)</button>
-              </div>
-              <div class="announcement-history-list">
-                ${announcements.map(a => `
-                  <div class="teacher-ann-item">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                      <span style="font-weight:700; color:#38bdf8; font-size:14px;">${a.title}</span>
-                      <span style="font-size:11px; color:#94a3b8;">${a.time} | 关联任务: ${a.taskTitle}</span>
-                    </div>
-                    <div style="font-size:13px; color:#cbd5e1; margin-bottom:6px;">${a.content}</div>
-                    ${a.attachment ? `<div style="font-size:12px; color:#a78bfa; background:rgba(139,92,246,0.15); padding:4px 8px; border-radius:4px; display:inline-block; margin-bottom:8px;">📎 随附资源: <b>${a.attachment.name}</b> (${a.attachment.size})</div>` : ''}
-                    <div style="font-size:11px; color:#94a3b8; display:flex; gap:12px; border-top:1px dashed rgba(255,255,255,0.1); padding-top:6px;">
-                      <span>已读小组: <b style="color:#4ade80;">${a.readStatus && a.readStatus['group_1'] ? '✅ 第1小组 (已读)' : '无'}</b></span>
-                      <span>未读小组: <b style="color:#f87171;">${a.readStatus && !a.readStatus['group_1'] ? '⚠️ 第1小组 (未读)' : '无'}</b></span>
-                    </div>
                   </div>
-                `).join('')}
-              </div>
-            </div>
-
-            <!-- 3. 课程任务发布卡片 -->
-            <div class="card" style="margin-top:16px;">
-              <div class="card-title">
-                <span>📌 课程任务发布与班级小组关联 (含起止时间控制)</span>
-                <button id="btn-open-task-modal" class="teacher-action-btn indigo">+ 发布新写作任务</button>
-              </div>
-              <div class="task-list-container">
-                ${tasks.map(t => `
-                  <div class="teacher-task-card">
-                    <div style="display:flex; justify-content:space-between; align-items:center;">
-                      <span style="font-size:16px; font-weight:700; color:#38bdf8;">${t.title}</span>
-                      <span class="status-badge active">● 教学班: ${t.className}</span>
-                    </div>
-                    <div style="font-size:12px; color:#94a3b8; margin:8px 0; display:flex; gap:14px; flex-wrap:wrap; background:rgba(15,23,42,0.6); padding:6px 12px; border-radius:6px; border:1px solid rgba(255,255,255,0.08);">
-                      <span>📅 <b>开始时间:</b> <span style="color:#a5b4fc;">${t.startTime || '即时开启'}</span></span>
-                      <span>⌛ <b>截止时间:</b> <span style="color:#fca5a5;">${t.deadline || '无硬性限制'}</span></span>
-                      <span>⏱️ <b>预估时长:</b> ${t.durationMinutes} 分钟</span>
-                    </div>
-                    <div style="font-size:14px; color:#f1f5f9; background:rgba(15,23,42,0.8); padding:12px; border-radius:8px; border-left:4px solid var(--accent-indigo); line-height:1.6;">
-                      <b style="color:#a5b4fc;">任务说明与要求:</b> ${t.instructions}
-                    </div>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          </section>
-
-          <!-- 右侧监控面板 -->
-          <section class="teacher-right-panel">
-            <div class="card">
-              <div class="card-title">
-                <span>📊 班级各组写作状态监控与 Excel 记录导出</span>
-                <button id="btn-export-all-excel" style="background:linear-gradient(135deg, #10b981, #059669); border:none; color:white; padding:6px 14px; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;">
-                  📊 一键导出 Excel 表格 (名字/时间/内容)
+                </div>
+                <button id="btn-export-all-excel" style="background:linear-gradient(135deg, #6366f1, #4f46e5); border:none; color:white; padding:10px 20px; border-radius:10px; font-size:14px; font-weight:800; cursor:pointer; box-shadow:0 4px 14px rgba(99,102,241,0.4);">
+                  📊 一键导出本组 Excel 聊天与研讨记录
                 </button>
               </div>
-              <table class="monitor-table">
-                <thead>
-                  <tr><th>小组名称</th><th>当前阶段</th><th>各成员字数贡献</th><th>编辑会议均分</th><th>通知已读</th><th>提交状态</th><th>操作</th></tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td><b>第1小组 (AI组)</b></td>
-                    <td><span class="phase-pill p1">${state.currentStage === 'stage3' ? '阶段三：答辩擂台' : '阶段二：学术编辑部'}</span></td>
-                    <td><div style="font-size:11px;">A (42%) | B (31%) | C (27%)</div></td>
-                    <td><span style="color:#f59e0b;">★ 4.5</span></td>
-                    <td>${announcements[0] && announcements[0].readStatus && announcements[0].readStatus['group_1'] ? '<span style="color:#4ade80;">✅ 已读</span>' : '<span style="color:#f87171;">⚠️ 未读</span>'}</td>
-                    <td>${state.isFinalSubmitted ? '<span style="color:#34d399; font-weight:700;">🔒 已提交归档</span>' : '<span style="color:#fbbf24; font-weight:700;">📝 写作研讨中</span>'}</td>
-                    <td><button class="export-single-excel-btn" data-group="group_1" style="background:var(--accent-indigo); border:none; color:white; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">导出 Excel</button></td>
-                  </tr>
-                  <tr>
-                    <td><b>第2小组 (提问组)</b></td>
-                    <td><span class="phase-pill p2">阶段一：学术拍卖会</span></td>
-                    <td>竞拍中</td><td>--</td>
-                    <td><span style="color:#f87171;">⚠️ 未读</span></td>
-                    <td>未提交</td>
-                    <td><button class="export-single-excel-btn" data-group="group_2" style="background:rgba(255,255,255,0.1); border:none; color:#94a3b8; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">导出 Excel</button></td>
-                  </tr>
-                </tbody>
-              </table>
+
+              <!-- 核心监控镜像控制台：两栏铺满布局 -->
+              <div style="display:grid; grid-template-columns: 1.6fr 1fr; gap:20px; width:100%;">
+
+                <!-- 左栏：学生实时键入/撰写大正文同屏 Console -->
+                <div class="card" style="padding:20px; display:flex; flex-direction:column; background:radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0f172a 90%); border:1px solid rgba(52,211,153,0.3);">
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <span style="font-size:16px; font-weight:800; color:#34d399;">📝 实时写作大正文镜像 (Live Document Stream)</span>
+                      <span style="font-size:11px; background:rgba(52,211,153,0.15); color:#34d399; padding:2px 8px; border-radius:10px; font-weight:700; border:1px solid rgba(52,211,153,0.3);">🟢 实时同步学生键入中</span>
+                    </div>
+                    <span style="font-size:13px; color:#cbd5e1;">实时总字数: <b style="color:#38bdf8; font-size:15px;">${state.stage2.unifiedContent.length}</b> 字</span>
+                  </div>
+
+                  <!-- 实时操作轨迹 -->
+                  <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:12px; color:#a5b4fc; display:flex; gap:16px;">
+                    <span>⚡ <b>正在编辑组员:</b> 李明 (组长) 正在撰写“一、背景”；王芳 正在修订“三、文献”</span>
+                  </div>
+
+                  <!-- 镜像大正文文本框 -->
+                  <textarea id="teacher-live-doc-mirror" class="teacher-textarea" readonly style="flex:1; min-height:360px; font-family:sans-serif; font-size:14px; line-height:1.6; background:rgba(15,23,42,0.85); color:#f8fafc; border:1px solid rgba(255,255,255,0.1); opacity:0.95;">${state.stage2.unifiedContent}</textarea>
+
+                  <!-- SSRL 实时贡献比例条 -->
+                  <div style="margin-top:14px; background:rgba(15,23,42,0.7); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
+                    <div style="font-size:12px; font-weight:700; color:#cbd5e1; margin-bottom:6px;">📊 组内实时 SSRL 字数贡献比率</div>
+                    <div style="height:12px; background:rgba(0,0,0,0.4); border-radius:6px; overflow:hidden; display:flex;">
+                      <div style="width:42%; background:#818cf8;" title="李明: 42%"></div>
+                      <div style="width:31%; background:#22d3ee;" title="王芳: 31%"></div>
+                      <div style="width:27%; background:#fbbf24;" title="陈强: 27%"></div>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; font-size:11px; color:#cbd5e1; margin-top:6px;">
+                      ${monitorMembersList.map(m => `<span style="color:${m.color || '#a5b4fc'};">● ${m.name}: ${m.id === 'A' ? '42%' : m.id === 'B' ? '31%' : '27%'}</span>`).join('')}
+                    </div>
+                  </div>
+                </div>
+
+                <!-- 右栏：实时学术对话与 Agent 答辩互动同屏 -->
+                <div class="card" style="padding:20px; display:flex; flex-direction:column; background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.1);">
+                  <div style="font-size:16px; font-weight:800; color:#fbbf24; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                    <span>💬 实时学术对话流 (含 AI 智能体提问)</span>
+                    <span class="phase-pill p1" style="font-size:11px;">${state.currentStage === 'stage3' ? '阶段三：答辩' : '阶段二：编辑部'}</span>
+                  </div>
+                  <div style="flex:1; max-height:480px; overflow-y:auto; background:rgba(30,41,59,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px; font-size:12px; display:flex; flex-direction:column; gap:10px;">
+                    ${(state.chatLogs[state.currentStage] || []).map(m => {
+                      const isAgent = AgentProfiles[m.sender] !== undefined;
+                      const senderName = isAgent ? AgentProfiles[m.sender].name : (monitorMembersObj[m.sender] ? monitorMembersObj[m.sender].name : m.sender);
+                      const color = isAgent ? AgentProfiles[m.sender].color : (monitorMembersObj[m.sender] ? monitorMembersObj[m.sender].color : '#38bdf8');
+                      return `
+                        <div style="background:rgba(15,23,42,0.6); padding:8px 12px; border-radius:8px; border-left:3px solid ${color};">
+                          <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+                            <b style="color:${color}; font-size:12px;">${senderName}</b>
+                            <span style="color:#64748b; font-size:10px;">${m.timestamp || ''}</span>
+                          </div>
+                          <div style="color:#f8fafc; line-height:1.5;">${m.text}</div>
+                        </div>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+
+              </div>
+
             </div>
-          </section>
+          ` : ''}
+
         </main>
       </div>
     `;
 
-    // Event Bindings
+    // Global Handlers
     container.querySelector('#btn-logout').addEventListener('click', () => onLogout());
     container.querySelector('#btn-switch-student-preview').addEventListener('click', () => onSwitchToStudentView());
 
-    container.querySelectorAll('.delete-student-btn').forEach(btn => {
+    container.querySelectorAll('.teacher-tab-nav').forEach(btn => {
       btn.addEventListener('click', () => {
-        if (confirm('确认从班级中移除此学生账号？')) {
-          authManager.deleteStudent(btn.dataset.id);
+        state.teacherActiveTab = btn.dataset.tab;
+        renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
+      });
+    });
+
+    container.querySelectorAll('.btn-select-class').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.activeClassId = btn.dataset.id;
+        renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
+      });
+    });
+
+    // 1. View 1 Handlers
+    const btnCreateClass = container.querySelector('#btn-v1-create-class');
+    if (btnCreateClass) {
+      btnCreateClass.addEventListener('click', () => {
+        const name = prompt('请输入新教学班级名称 (例如: 《现代教育技术》2026春02班):', '《现代教育技术》2026春02班');
+        if (name) {
+          const newC = authManager.createClass(name);
+          state.activeClassId = newC.id;
           renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
         }
       });
-    });
+    }
 
-    container.querySelector('#btn-export-all-excel').addEventListener('click', () => {
-      authManager.exportGroupChatLogsToExcel('group_1', state.chatLogs);
-    });
-
-    container.querySelectorAll('.export-single-excel-btn').forEach(btn => {
-      btn.addEventListener('click', () => authManager.exportGroupChatLogsToExcel(btn.dataset.group, state.chatLogs));
-    });
-
-    // 1. Modal: 创建新班级
-    container.querySelector('#btn-open-create-class').addEventListener('click', () => {
-      const name = prompt('请输入新班级名称 (例如: 《现代教育技术》2026春02班):', '《现代教育技术》2026春02班');
-      if (name) {
-        authManager.createClass(name);
-        renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
-      }
-    });
-
-    // 2. Modal: 创建新小组
-    container.querySelector('#btn-open-create-group').addEventListener('click', () => {
-      const cls = classes[0];
-      const gName = prompt(`在班级【${cls.name}】下创建新小组名称:`, `第${(cls.groups || []).length + 1}小组`);
-      if (gName) {
-        authManager.createGroup(cls.id, gName);
-        renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
-      }
-    });
-
-    // 3. Modal: 增加单名学生
-    container.querySelector('#btn-open-add-student').addEventListener('click', () => {
-      document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
-      const cls = classes[0];
-      const groups = cls.groups || [];
-      const modal = document.createElement('div');
-      modal.className = 'modal-overlay';
-      modal.innerHTML = `
-        <div class="teacher-modal-card fancy-task-modal" style="width:480px;">
-          <div class="teacher-modal-header task-theme-gradient">
-            <div class="modal-header-title">
-              <div class="modal-icon-badge task">👤</div>
-              <div><h3>新增单个学生账号 (默认密码 123)</h3></div>
+    const btnAddStd = container.querySelector('#btn-v1-add-student');
+    if (btnAddStd) {
+      btnAddStd.addEventListener('click', () => {
+        document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+          <div class="teacher-modal-card fancy-task-modal" style="width:460px;">
+            <div class="teacher-modal-header task-theme-gradient">
+              <div class="modal-header-title">
+                <div class="modal-icon-badge task">👨‍🎓</div>
+                <div><h3>单条创建学生账号 (${activeClass.name})</h3></div>
+              </div>
+              <button class="modal-close-btn" id="btn-close-single-student">✕</button>
             </div>
-            <button class="modal-close-btn" id="btn-close-single-student">✕</button>
-          </div>
-          <div class="teacher-modal-body">
-            <div class="teacher-form-group">
-              <label><span class="req">*</span> 学生真实姓名</label>
-              <input type="text" id="modal-std-name" class="teacher-input fancy" placeholder="输入姓名 (例如: 赵强)" value="赵强">
-            </div>
-            <div class="teacher-form-group">
-              <label><span class="req">*</span> 拼音用户名 (登录账号)</label>
-              <input type="text" id="modal-std-username" class="teacher-input fancy" placeholder="输入拼音账号 (例如: zhaoqiang)" value="zhaoqiang">
-            </div>
-            <div class="teacher-form-group">
-              <label>学号/编号 (如 D 或 2026004)</label>
-              <input type="text" id="modal-std-code" class="teacher-input fancy" placeholder="学号 (例如: D)" value="D">
-            </div>
-            <div class="form-grid-2">
+            <div class="teacher-modal-body">
               <div class="teacher-form-group">
-                <label><span class="req">*</span> 所属班级</label>
-                <select id="modal-std-class" class="teacher-input fancy">${classes.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}</select>
+                <label><span class="req">*</span> 学生真实姓名</label>
+                <input type="text" id="modal-std-name" class="teacher-input fancy" placeholder="输入姓名 (例如: 赵强)" value="赵强">
               </div>
               <div class="teacher-form-group">
-                <label><span class="req">*</span> 所属小组</label>
-                <select id="modal-std-group" class="teacher-input fancy">${groups.map(g => `<option value="${g.id}">${g.name}</option>`).join('')}</select>
+                <label><span class="req">*</span> 拼音用户名 (登录账号)</label>
+                <input type="text" id="modal-std-username" class="teacher-input fancy" placeholder="输入拼音账号 (例如: zhaoqiang)" value="zhaoqiang">
+              </div>
+              <div class="teacher-form-group">
+                <label>学号 / 编号 (例如: S004 或 D)</label>
+                <input type="text" id="modal-std-code" class="teacher-input fancy" placeholder="输入学号" value="D">
+              </div>
+              <div class="teacher-form-group">
+                <label>设置初始密码 (留空统一定为 123)</label>
+                <input type="password" id="modal-std-password" class="teacher-input fancy" placeholder="留空默认为 123">
               </div>
             </div>
+            <div class="teacher-modal-footer">
+              <button class="modal-btn cancel" id="btn-cancel-single-std">取消</button>
+              <button class="modal-btn submit task-theme" id="btn-submit-single-std">👨‍🎓 确认创建账号</button>
+            </div>
           </div>
-          <div class="teacher-modal-footer">
-            <button class="modal-btn cancel" id="btn-cancel-single-std">取消</button>
-            <button class="modal-btn submit task-theme" id="btn-submit-single-std">👤 确认添加学生</button>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(modal);
+        `;
+        document.body.appendChild(modal);
 
-      const closeModal = () => modal.remove();
-      modal.querySelector('#btn-close-single-student').addEventListener('click', closeModal);
-      modal.querySelector('#btn-cancel-single-std').addEventListener('click', closeModal);
-      modal.querySelector('#btn-submit-single-std').addEventListener('click', () => {
-        const name = modal.querySelector('#modal-std-name').value.trim();
-        const username = modal.querySelector('#modal-std-username').value.trim();
-        const code = modal.querySelector('#modal-std-code').value.trim();
-        const classId = modal.querySelector('#modal-std-class').value;
-        const groupId = modal.querySelector('#modal-std-group').value;
-        if (!name || !username) { alert('⚠️ 请输入姓名和登录账号！'); return; }
-        authManager.addStudent(name, username, code || username, classId, groupId, 'student');
-        closeModal();
-        renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
+        const closeModal = () => modal.remove();
+        modal.querySelector('#btn-close-single-student').addEventListener('click', closeModal);
+        modal.querySelector('#btn-cancel-single-std').addEventListener('click', closeModal);
+        modal.querySelector('#btn-submit-single-std').addEventListener('click', () => {
+          const name = modal.querySelector('#modal-std-name').value.trim();
+          const username = modal.querySelector('#modal-std-username').value.trim();
+          const code = modal.querySelector('#modal-std-code').value.trim();
+          const pwd = modal.querySelector('#modal-std-password').value.trim();
+          if (!name || !username) { alert('⚠️ 请填齐学生姓名和拼音账号！'); return; }
+          authManager.addStudentToClass(name, username, code || username, activeClass.id, pwd || '123');
+          closeModal();
+          renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
+        });
       });
-    });
+    }
 
-    // 4. Modal: 批量导入学生
-    container.querySelector('#btn-open-batch-import').addEventListener('click', () => {
+    const btnImportFile = container.querySelector('#btn-v1-import-file');
+    if (btnImportFile) {
+      btnImportFile.addEventListener('click', () => {
+        document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+          <div class="teacher-modal-card fancy-task-modal" style="width:620px; background:radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0f172a 80%);">
+            <div class="teacher-modal-header" style="background:linear-gradient(135deg, rgba(236,72,153,0.3), rgba(139,92,246,0.3));">
+              <div class="modal-header-title">
+                <div class="modal-icon-badge" style="background:rgba(236,72,153,0.3); color:#f472b6;">📥</div>
+                <div>
+                  <h3>上传 XLSX / CSV 文件导入学生账号 (${activeClass.name})</h3>
+                </div>
+              </div>
+              <button class="modal-close-btn" id="btn-close-file-modal">✕</button>
+            </div>
+            <div class="teacher-modal-body">
+              <div class="teacher-form-group">
+                <label><span class="req">*</span> 选择本地 .xlsx 或 .csv 文件上传</label>
+                <div id="file-dropzone" style="border:2px dashed rgba(236,72,153,0.4); border-radius:12px; padding:20px; text-align:center; background:rgba(236,72,153,0.08); cursor:pointer;">
+                  <input type="file" id="modal-file-input" accept=".xlsx, .xls, .csv" style="display:none;">
+                  <div id="dropzone-text">
+                    <span style="font-size:32px;">📄</span>
+                    <div style="font-size:14px; font-weight:700; color:#f472b6; margin-top:6px;">点击选择或拖拽本地 .xlsx / .csv 文件到此处</div>
+                  </div>
+                </div>
+              </div>
+              <div class="teacher-form-group" style="margin-top:14px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                  <label>或 直接复制粘贴文本</label>
+                  <button id="btn-fill-text-demo" style="background:rgba(99,102,241,0.2); border:1px solid #6366f1; color:#a5b4fc; padding:2px 8px; border-radius:4px; font-size:11px; cursor:pointer;">⚡ 填充文本示例</button>
+                </div>
+                <textarea id="modal-paste-textarea" class="teacher-textarea fancy" style="min-height:90px; font-family:monospace; font-size:13px;" placeholder="格式：&#10;赵强, zhaoqiang, D&#10;钱丽, qianli, E, 123456"></textarea>
+              </div>
+            </div>
+            <div class="teacher-modal-footer">
+              <button class="modal-btn cancel" id="btn-cancel-file-modal">取消</button>
+              <button class="modal-btn submit task-theme" id="btn-submit-file-import" style="background:linear-gradient(135deg, #ec4899, #8b5cf6);">
+                🚀 确认解析并导入学生池 (未填密码默认为 123)
+              </button>
+            </div>
+          </div>
+        `;
+        document.body.appendChild(modal);
+
+        const closeModal = () => modal.remove();
+        modal.querySelector('#btn-close-file-modal').addEventListener('click', closeModal);
+        modal.querySelector('#btn-cancel-file-modal').addEventListener('click', closeModal);
+
+        const fileInput = modal.querySelector('#modal-file-input');
+        const dropzone = modal.querySelector('#file-dropzone');
+        const dropText = modal.querySelector('#dropzone-text');
+        const textarea = modal.querySelector('#modal-paste-textarea');
+        let loadedParsedStudents = null;
+
+        dropzone.addEventListener('click', () => fileInput.click());
+        fileInput.addEventListener('change', (e) => {
+          if (e.target.files && e.target.files[0]) {
+            const f = e.target.files[0];
+            dropText.innerHTML = `<span style="font-size:28px;">✅</span><div style="font-size:13px; color:#34d399; font-weight:700;">已读取文件: ${f.name}</div>`;
+            parseXLSXOrCSVFile(f, (parsedList) => {
+              loadedParsedStudents = parsedList;
+              dropText.innerHTML = `<span style="font-size:28px;">🎉</span><div style="font-size:14px; color:#34d399; font-weight:700;">成功解析 ${parsedList.length} 名学生记录！</div>`;
+            });
+          }
+        });
+
+        modal.querySelector('#btn-fill-text-demo').addEventListener('click', () => {
+          textarea.value = `赵强, zhaoqiang, D\n钱丽, qianli, E\n孙伟, sunwei, F\n周梅, zhoumei, G`;
+        });
+
+        modal.querySelector('#btn-submit-file-import').addEventListener('click', () => {
+          let listToImport = loadedParsedStudents;
+          if (!listToImport && textarea.value.trim()) {
+            listToImport = parseCSVText(textarea.value.trim());
+          }
+          if (!listToImport || listToImport.length === 0) {
+            alert('⚠️ 请上传 XLSX/CSV 文件或粘贴名册文本！');
+            return;
+          }
+          const count = authManager.batchAddStudentsToClass(listToImport, activeClass.id);
+          alert(`🎉 成功导入 ${count} 名学生账号存入【${activeClass.name}】！`);
+          closeModal();
+          renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
+        });
+      });
+    }
+
+    const setupGroupModal = (editingGroupId = null) => {
       document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
-      const cls = classes[0];
+      const cls = activeClass;
+      const targetGroup = editingGroupId ? (cls.groups || []).find(g => g.id === editingGroupId) : null;
+      const currentMembers = targetGroup ? (targetGroup.members || []) : [];
+      const availableStudents = authManager.getAvailableStudentsForGroup(cls.id, editingGroupId);
+
       const modal = document.createElement('div');
       modal.className = 'modal-overlay';
       modal.innerHTML = `
-        <div class="teacher-modal-card fancy-task-modal" style="width:620px; background:radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0f172a 80%);">
-          <div class="teacher-modal-header" style="background:linear-gradient(135deg, rgba(236,72,153,0.3), rgba(139,92,246,0.3));">
+        <div class="teacher-modal-card fancy-task-modal" style="width:580px; background:radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0f172a 80%);">
+          <div class="teacher-modal-header" style="background:linear-gradient(135deg, rgba(16,185,129,0.3), rgba(6,182,212,0.3));">
             <div class="modal-header-title">
-              <div class="modal-icon-badge" style="background:rgba(236,72,153,0.3); color:#f472b6;">📥</div>
+              <div class="modal-icon-badge" style="background:rgba(16,185,129,0.3); color:#34d399;">👥</div>
               <div>
-                <h3>批量导入学生账号与小组划定 (默认密码 123)</h3>
-                <p style="font-size:12px; color:#cbd5e1;">支持直接粘贴 Excel/TXT/CSV 多行学生名册数据</p>
+                <h3>${targetGroup ? `编辑【${targetGroup.name}】小组成员` : '新建小组并勾选小组成员'} (${cls.name})</h3>
               </div>
             </div>
-            <button class="modal-close-btn" id="btn-close-batch-modal">✕</button>
+            <button class="modal-close-btn" id="btn-close-group-edit">✕</button>
           </div>
           <div class="teacher-modal-body">
-            <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.1); border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:12px; color:#cbd5e1; line-height:1.6;">
-              <b style="color:#34d399;">格式说明：</b> 每一行为一名学生，字段用逗号、空格或 Tab 分隔。<br>
-              标准格式: <code style="color:#38bdf8;">姓名, 拼音账号(用户名), 学号, 所属小组名称</code><br>
-              示例：<span style="color:#a5b4fc;">赵强, zhaoqiang, D, 第1小组</span>
+            <div class="teacher-form-group">
+              <label><span class="req">*</span> 小组名称</label>
+              <input type="text" id="modal-grp-name" class="teacher-input fancy" value="${targetGroup ? targetGroup.name : `第${(cls.groups || []).length + 1}小组`}" placeholder="输入小组名称">
             </div>
 
-            <div class="teacher-form-group">
-              <div style="display:flex; justify-space-between; align-items:center; margin-bottom:6px;">
-                <label><span class="req">*</span> 粘贴文本数据</label>
-                <button id="btn-fill-demo-data" style="background:rgba(99,102,241,0.2); border:1px solid #6366f1; color:#a5b4fc; padding:2px 8px; border-radius:4px; font-size:11px; cursor:pointer;">⚡ 填充示范数据</button>
+            <div class="teacher-form-group" style="margin-top:10px;">
+              <label><span class="req">*</span> 勾选归属本组的学生成员 (可选候选人: ${availableStudents.length} 人)</label>
+              <div style="background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px; max-height:220px; overflow-y:auto; display:flex; flex-direction:column; gap:8px;">
+                ${availableStudents.length === 0 ? '<div style="color:#94a3b8; font-size:12px; text-align:center;">暂无未分组的学生。</div>' : ''}
+                ${availableStudents.map(s => {
+                  const isChecked = currentMembers.includes(s.id);
+                  const isLeader = s.studentCode === 'A';
+                  return `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(30,41,59,0.6); padding:8px 12px; border-radius:8px;">
+                      <label style="display:flex; align-items:center; gap:10px; cursor:pointer; font-size:13px; color:#f8fafc;">
+                        <input type="checkbox" class="chk-grp-member" value="${s.id}" ${isChecked ? 'checked' : ''} style="width:16px; height:16px; cursor:pointer;">
+                        <span>${s.avatar || '👤'} <b>${s.name}</b> (${s.username})</span>
+                      </label>
+                      <label style="font-size:11px; color:#fbbf24; cursor:pointer; display:flex; align-items:center; gap:4px;">
+                        <input type="radio" name="grp-leader-radio" value="${s.id}" ${isLeader || (isChecked && currentMembers[0] === s.id) ? 'checked' : ''}>
+                        设为组长
+                      </label>
+                    </div>
+                  `;
+                }).join('')}
               </div>
-              <textarea id="modal-batch-text" class="teacher-textarea fancy" style="min-height:140px; font-family:monospace; font-size:13px;" placeholder="粘贴多行数据，例如：&#10;赵强, zhaoqiang, D, 第1小组, 组员&#10;钱丽, qianli, E, 第1小组, 组员&#10;孙伟, sunwei, F, 第2小组, 组长"></textarea>
             </div>
           </div>
           <div class="teacher-modal-footer">
-            <button class="modal-btn cancel" id="btn-cancel-batch">取消</button>
-            <button class="modal-btn submit task-theme" id="btn-submit-batch-import" style="background:linear-gradient(135deg, #ec4899, #8b5cf6);">
-              🚀 批量导入并生成账号
+            <button class="modal-btn cancel" id="btn-cancel-grp-edit">取消</button>
+            <button class="modal-btn submit task-theme" id="btn-submit-grp-edit" style="background:linear-gradient(135deg, #10b981, #059669);">
+              💾 保存小组划分配置
             </button>
           </div>
         </div>
@@ -1190,194 +1516,222 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       document.body.appendChild(modal);
 
       const closeModal = () => modal.remove();
-      modal.querySelector('#btn-close-batch-modal').addEventListener('click', closeModal);
-      modal.querySelector('#btn-cancel-batch').addEventListener('click', closeModal);
+      modal.querySelector('#btn-close-group-edit').addEventListener('click', closeModal);
+      modal.querySelector('#btn-cancel-grp-edit').addEventListener('click', closeModal);
 
-      const batchTextarea = modal.querySelector('#modal-batch-text');
-      modal.querySelector('#btn-fill-demo-data').addEventListener('click', () => {
-        batchTextarea.value = `赵强, zhaoqiang, D, 第1小组, 组员\n钱丽, qianli, E, 第1小组, 组员\n孙伟, sunwei, F, 第2小组, 组长\n周梅, zhoumei, G, 第2小组, 组员`;
-      });
+      modal.querySelector('#btn-submit-grp-edit').addEventListener('click', () => {
+        const name = modal.querySelector('#modal-grp-name').value.trim();
+        const selectedUserIds = Array.from(modal.querySelectorAll('.chk-grp-member:checked')).map(cb => cb.value);
+        const leaderRadio = modal.querySelector('input[name="grp-leader-radio"]:checked');
+        const leaderUserId = leaderRadio ? leaderRadio.value : (selectedUserIds[0] || null);
 
-      modal.querySelector('#btn-submit-batch-import').addEventListener('click', () => {
-        const text = batchTextarea.value.trim();
-        if (!text) { alert('⚠️ 请输入或粘贴学生名册数据！'); return; }
-        const count = authManager.importStudentsBatch(text, cls.id);
-        alert(`🎉 成功批量导入 ${count} 名学生账号！初始密码统一为 123。`);
+        if (!name) { alert('⚠️ 请输入小组名称！'); return; }
+        authManager.updateGroupMembers(cls.id, editingGroupId || ('group_' + Date.now()), name, selectedUserIds, leaderUserId);
         closeModal();
         renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
       });
+    };
+
+    const btnCreateGroupV1 = container.querySelector('#btn-v1-create-group');
+    if (btnCreateGroupV1) btnCreateGroupV1.addEventListener('click', () => setupGroupModal(null));
+
+    container.querySelectorAll('.btn-edit-group-members').forEach(btn => {
+      btn.addEventListener('click', () => setupGroupModal(btn.dataset.gid));
     });
 
-    // 5. Task & Announcement Modals
-    container.querySelector('#btn-open-task-modal').addEventListener('click', () => {
-      document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
-      const modal = document.createElement('div');
-      modal.className = 'modal-overlay';
-      modal.innerHTML = `
-        <div class="teacher-modal-card fancy-task-modal">
-          <div class="teacher-modal-header task-theme-gradient">
-            <div class="modal-header-title">
-              <div class="modal-icon-badge task">📌</div>
-              <div><div class="modal-tag-pill">📌 教学任务管理矩阵 · 起止时间控制</div><h3>发布全新协作写作任务</h3></div>
-            </div>
-            <button class="modal-close-btn" id="btn-close-task-modal">✕</button>
-          </div>
-          <div class="teacher-modal-body">
-            <div class="form-grid-2">
-              <div class="teacher-form-group">
-                <label><span class="req">*</span> 关联受众教学班级</label>
-                <select id="modal-task-class" class="teacher-input fancy">${classes.map(c => `<option value="${c.id}">🏫 ${c.name}</option>`).join('')}</select>
-              </div>
-              <div class="teacher-form-group">
-                <label><span class="req">*</span> 任务预估时长 (分钟)</label>
-                <input type="number" id="modal-task-duration" class="teacher-input fancy" value="150">
-                <div class="preset-chip-group">
-                  <span class="preset-chip" data-duration="60">⚡ 60m</span>
-                  <span class="preset-chip" data-duration="90">⏱️ 90m</span>
-                  <span class="preset-chip active" data-duration="150">🌟 150m (标准)</span>
-                  <span class="preset-chip" data-duration="180">🔥 180m</span>
-                </div>
-              </div>
-            </div>
-            <div class="form-grid-2" style="margin-top:6px;">
-              <div class="teacher-form-group">
-                <label><span class="req">*</span> 📅 任务开始时间</label>
-                <input type="datetime-local" id="modal-task-start" class="teacher-input fancy">
-                <div class="preset-chip-group" style="margin-top:4px;"><span class="preset-chip" id="btn-start-now">⚡ 设为当前时间</span></div>
-              </div>
-              <div class="teacher-form-group">
-                <label><span class="req">*</span> ⌛ 任务截止时间 (Deadline)</label>
-                <input type="datetime-local" id="modal-task-deadline" class="teacher-input fancy">
-                <div class="preset-chip-group" style="margin-top:4px;">
-                  <span class="preset-chip" data-addhours="2.5">⏱️ +2.5小时</span>
-                  <span class="preset-chip" data-addhours="24">📅 +24小时 (明天)</span>
-                  <span class="preset-chip" data-addhours="168">🗓️ +7天 (下周)</span>
-                </div>
-              </div>
-            </div>
-            <div class="teacher-form-group" style="margin-top:6px;">
-              <label><span class="req">*</span> 写作任务名称</label>
-              <input type="text" id="modal-task-title" class="teacher-input fancy" value="《现代教育技术》期末协作研究设计方案编写" placeholder="输入任务名称">
-            </div>
-            <div class="teacher-form-group">
-              <label><span class="req">*</span> 任务详细说明与要求</label>
-              <textarea id="modal-task-desc" class="teacher-textarea fancy" placeholder="请输入任务的具体说明与考核标准...">请在150分钟内，以小组为单位完成包含研究背景、研究问题、文献综述、研究设计与方法、不足反思与参考文献的高质量方案编写，并参加期末答辩。</textarea>
-            </div>
-          </div>
-          <div class="teacher-modal-footer">
-            <button class="modal-btn cancel" id="btn-cancel-task">取消</button>
-            <button class="modal-btn submit task-theme" id="btn-submit-new-task">🚀 确认发布写作任务</button>
-          </div>
-        </div>
-      `;
-      document.body.appendChild(modal);
-
-      const closeModal = () => modal.remove();
-      modal.querySelector('#btn-close-task-modal').addEventListener('click', closeModal);
-      modal.querySelector('#btn-cancel-task').addEventListener('click', closeModal);
-
-      const startInput = modal.querySelector('#modal-task-start');
-      const deadlineInput = modal.querySelector('#modal-task-deadline');
-      const formatLocal = (d) => {
-        const pad = n => String(n).padStart(2, '0');
-        return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-      };
-      const now = new Date();
-      startInput.value = formatLocal(now);
-      deadlineInput.value = formatLocal(new Date(now.getTime() + 150 * 60 * 1000));
-
-      modal.querySelector('#btn-start-now').addEventListener('click', () => { startInput.value = formatLocal(new Date()); });
-      modal.querySelector('#btn-submit-new-task').addEventListener('click', () => {
-        const classId = modal.querySelector('#modal-task-class').value;
-        const title = modal.querySelector('#modal-task-title').value.trim();
-        const desc = modal.querySelector('#modal-task-desc').value.trim();
-        const startTime = startInput.value ? startInput.value.replace('T', ' ') : null;
-        const deadline = deadlineInput.value ? deadlineInput.value.replace('T', ' ') : null;
-        if (!title || !desc) { alert('⚠️ 请填齐任务标题与说明！'); return; }
-        authManager.createTask(title, classId, desc, [{ name: '研究设计指南.pdf', size: '1.5MB' }], startTime, deadline, 150);
-        closeModal();
-        renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
+    container.querySelectorAll('.delete-student-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (confirm('确认移除此学生账号？')) {
+          authManager.deleteStudent(btn.dataset.id);
+          renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
+        }
       });
     });
 
-    container.querySelector('#btn-open-ann-modal').addEventListener('click', () => {
-      document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
-      let uploadedFile = { name: '协作写作问卷测量规范范例.pdf', size: '2.4 MB' };
-      const modal = document.createElement('div');
-      modal.className = 'modal-overlay';
-      modal.innerHTML = `
-        <div class="teacher-modal-card fancy-ann-modal">
-          <div class="teacher-modal-header ann-theme-gradient">
-            <div class="modal-header-title"><div class="modal-icon-badge ann">📢</div><div><h3>发布课堂即时通知 (含教学资源上传)</h3></div></div>
-            <button class="modal-close-btn" id="btn-close-ann-modal">✕</button>
-          </div>
-          <div class="teacher-modal-body">
-            <div class="teacher-form-group">
-              <label><span class="req">*</span> 关联写作任务</label>
-              <select id="modal-ann-task" class="teacher-input fancy">${tasks.map(t => `<option value="${t.id}">📌 ${t.title}</option>`).join('')}</select>
+    container.querySelectorAll('.btn-delete-group').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if (confirm('确认解散并删除此小组？')) {
+          authManager.deleteGroup(activeClass.id, btn.dataset.gid);
+          renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
+        }
+      });
+    });
+
+    // 2. View 2 Handlers (Task creation with explicit Start/Deadline times & Notice file uploader)
+    const btnOpenTaskV2 = container.querySelector('#btn-v2-open-task-modal');
+    if (btnOpenTaskV2) {
+      btnOpenTaskV2.addEventListener('click', () => {
+        document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+        const now = new Date();
+        const startStr = now.toISOString().slice(0, 16);
+        const deadlineDate = new Date(now.getTime() + 150 * 60 * 1000);
+        const deadlineStr = deadlineDate.toISOString().slice(0, 16);
+
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+          <div class="teacher-modal-card fancy-task-modal" style="width:620px;">
+            <div class="teacher-modal-header task-theme-gradient">
+              <div class="modal-header-title"><div class="modal-icon-badge task">📌</div><div><h3>发布全新写作任务 (含起止时间控制)</h3></div></div>
+              <button class="modal-close-btn" id="btn-close-task-modal">✕</button>
             </div>
-            <div class="teacher-form-group">
-              <label><span class="req">*</span> 通知标题</label>
-              <input type="text" id="modal-ann-title" class="teacher-input fancy" value="📢 教学通知：请及时完成文献与方法衔接" placeholder="输入通知标题">
-            </div>
-            <div class="teacher-form-group">
-              <label><span class="req">*</span> 通知详细内容</label>
-              <textarea id="modal-ann-content" class="teacher-textarea fancy" placeholder="输入推送给全班学生的通知正文...">请各组在后10分钟内集中检查【研究问题与假设】，并点击弹窗确认已读。</textarea>
-            </div>
-            <div class="teacher-form-group">
-              <label>📎 随附教学资源文件上传 (点击选择本地文件或保留默认范例)</label>
-              <div id="ann-file-dropzone" style="border:2px dashed rgba(139,92,246,0.4); border-radius:10px; padding:14px; text-align:center; background:rgba(139,92,246,0.08); cursor:pointer; transition:all 0.2s;">
-                <input type="file" id="modal-ann-file" style="display:none;">
-                <div id="ann-file-preview">
-                  <span style="font-size:24px;">📁</span>
-                  <div style="font-size:13px; color:#a78bfa; font-weight:700; margin-top:4px;">点击上传电脑本地教学文件 (.pdf, .docx, .zip)</div>
-                  <div style="font-size:11px; color:#cbd5e1; margin-top:4px;">当前已附资源: <b style="color:#34d399;">协作写作问卷测量规范范例.pdf (2.4 MB)</b></div>
+            <div class="teacher-modal-body">
+              <div class="form-grid-2">
+                <div class="teacher-form-group">
+                  <label><span class="req">*</span> 关联受众教学班级</label>
+                  <select id="modal-task-class" class="teacher-input fancy">${classes.map(c => `<option value="${c.id}">🏫 ${c.name}</option>`).join('')}</select>
+                </div>
+                <div class="teacher-form-group">
+                  <label><span class="req">*</span> 任务预估时长 (分钟)</label>
+                  <input type="number" id="modal-task-duration" class="teacher-input fancy" value="150">
                 </div>
               </div>
+
+              <!-- 起止时间控制框 -->
+              <div class="form-grid-2" style="margin-top:8px;">
+                <div class="teacher-form-group">
+                  <label><span class="req">*</span> 📅 任务开始时间</label>
+                  <input type="datetime-local" id="modal-task-start" class="teacher-input fancy" value="${startStr}">
+                </div>
+                <div class="teacher-form-group">
+                  <label><span class="req">*</span> ⌛ 任务截止时间</label>
+                  <input type="datetime-local" id="modal-task-deadline" class="teacher-input fancy" value="${deadlineStr}">
+                </div>
+              </div>
+
+              <div class="teacher-form-group" style="margin-top:8px;">
+                <label><span class="req">*</span> 写作任务名称</label>
+                <input type="text" id="modal-task-title" class="teacher-input fancy" value="《现代教育技术》期末协作研究设计方案编写">
+              </div>
+              <div class="teacher-form-group">
+                <label><span class="req">*</span> 任务详细说明与要求</label>
+                <textarea id="modal-task-desc" class="teacher-textarea fancy" style="min-height:90px;">请在150分钟内，以小组为单位完成包含研究背景、研究问题、文献综述、研究设计与方法、不足反思与参考文献的高质量方案编写，并参加期末答辩。</textarea>
+              </div>
+            </div>
+            <div class="teacher-modal-footer">
+              <button class="modal-btn cancel" id="btn-cancel-task">取消</button>
+              <button class="modal-btn submit task-theme" id="btn-submit-new-task">🚀 确认发布写作任务</button>
             </div>
           </div>
-          <div class="teacher-modal-footer">
-            <button class="modal-btn cancel" id="btn-cancel-ann">取消</button>
-            <button class="modal-btn submit ann-theme" id="btn-submit-new-ann">📢 广播发布并推送弹窗</button>
+        `;
+        document.body.appendChild(modal);
+
+        const closeModal = () => modal.remove();
+        modal.querySelector('#btn-close-task-modal').addEventListener('click', closeModal);
+        modal.querySelector('#btn-cancel-task').addEventListener('click', closeModal);
+        modal.querySelector('#btn-submit-new-task').addEventListener('click', () => {
+          const classId = modal.querySelector('#modal-task-class').value;
+          const title = modal.querySelector('#modal-task-title').value.trim();
+          const desc = modal.querySelector('#modal-task-desc').value.trim();
+          const startTime = modal.querySelector('#modal-task-start').value;
+          const deadline = modal.querySelector('#modal-task-deadline').value;
+          const duration = modal.querySelector('#modal-task-duration').value;
+
+          if (!title || !desc) { alert('⚠️ 请填齐任务标题与说明！'); return; }
+          authManager.createTask(title, classId, desc, [{ name: '研究设计指南.pdf', size: '1.5MB' }], startTime, deadline, duration);
+          closeModal();
+          renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
+        });
+      });
+    }
+
+    const btnOpenAnnV2 = container.querySelector('#btn-v2-open-ann-modal');
+    if (btnOpenAnnV2) {
+      btnOpenAnnV2.addEventListener('click', () => {
+        document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+        const modal = document.createElement('div');
+        modal.className = 'modal-overlay';
+        modal.innerHTML = `
+          <div class="teacher-modal-card fancy-ann-modal" style="width:600px;">
+            <div class="teacher-modal-header ann-theme-gradient">
+              <div class="modal-header-title">
+                <div class="modal-icon-badge ann">📢</div>
+                <div>
+                  <h3>发布课堂即时通知 (含随附文件选择与上传)</h3>
+                  <p style="font-size:12px; color:#cbd5e1;">选择或拖拽本地文件随附发布，学生端可点击下载</p>
+                </div>
+              </div>
+              <button class="modal-close-btn" id="btn-close-ann-modal">✕</button>
+            </div>
+            <div class="teacher-modal-body">
+              <div class="teacher-form-group">
+                <label><span class="req">*</span> 关联写作任务</label>
+                <select id="modal-ann-task" class="teacher-input fancy">${tasks.map(t => `<option value="${t.id}">📌 ${t.title}</option>`).join('')}</select>
+              </div>
+              <div class="teacher-form-group">
+                <label><span class="req">*</span> 通知标题</label>
+                <input type="text" id="modal-ann-title" class="teacher-input fancy" value="📢 教学通知：请及时完成文献与方法衔接">
+              </div>
+              <div class="teacher-form-group">
+                <label><span class="req">*</span> 通知详细内容</label>
+                <textarea id="modal-ann-content" class="teacher-textarea fancy" style="min-height:80px;">请各组在后10分钟内集中检查【研究问题与假设】，并点击弹窗确认已读。</textarea>
+              </div>
+
+              <div class="teacher-form-group">
+                <label>📎 随附教学资源文件上传 (支持选择/拖拽 PDF, DOCX, ZIP 等)</label>
+                <div id="ann-file-dropzone" style="border:2px dashed rgba(168,85,247,0.4); border-radius:10px; padding:16px; text-align:center; background:rgba(168,85,247,0.08); cursor:pointer;">
+                  <input type="file" id="modal-ann-file-input" style="display:none;">
+                  <div id="ann-dropzone-text">
+                    <span style="font-size:24px;">📁</span>
+                    <div style="font-size:13px; font-weight:700; color:#c084fc; margin-top:4px;">点击选择或拖拽本地随附资源文件</div>
+                  </div>
+                </div>
+              </div>
+
+            </div>
+            <div class="teacher-modal-footer">
+              <button class="modal-btn cancel" id="btn-cancel-ann">取消</button>
+              <button class="modal-btn submit ann-theme" id="btn-submit-new-ann">📢 广播发布并推送弹窗</button>
+            </div>
           </div>
-        </div>
-      `;
-      document.body.appendChild(modal);
+        `;
+        document.body.appendChild(modal);
 
-      const closeModal = () => modal.remove();
-      modal.querySelector('#btn-close-ann-modal').addEventListener('click', closeModal);
-      modal.querySelector('#btn-cancel-ann').addEventListener('click', closeModal);
+        const closeModal = () => modal.remove();
+        modal.querySelector('#btn-close-ann-modal').addEventListener('click', closeModal);
+        modal.querySelector('#btn-cancel-ann').addEventListener('click', closeModal);
 
-      const fileInput = modal.querySelector('#modal-ann-file');
-      const dropzone = modal.querySelector('#ann-file-dropzone');
-      const preview = modal.querySelector('#ann-file-preview');
+        const fileInput = modal.querySelector('#modal-ann-file-input');
+        const dropzone = modal.querySelector('#ann-file-dropzone');
+        const dropText = modal.querySelector('#ann-dropzone-text');
+        let selectedAttachment = { name: '协作写作问卷测量规范范例.pdf', size: '2.4 MB' };
 
-      if (dropzone && fileInput) {
         dropzone.addEventListener('click', () => fileInput.click());
         fileInput.addEventListener('change', (e) => {
           if (e.target.files && e.target.files[0]) {
             const f = e.target.files[0];
             const sizeMB = (f.size / (1024 * 1024)).toFixed(1) + ' MB';
-            uploadedFile = { name: f.name, size: sizeMB };
-            preview.innerHTML = `
-              <span style="font-size:24px;">✅</span>
-              <div style="font-size:13px; color:#34d399; font-weight:700; margin-top:4px;">已上传本地文件: ${f.name}</div>
-              <div style="font-size:11px; color:#a5b4fc;">大小: ${sizeMB} | 准备随着通知广播推送给全组</div>
-            `;
+            selectedAttachment = { name: f.name, size: sizeMB };
+            dropText.innerHTML = `<span style="font-size:24px;">✅</span><div style="font-size:13px; color:#34d399; font-weight:700;">已选中随附文件: ${f.name} (${sizeMB})</div>`;
           }
         });
-      }
 
-      modal.querySelector('#btn-submit-new-ann').addEventListener('click', () => {
-        const taskId = modal.querySelector('#modal-ann-task').value;
-        const title = modal.querySelector('#modal-ann-title').value.trim();
-        const content = modal.querySelector('#modal-ann-content').value.trim();
-        if (!title || !content) { alert('⚠️ 请填齐通知标题与内容！'); return; }
-        authManager.publishAnnouncement(taskId, title, content, uploadedFile);
-        closeModal();
+        modal.querySelector('#btn-submit-new-ann').addEventListener('click', () => {
+          const taskId = modal.querySelector('#modal-ann-task').value;
+          const title = modal.querySelector('#modal-ann-title').value.trim();
+          const content = modal.querySelector('#modal-ann-content').value.trim();
+          if (!title || !content) { alert('⚠️ 请填齐通知标题与内容！'); return; }
+          authManager.publishAnnouncement(taskId, title, content, selectedAttachment);
+          closeModal();
+          renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
+        });
+      });
+    }
+
+    // 3. View 3 Handlers (Switching live monitored group & Excel export)
+    container.querySelectorAll('.btn-switch-monitor-group').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.activeMonitorGroupId = btn.dataset.gid;
         renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
       });
     });
+
+    const btnExportExcel = container.querySelector('#btn-export-all-excel');
+    if (btnExportExcel) {
+      btnExportExcel.addEventListener('click', () => {
+        authManager.exportGroupChatLogsToExcel(activeMonitorGId, state.chatLogs);
+      });
+    }
   }
 
   /* ==========================================================================
@@ -1517,8 +1871,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           </div>
           <div>
             <div style="font-weight:700; color:#a78bfa; margin-bottom:8px; font-size:13px; display:flex; justify-content:space-between; align-items:center;">
-              <span>👥 成员具体分工 (由教师端统筹设定):</span>
-              ${!isContractLocked ? `<button id="btn-add-team-member" style="background:rgba(99,102,241,0.2); border:1px dashed #6366f1; color:#a5b4fc; padding:2px 8px; border-radius:4px; font-size:11px; cursor:pointer; font-weight:700;">+ 增加小组成员</button>` : ''}
+              <span>👥 成员具体分工 (由教师端在界面一统一设定):</span>
             </div>
             <div style="display:flex; flex-direction:column; gap:10px; font-size:13px;">
               ${membersList.map(m => {
@@ -1527,7 +1880,6 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                   <div style="display:flex; align-items:center; gap:8px;">
                     <span style="white-space:nowrap; font-weight:700; color:${m.color || '#818cf8'}; min-width:120px;">${m.avatar || '👤'} ${m.name}:</span>
                     <input type="text" class="large-contract-input task-assignment-input" data-mid="${m.id}" value="${taskVal}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''} style="flex:1;" placeholder="分配具体负责的写作章节与任务">
-                    ${!isContractLocked && totalMembersCount > 2 ? `<button class="btn-remove-member" data-mid="${m.id}" style="background:rgba(239,68,68,0.15); border:1px solid rgba(239,68,68,0.3); color:#f87171; border-radius:4px; padding:4px 8px; font-size:11px; cursor:pointer;" title="移除此成员">✕</button>` : ''}
                   </div>
                 `;
               }).join('')}
@@ -1558,7 +1910,6 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       </div>
     `;
 
-    // Bind contract input events
     const topicInput = canvas.querySelector('#contract-topic-input');
     if (topicInput && !isContractLocked) {
       topicInput.addEventListener('input', (e) => {
@@ -1590,19 +1941,6 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           }
         });
       }
-    });
-
-    const addBtn = canvas.querySelector('#btn-add-team-member');
-    if (addBtn && !isContractLocked) {
-      addBtn.addEventListener('click', () => {
-        if (handlers.onAddMember) handlers.onAddMember();
-      });
-    }
-
-    canvas.querySelectorAll('.btn-remove-member').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if (handlers.onRemoveMember) handlers.onRemoveMember(btn.dataset.mid);
-      });
     });
 
     if (!isContractLocked) {
@@ -1707,7 +2045,6 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           </div>
         ` : ''}
 
-        <!-- Stage 3 Navigation Sub-Bar -->
         <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(30,41,59,0.8); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px 12px; flex-shrink:0;">
           <div style="display:flex; gap:10px;">
             <button id="tab-btn-defense" style="background:${activeTab === 'defense' ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'rgba(255,255,255,0.08)'}; border:none; color:white; padding:8px 16px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer;">
@@ -1731,7 +2068,6 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             <div style="display:flex; flex-direction:column; gap:16px;">
               ${s3.feedbackItems.map((item, idx) => `
                 <div style="background:rgba(15,23,42,0.7); padding:16px; border-radius:12px; border:1px solid ${item.role === 'opponent' ? 'rgba(239,68,68,0.4)' : 'rgba(34,197,94,0.4)'}; box-shadow:0 4px 12px rgba(0,0,0,0.3);">
-                  <!-- 1. Speaker Header & Title -->
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <div style="display:flex; align-items:center; gap:8px;">
                       <span style="font-size:18px;">${item.role === 'opponent' ? '🔴' : '🟢'}</span>
@@ -1741,18 +2077,12 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                       ${item.status === 'adopted' ? '✅ 已研讨并归档' : '⏳ 待组内研讨裁决'}
                     </span>
                   </div>
-
-                  <!-- 2. Original Critique Content -->
                   <div style="font-size:13px; color:#f1f5f9; background:rgba(30,41,59,0.8); padding:10px 14px; border-radius:8px; margin-bottom:10px; line-height:1.6;">
                     <b>${item.speaker}意见原文:</b> ${item.content}
                   </div>
-
-                  <!-- 3. Intermediate Agent Guidance per Suggestion -->
                   <div style="font-size:13px; color:#fef08a; background:rgba(234,179,8,0.12); border:1px solid rgba(234,179,8,0.3); padding:10px 14px; border-radius:8px; margin-bottom:12px; line-height:1.6;">
                     <b>🟡 中间委员 Agent 针对性引导思考:</b><br>${item.neutralGuidance}
                   </div>
-
-                  <!-- 4. Student Resolution & Button -->
                   ${item.response ? `
                     <div style="font-size:13px; color:#a5b4fc; background:rgba(99,102,241,0.15); border-left:4px solid var(--accent-indigo); padding:10px 14px; border-radius:6px;">
                       <b>👥 组内研讨统一裁决结论:</b> ${item.response}
@@ -1767,7 +2097,6 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             </div>
           </div>
         ` : `
-          <!-- Unified Editor inside Stage 3 -->
           <div class="card" style="flex:1; display:flex; flex-direction:column; padding:20px;">
             <div class="card-title" style="margin-bottom:10px;">
               <span>📝 论文全篇大正文 ${isFinalSubmitted ? '<span style="font-size:11px; color:#34d399; margin-left:6px;">(🔒 终稿已提交 · 归档只读查阅)</span>' : '(依据答辩意见实时修改终稿)'}</span>
@@ -1779,7 +2108,6 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       </div>
     `;
 
-    // Event Bindings for Stage 3 Tabs
     const tabDefense = canvas.querySelector('#tab-btn-defense');
     const tabEditor = canvas.querySelector('#tab-btn-editor');
     if (tabDefense) tabDefense.addEventListener('click', () => handlers.onSwitchStage3Tab('defense'));
@@ -2304,7 +2632,6 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       const currentUser = this.authManager.getCurrentUser();
       const currentGroupId = currentUser && currentUser.groupId ? currentUser.groupId : 'group_1';
 
-      // Load dynamic group members configured by teacher for this group
       const teacherMembers = this.authManager.getGroupMembersForWorkspace(currentGroupId);
       if (teacherMembers && Object.keys(teacherMembers).length > 0) {
         this.state.members = teacherMembers;
@@ -2319,52 +2646,6 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         onRefresh: () => { this.renderStudentWorkspace(); },
         onContractChange: () => {
           this.syncStage1();
-        },
-        onAddMember: () => {
-          const memberCount = Object.keys(this.state.members).length;
-          const nextLetter = String.fromCharCode(65 + memberCount);
-          const name = prompt(`请输入新增加的小组成员姓名 (例如: 赵强/学生${nextLetter}):`, `赵强 (学生${nextLetter})`);
-          if (name) {
-            const mId = nextLetter;
-            const colors = ['#ec4899', '#8b5cf6', '#14b8a6', '#f97316', '#06b6d4', '#10b981'];
-            const chosenColor = colors[(memberCount - 3) % colors.length] || '#ec4899';
-            this.state.members[mId] = {
-              id: mId,
-              name,
-              roleTitle: '组员',
-              avatar: '🧑‍🎓',
-              color: chosenColor,
-              studentCode: mId
-            };
-            if (!this.state.stage1.contract.taskAssignments) this.state.stage1.contract.taskAssignments = {};
-            this.state.stage1.contract.taskAssignments[mId] = '负责撰写拓展章节与资料整理';
-
-            if (!this.state.stage1.contract.confirmedMembers) this.state.stage1.contract.confirmedMembers = {};
-            this.state.stage1.contract.confirmedMembers[mId] = false;
-
-            if (!this.state.stage1.votes) this.state.stage1.votes = {};
-            if (!this.state.stage1.hasVoted) this.state.stage1.hasVoted = {};
-            this.state.stage1.votes[mId] = null;
-            this.state.stage1.hasVoted[mId] = false;
-
-            this.syncStage1();
-            this.renderStudentWorkspace();
-          }
-        },
-        onRemoveMember: (mId) => {
-          if (Object.keys(this.state.members).length <= 2) {
-            alert('⚠️ 小组人数不能少于 2 人。');
-            return;
-          }
-          if (confirm(`确认移除小组成员 ${this.state.members[mId] ? this.state.members[mId].name : mId}？`)) {
-            delete this.state.members[mId];
-            if (this.state.stage1.contract.taskAssignments) delete this.state.stage1.contract.taskAssignments[mId];
-            if (this.state.stage1.contract.confirmedMembers) delete this.state.stage1.contract.confirmedMembers[mId];
-            if (this.state.stage1.votes) delete this.state.stage1.votes[mId];
-            if (this.state.stage1.hasVoted) delete this.state.stage1.hasVoted[mId];
-            this.syncStage1();
-            this.renderStudentWorkspace();
-          }
         },
         onConfirmContract: () => {
           if (this.state.stage1.contract.isConfirmed) {
