@@ -399,40 +399,65 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       return newClass;
     }
 
+    getClassStudents(classId) {
+      const users = this.getUsers();
+      return users.filter(u => u.role !== 'teacher' && (
+        (u.classIds && Array.isArray(u.classIds) && u.classIds.includes(classId)) ||
+        u.classId === classId
+      ));
+    }
+
     addStudentToClass(name, username, studentCode, classId, customPassword = null) {
       const users = this.getUsers();
       const classes = this.getClasses();
       const cleanUsername = username.trim().toLowerCase();
-      const existingIndex = users.findIndex(u => (u.username || '').toLowerCase() === cleanUsername || (u.studentCode && u.studentCode === studentCode));
+      const cleanCode = (studentCode || cleanUsername).trim();
+      const existingIndex = users.findIndex(u => (u.username || '').toLowerCase() === cleanUsername || (u.studentCode && u.studentCode === cleanCode));
       const avatars = ['👨‍🎓', '👩‍🎓', '🧑‍🎓', '🎓', '📚', '🌟'];
       const avatar = avatars[users.length % avatars.length];
 
-      const newUser = {
-        id: existingIndex !== -1 ? users[existingIndex].id : 'u_student_' + Date.now() + Math.floor(Math.random() * 1000),
-        username: cleanUsername,
-        email: `${cleanUsername}@jizhi.edu`,
-        password: (customPassword && customPassword.trim()) ? customPassword.trim() : '123',
-        name: name.trim(),
-        role: 'student',
-        studentCode: (studentCode || cleanUsername).trim(),
-        avatar: avatar,
-        classId: classId || 'class_101',
-        groupId: existingIndex !== -1 ? users[existingIndex].groupId : null
-      };
+      let targetUser;
+      if (existingIndex !== -1) {
+        targetUser = users[existingIndex];
+        if (name && name.trim()) targetUser.name = name.trim();
+        if (customPassword && customPassword.trim()) targetUser.password = customPassword.trim();
+        if (studentCode && studentCode.trim()) targetUser.studentCode = studentCode.trim();
 
-      if (existingIndex !== -1) users[existingIndex] = newUser;
-      else users.push(newUser);
+        if (!targetUser.classIds || !Array.isArray(targetUser.classIds)) {
+          targetUser.classIds = targetUser.classId ? [targetUser.classId] : [];
+        }
+        if (classId && !targetUser.classIds.includes(classId)) {
+          targetUser.classIds.push(classId);
+        }
+        if (!targetUser.classId) targetUser.classId = classId;
+      } else {
+        targetUser = {
+          id: 'u_student_' + Date.now() + Math.floor(Math.random() * 1000),
+          username: cleanUsername,
+          email: `${cleanUsername}@jizhi.edu`,
+          password: (customPassword && customPassword.trim()) ? customPassword.trim() : '123',
+          name: name.trim(),
+          role: 'student',
+          studentCode: cleanCode,
+          avatar: avatar,
+          classId: classId || 'class_101',
+          classIds: classId ? [classId] : ['class_101'],
+          groupId: null
+        };
+        users.push(targetUser);
+      }
+
       localStorage.setItem(STORAGE_KEY_USERS_DB, JSON.stringify(users));
 
-      const targetClass = classes.find(c => c.id === newUser.classId) || classes[0];
+      const targetClass = classes.find(c => c.id === (classId || 'class_101')) || classes[0];
       if (targetClass) {
         if (!targetClass.studentIds) targetClass.studentIds = [];
-        if (!targetClass.studentIds.includes(newUser.id)) targetClass.studentIds.push(newUser.id);
+        if (!targetClass.studentIds.includes(targetUser.id)) targetClass.studentIds.push(targetUser.id);
         localStorage.setItem(STORAGE_KEY_CLASSES, JSON.stringify(classes));
       }
 
       if (window.app && window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
-      return newUser;
+      return targetUser;
     }
 
     batchAddStudentsToClass(studentList, classId) {
@@ -464,12 +489,11 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     }
 
     getAvailableStudentsForGroup(classId, editingGroupId = null) {
-      const users = this.getUsers();
+      const classStudents = this.getClassStudents(classId);
       const classes = this.getClasses();
       const cls = classes.find(c => c.id === classId) || classes[0];
       if (!cls) return [];
 
-      const classStudents = users.filter(u => u.role !== 'teacher' && u.classId === classId);
       const assignedUserIdsInOtherGroups = new Set();
       if (cls.groups) {
         cls.groups.forEach(g => {
@@ -502,12 +526,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       users.forEach(u => {
         if (selectedUserIds.includes(u.id)) {
           u.groupId = group.id;
-          u.classId = classId;
           if (u.id === leaderUserId) {
             u.studentCode = 'A';
           }
-        } else if (u.groupId === group.id) {
-          u.groupId = null;
         }
       });
       localStorage.setItem(STORAGE_KEY_USERS_DB, JSON.stringify(users));
@@ -516,20 +537,50 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       return group;
     }
 
-    deleteStudent(userId) {
-      let users = this.getUsers();
-      users = users.filter(u => u.id !== userId);
-      localStorage.setItem(STORAGE_KEY_USERS_DB, JSON.stringify(users));
-
+    deleteStudent(userId, classId = null) {
+      const users = this.getUsers();
+      const student = users.find(u => u.id === userId);
       const classes = this.getClasses();
-      classes.forEach(c => {
-        if (c.studentIds) c.studentIds = c.studentIds.filter(id => id !== userId);
-        if (c.groups) {
-          c.groups.forEach(g => {
-            if (g.members) g.members = g.members.filter(id => id !== userId);
-          });
+
+      if (student && classId) {
+        if (!student.classIds || !Array.isArray(student.classIds)) {
+          student.classIds = student.classId ? [student.classId] : [];
         }
-      });
+        student.classIds = student.classIds.filter(c => c !== classId);
+        if (student.classId === classId) {
+          student.classId = student.classIds.length > 0 ? student.classIds[0] : null;
+        }
+
+        const cls = classes.find(c => c.id === classId);
+        if (cls) {
+          if (cls.studentIds) cls.studentIds = cls.studentIds.filter(id => id !== userId);
+          if (cls.groups) {
+            cls.groups.forEach(g => {
+              if (g.members) g.members = g.members.filter(id => id !== userId);
+            });
+          }
+        }
+
+        if (student.classIds.length === 0) {
+          const idx = users.findIndex(u => u.id === userId);
+          if (idx !== -1) users.splice(idx, 1);
+        }
+      } else {
+        const newUsers = users.filter(u => u.id !== userId);
+        users.length = 0;
+        newUsers.forEach(u => users.push(u));
+
+        classes.forEach(c => {
+          if (c.studentIds) c.studentIds = c.studentIds.filter(id => id !== userId);
+          if (c.groups) {
+            c.groups.forEach(g => {
+              if (g.members) g.members = g.members.filter(id => id !== userId);
+            });
+          }
+        });
+      }
+
+      localStorage.setItem(STORAGE_KEY_USERS_DB, JSON.stringify(users));
       localStorage.setItem(STORAGE_KEY_CLASSES, JSON.stringify(classes));
       if (window.app && window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
     }
@@ -825,7 +876,6 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       const user = this.app.authManager.getCurrentUser();
       const myGroupId = (user && user.groupId) ? user.groupId : (this.app.state.activeMonitorGroupId || 'group_1');
 
-      // 强行按 groupId 隔离
       if (remoteData.groupId && remoteData.groupId !== myGroupId && user?.role === 'student') return;
 
       this.lastTimestamp = remoteData.timestamp;
@@ -855,15 +905,8 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       if (remoteData.stage1) {
         const s1R = remoteData.stage1;
         const s1L = this.app.state.stage1;
-        if (s1R.contract) {
-          s1L.contract = s1R.contract;
-          updated = true;
-        }
-        if (s1R.votes) {
-          s1L.votes = s1R.votes;
-          s1L.hasVoted = s1R.hasVoted;
-          updated = true;
-        }
+        if (s1R.contract) { s1L.contract = s1R.contract; updated = true; }
+        if (s1R.votes) { s1L.votes = s1R.votes; s1L.hasVoted = s1R.hasVoted; updated = true; }
       }
 
       if (remoteData.stage2 && remoteData.stage2.unifiedContent) {
@@ -890,7 +933,6 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       if (updated) {
         this.app.saveGroupState(myGroupId);
         if (user?.role === 'student') this.app.renderStudentWorkspace();
-
         if (user?.role === 'teacher') {
           const mainEl = document.getElementById('app');
           if (mainEl && this.app.state.teacherActiveTab === 'view_monitoring') {
@@ -1416,38 +1458,96 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     if (btnAddStd) {
       btnAddStd.addEventListener('click', () => {
         document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+
+        // 计算当前班级未包含的学生（在其他班但不在本班的学生）
+        const allUsers = authManager.getUsers();
+        const currentClassStudentIds = new Set(authManager.getClassStudents(activeClass.id).map(s => s.id));
+        const unenrolledStudents = allUsers.filter(u =>
+          u.role !== 'teacher' && !currentClassStudentIds.has(u.id)
+        );
+
         const modal = document.createElement('div');
         modal.className = 'modal-overlay';
         modal.innerHTML = `
-          <div class="teacher-modal-card fancy-task-modal" style="width:460px;">
+          <div class="teacher-modal-card fancy-task-modal" style="width:540px;">
             <div class="teacher-modal-header task-theme-gradient">
               <div class="modal-header-title">
                 <div class="modal-icon-badge task">👨‍🎓</div>
-                <div><h3>单条创建学生账号 (${activeClass.name})</h3></div>
+                <div><h3>添加学生至【${activeClass.name}】</h3></div>
               </div>
               <button class="modal-close-btn" id="btn-close-single-student">✕</button>
             </div>
-            <div class="teacher-modal-body">
-              <div class="teacher-form-group">
-                <label><span class="req">*</span> 学生真实姓名</label>
-                <input type="text" id="modal-std-name" class="teacher-input fancy" placeholder="输入姓名 (例如: 赵强)" value="赵强">
+
+            <!-- 双标签切换 -->
+            <div style="display:flex; border-bottom:1px solid rgba(255,255,255,0.1); background:rgba(15,23,42,0.5);">
+              <button id="tab-new-student" style="flex:1; padding:12px; font-size:13px; font-weight:700; border:none; cursor:pointer; background:rgba(99,102,241,0.25); color:#a5b4fc; border-bottom:3px solid #6366f1;">
+                ✏️ 新建学生账号
+              </button>
+              <button id="tab-enroll-student" style="flex:1; padding:12px; font-size:13px; font-weight:700; border:none; cursor:pointer; background:transparent; color:#64748b; border-bottom:3px solid transparent;">
+                🔗 加入已有学生 (${unenrolledStudents.length}人)
+              </button>
+            </div>
+
+            <!-- 面板1: 新建学生 -->
+            <div id="panel-new-student">
+              <div class="teacher-modal-body">
+                <div class="teacher-form-group">
+                  <label><span class="req">*</span> 学生真实姓名</label>
+                  <input type="text" id="modal-std-name" class="teacher-input fancy" placeholder="输入姓名 (例如: 赵强)" value="赵强">
+                </div>
+                <div class="teacher-form-group">
+                  <label><span class="req">*</span> 拼音用户名 (登录账号)</label>
+                  <input type="text" id="modal-std-username" class="teacher-input fancy" placeholder="输入拼音账号 (例如: zhaoqiang)" value="zhaoqiang">
+                </div>
+                <div class="teacher-form-group">
+                  <label>学号 / 编号</label>
+                  <input type="text" id="modal-std-code" class="teacher-input fancy" placeholder="输入学号" value="D">
+                </div>
+                <div class="teacher-form-group">
+                  <label>设置初始密码 (留空统一定为 123)</label>
+                  <input type="password" id="modal-std-password" class="teacher-input fancy" placeholder="留空默认为 123">
+                </div>
               </div>
-              <div class="teacher-form-group">
-                <label><span class="req">*</span> 拼音用户名 (登录账号)</label>
-                <input type="text" id="modal-std-username" class="teacher-input fancy" placeholder="输入拼音账号 (例如: zhaoqiang)" value="zhaoqiang">
-              </div>
-              <div class="teacher-form-group">
-                <label>学号 / 编号 (例如: S004 或 D)</label>
-                <input type="text" id="modal-std-code" class="teacher-input fancy" placeholder="输入学号" value="D">
-              </div>
-              <div class="teacher-form-group">
-                <label>设置初始密码 (留空统一定为 123)</label>
-                <input type="password" id="modal-std-password" class="teacher-input fancy" placeholder="留空默认为 123">
+              <div class="teacher-modal-footer">
+                <button class="modal-btn cancel" id="btn-cancel-single-std">取消</button>
+                <button class="modal-btn submit task-theme" id="btn-submit-single-std">👨‍🎓 确认创建并加入本班</button>
               </div>
             </div>
-            <div class="teacher-modal-footer">
-              <button class="modal-btn cancel" id="btn-cancel-single-std">取消</button>
-              <button class="modal-btn submit task-theme" id="btn-submit-single-std">👨‍🎓 确认创建账号</button>
+
+            <!-- 面板2: 加入已有学生 -->
+            <div id="panel-enroll-student" style="display:none;">
+              <div class="teacher-modal-body">
+                <div style="font-size:12px; color:#94a3b8; background:rgba(99,102,241,0.1); border:1px solid rgba(99,102,241,0.3); border-radius:8px; padding:10px 14px; margin-bottom:12px;">
+                  💡 以下学生账号已在其他班级中存在。勾选后点击确认，可将其同时加入本班，<b style="color:#a5b4fc;">账号不会重复创建</b>。
+                </div>
+                <div style="max-height:280px; overflow-y:auto; display:flex; flex-direction:column; gap:6px;">
+                  ${unenrolledStudents.length === 0 ? `
+                    <div style="text-align:center; color:#64748b; padding:32px; font-size:14px;">
+                      ✅ 当前所有学生账号已加入本班，无可选学生
+                    </div>
+                  ` : unenrolledStudents.map(s => {
+                    const otherClasses = authManager.getClasses().filter(c =>
+                      (s.classIds || [s.classId]).includes(c.id) && c.id !== activeClass.id
+                    );
+                    return `
+                      <label style="display:flex; align-items:center; gap:12px; background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:10px 14px; cursor:pointer; transition:all 0.15s;">
+                        <input type="checkbox" class="enroll-chk" data-uid="${s.id}" style="width:16px; height:16px; cursor:pointer; accent-color:#6366f1;">
+                        <div>
+                          <div style="font-size:14px; font-weight:700; color:#f1f5f9;">${s.avatar || '👤'} ${s.name}</div>
+                          <div style="font-size:11px; color:#64748b; margin-top:2px;">
+                            账号: ${s.username} | 学号: ${s.studentCode || '-'}
+                            ${otherClasses.length > 0 ? `| 已在: ${otherClasses.map(c => c.name).join(', ')}` : ''}
+                          </div>
+                        </div>
+                      </label>
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+              <div class="teacher-modal-footer">
+                <button class="modal-btn cancel" id="btn-cancel-enroll">取消</button>
+                <button class="modal-btn submit task-theme" id="btn-submit-enroll">🔗 确认加入本班</button>
+              </div>
             </div>
           </div>
         `;
@@ -1456,6 +1556,26 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         const closeModal = () => modal.remove();
         modal.querySelector('#btn-close-single-student').addEventListener('click', closeModal);
         modal.querySelector('#btn-cancel-single-std').addEventListener('click', closeModal);
+        const cancelEnrollBtn = modal.querySelector('#btn-cancel-enroll');
+        if (cancelEnrollBtn) cancelEnrollBtn.addEventListener('click', closeModal);
+
+        // 标签切换逻辑
+        const tabNew = modal.querySelector('#tab-new-student');
+        const tabEnroll = modal.querySelector('#tab-enroll-student');
+        const panelNew = modal.querySelector('#panel-new-student');
+        const panelEnroll = modal.querySelector('#panel-enroll-student');
+        tabNew.addEventListener('click', () => {
+          tabNew.style.background = 'rgba(99,102,241,0.25)'; tabNew.style.color = '#a5b4fc'; tabNew.style.borderBottom = '3px solid #6366f1';
+          tabEnroll.style.background = 'transparent'; tabEnroll.style.color = '#64748b'; tabEnroll.style.borderBottom = '3px solid transparent';
+          panelNew.style.display = ''; panelEnroll.style.display = 'none';
+        });
+        tabEnroll.addEventListener('click', () => {
+          tabEnroll.style.background = 'rgba(99,102,241,0.25)'; tabEnroll.style.color = '#a5b4fc'; tabEnroll.style.borderBottom = '3px solid #6366f1';
+          tabNew.style.background = 'transparent'; tabNew.style.color = '#64748b'; tabNew.style.borderBottom = '3px solid transparent';
+          panelEnroll.style.display = ''; panelNew.style.display = 'none';
+        });
+
+        // 新建账号提交
         modal.querySelector('#btn-submit-single-std').addEventListener('click', () => {
           const name = modal.querySelector('#modal-std-name').value.trim();
           const username = modal.querySelector('#modal-std-username').value.trim();
@@ -1466,6 +1586,39 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           closeModal();
           renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
         });
+
+        // 加入已有学生提交
+        const submitEnrollBtn = modal.querySelector('#btn-submit-enroll');
+        if (submitEnrollBtn) {
+          submitEnrollBtn.addEventListener('click', () => {
+            const checked = modal.querySelectorAll('.enroll-chk:checked');
+            if (checked.length === 0) { alert('⚠️ 请勾选至少一位学生！'); return; }
+            checked.forEach(chk => {
+              // 直接把该学生的 classIds 追加当前班级
+              const users = authManager.getUsers();
+              const student = users.find(u => u.id === chk.dataset.uid);
+              if (student) {
+                if (!student.classIds || !Array.isArray(student.classIds)) {
+                  student.classIds = student.classId ? [student.classId] : [];
+                }
+                if (!student.classIds.includes(activeClass.id)) {
+                  student.classIds.push(activeClass.id);
+                }
+              }
+              localStorage.setItem('jizhi_users_db_v2', JSON.stringify(users));
+              // 同时把 student.id 加入班级 studentIds
+              const classes = authManager.getClasses();
+              const cls = classes.find(c => c.id === activeClass.id);
+              if (cls) {
+                if (!cls.studentIds) cls.studentIds = [];
+                if (!cls.studentIds.includes(chk.dataset.uid)) cls.studentIds.push(chk.dataset.uid);
+                localStorage.setItem('jizhi_classes_db', JSON.stringify(classes));
+              }
+            });
+            closeModal();
+            renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
+          });
+        }
       });
     }
 
@@ -1643,8 +1796,14 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
     container.querySelectorAll('.delete-student-btn').forEach(btn => {
       btn.addEventListener('click', () => {
-        if (confirm('确认移除此学生账号？')) {
-          authManager.deleteStudent(btn.dataset.id);
+        const users = authManager.getUsers();
+        const student = users.find(u => u.id === btn.dataset.id);
+        const otherClasses = student ? ((student.classIds || []).filter(c => c !== activeClass.id)) : [];
+        const confirmMsg = otherClasses.length > 0
+          ? `确认从【${activeClass.name}】移除此学生？该学生在其他 ${otherClasses.length} 个班级中的账号不受影响。`
+          : `确认移除此学生账号？该学生不在其他班级中，将被完全删除。`;
+        if (confirm(confirmMsg)) {
+          authManager.deleteStudent(btn.dataset.id, activeClass.id);
           renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
         }
       });
