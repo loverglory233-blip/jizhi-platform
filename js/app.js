@@ -1,6 +1,6 @@
 /**
  * Jizhi (集智) Multi-Agent Collaborative Writing Platform
- * Main Controller & Multi-Role App Handler
+ * Main Controller - Voting Lock, Instant Vote Chat Notifications & Auctioneer Tally Sync
  */
 
 import { InitialState } from './state.js';
@@ -45,7 +45,8 @@ class App {
           (s) => this.switchStage(s),
           (sp) => this.setSpeed(sp),
           () => this.handleLogout(),
-          () => this.switchToTeacherView()
+          () => this.switchToTeacherView(),
+          () => this.showAnnouncementModal()
         );
       }
     }, 1000);
@@ -56,16 +57,12 @@ class App {
     const appEl = document.getElementById('app');
 
     if (!currentUser) {
-      // Unauthenticated -> Show Login Screen
       appEl.className = 'app-login-mode';
-      renderLoginView(appEl, this.authManager, (user) => {
-        this.renderMain();
-      });
+      renderLoginView(appEl, this.authManager, () => this.renderMain());
       return;
     }
 
     if (currentUser.role === 'teacher') {
-      // Teacher Portal
       appEl.className = 'app-teacher-mode';
       renderTeacherPortal(
         appEl,
@@ -73,7 +70,6 @@ class App {
         this.state,
         () => this.handleLogout(),
         () => {
-          // Temporary preview as Student A
           const users = this.authManager.getUsers();
           const studentA = users.find(u => u.email === 'studentA@jizhi.edu');
           if (studentA) {
@@ -83,7 +79,6 @@ class App {
         }
       );
     } else {
-      // Student Workspace
       appEl.className = 'app-student-mode';
       appEl.innerHTML = `
         <header class="app-header" id="app-header"></header>
@@ -103,6 +98,17 @@ class App {
 
             <div class="chat-stream" id="chat-stream"></div>
 
+            <div class="emoji-bar" id="emoji-bar" style="padding:4px 16px; background:rgba(15,23,42,0.4); display:flex; gap:8px; border-top:1px solid rgba(255,255,255,0.08);">
+              <span class="emoji-btn" data-emoji="😊" style="cursor:pointer; font-size:16px;">😊</span>
+              <span class="emoji-btn" data-emoji="👍" style="cursor:pointer; font-size:16px;">👍</span>
+              <span class="emoji-btn" data-emoji="🎉" style="cursor:pointer; font-size:16px;">🎉</span>
+              <span class="emoji-btn" data-emoji="📝" style="cursor:pointer; font-size:16px;">📝</span>
+              <span class="emoji-btn" data-emoji="💡" style="cursor:pointer; font-size:16px;">💡</span>
+              <span class="emoji-btn" data-emoji="❓" style="cursor:pointer; font-size:16px;">❓</span>
+              <span class="emoji-btn" data-emoji="💯" style="cursor:pointer; font-size:16px;">💯</span>
+              <span class="emoji-btn" data-emoji="👏" style="cursor:pointer; font-size:16px;">👏</span>
+            </div>
+
             <div class="chat-input-bar">
               <input type="text" class="chat-input" id="chat-input" placeholder="在小组/智能体协同频道中发言..." autocomplete="off">
               <button class="send-btn" id="send-btn" title="发送消息">
@@ -118,7 +124,58 @@ class App {
 
       this.initStudentEvents();
       this.renderStudentWorkspace();
+      this.checkUnreadAnnouncements();
     }
+  }
+
+  checkUnreadAnnouncements() {
+    const anns = this.authManager.getAnnouncements();
+    const unread = anns.find(a => !a.readStatus || !a.readStatus['group_1']);
+    if (unread) {
+      setTimeout(() => this.showAnnouncementModal(unread), 800);
+    }
+  }
+
+  showAnnouncementModal(targetAnn = null) {
+    const anns = this.authManager.getAnnouncements();
+    const ann = targetAnn || (anns.length > 0 ? anns[0] : null);
+    if (!ann) return;
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="modal-box" style="border-color:#10b981; box-shadow:0 0 30px rgba(16,185,129,0.3);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+          <h3 style="color:#34d399; font-size:18px;">${ann.title}</h3>
+          <span style="font-size:11px; color:#94a3b8;">${ann.time} | 来自: ${ann.author}</span>
+        </div>
+
+        <div style="font-size:14px; color:#f8fafc; line-height:1.6; background:rgba(15,23,42,0.8); padding:14px; border-radius:8px; margin-bottom:14px; border:1px solid rgba(255,255,255,0.1);">
+          ${ann.content}
+        </div>
+
+        ${ann.attachment ? `
+          <div style="background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.3); padding:10px; border-radius:8px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-size:13px; color:#a5b4fc;">📎 附件资源: <b>${ann.attachment.name}</b> (${ann.attachment.size})</span>
+            <button onclick="alert('📥 已成功下载教师随附学习资源：${ann.attachment.name}')" style="background:var(--accent-indigo); border:none; color:white; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer;">
+              下载资源
+            </button>
+          </div>
+        ` : ''}
+
+        <button class="btn-primary" id="btn-read-confirm" style="background:linear-gradient(135deg, #10b981, #059669); font-size:14px; font-weight:700;">
+          ✅ 我已阅读并确认 (已读状态将自动同步至教师端)
+        </button>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    modal.querySelector('#btn-read-confirm').addEventListener('click', () => {
+      this.authManager.markAnnouncementRead(ann.id, 'group_1');
+      document.body.removeChild(modal);
+      this.renderStudentWorkspace();
+    });
   }
 
   handleLogout() {
@@ -136,7 +193,17 @@ class App {
   initStudentEvents() {
     const input = document.getElementById('chat-input');
     const sendBtn = document.getElementById('send-btn');
+    const emojiBar = document.getElementById('emoji-bar');
     if (!input || !sendBtn) return;
+
+    if (emojiBar) {
+      emojiBar.querySelectorAll('.emoji-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+          input.value += btn.dataset.emoji;
+          input.focus();
+        });
+      });
+    }
 
     const handleSend = () => {
       const text = input.value.trim();
@@ -149,7 +216,7 @@ class App {
       this.state.chatLogs[currentStage].push({
         sender: studentCode,
         text: text,
-        timestamp: new Date().toLocaleTimeString()
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       });
 
       input.value = '';
@@ -171,23 +238,77 @@ class App {
 
       if (stage === 'stage1') {
         replyAgent = 'auctioneer';
-        replyText = `🎪 [拍卖师记录]: 收到回复："${userMsg}"。协商结果已同步！`;
+        replyText = `🎪 【拍卖师评估记录】收到观点补充："${userMsg}"。提问：你们认为该方案的核心限制条件是什么？系统已将补充理由更新至合作卡片中。`;
       } else if (stage === 'stage2') {
-        replyAgent = 'managingEditor';
-        replyText = `🤝 [责任编辑]: 已接收讨论！过程协同度与贡献比已实时更新。`;
+        replyAgent = 'reviewingEditor';
+        replyText = `📝 【审稿编辑高阶引导】关注到成员针对：“${userMsg}” 的讨论。请注意：在研究设计章节，必须明确自变量（AI干预模式）与因变量（SSRL得分）之间的因果链条，切勿直接贴出答案。`;
       } else if (stage === 'stage3') {
         replyAgent = 'neutral';
-        replyText = `🟡 [中间委员]: 请小组决定是否在修改稿中落实此反思意见。`;
+        replyText = `🟡 【中间委员裁决提示】针对意见：“${userMsg}”，请小组在修改稿中补充一段限定说明，并统一确认。`;
       }
 
       this.state.chatLogs[stage].push({
         sender: replyAgent,
         text: replyText,
-        timestamp: new Date().toLocaleTimeString()
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       });
 
       renderChat(this.state);
     }, 1000);
+  }
+
+  handleVoteCast(proposalId) {
+    const user = this.state.currentUser;
+    const s1 = this.state.stage1;
+
+    if (s1.hasVoted && s1.hasVoted[user]) {
+      alert('⚠️ 投票已被锁定！每位成员首次投票后不能再修改选项。');
+      return;
+    }
+
+    // Record Vote and Lock
+    if (!s1.hasVoted) s1.hasVoted = {};
+    s1.votes[user] = proposalId;
+    s1.hasVoted[user] = true;
+
+    const proposal = s1.proposals.find(p => p.id === proposalId);
+    const memberName = this.state.members[user] ? this.state.members[user].name : user;
+
+    // Count Total Votes Cast
+    const votesCastCount = Object.values(s1.hasVoted).filter(Boolean).length;
+
+    // 1. Post Vote Notification in Chat Box
+    this.state.chatLogs.stage1.push({
+      sender: user,
+      text: `📢 [投票告知]: 我已确认投票支持提案《${proposal ? proposal.title : proposalId}》！（当前全组已集齐 ${votesCastCount}/3 票）`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    });
+
+    // 2. If All 3 Voted, Trigger Auctioneer Final Tally Announcement
+    if (votesCastCount >= 3) {
+      setTimeout(() => {
+        // Calculate Tally
+        const tally = {};
+        Object.values(s1.votes).forEach(pId => {
+          if (pId) tally[pId] = (tally[pId] || 0) + 1;
+        });
+
+        let summaryText = '🎪 【拍卖师宣布最终计票结果】：全员投票已完毕！\n';
+        s1.proposals.forEach(p => {
+          summaryText += `• 《${p.title}》得票: ${tally[p.id] || 0} 票\n`;
+        });
+        summaryText += `\n🔨 结果表明：《搭便车干预》高票胜出！注意，C同学支持《短视频注意力》，建议将“注意力分配视角”融入最终主题中，请组员讨论并更新合作卡片！`;
+
+        this.state.chatLogs.stage1.push({
+          sender: 'auctioneer',
+          text: summaryText,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        });
+        renderChat(this.state);
+      }, 1000);
+    }
+
+    this.renderStudentWorkspace();
   }
 
   switchStage(newStage) {
@@ -205,7 +326,8 @@ class App {
       (s) => this.switchStage(s),
       (sp) => this.setSpeed(sp),
       () => this.handleLogout(),
-      () => this.switchToTeacherView()
+      () => this.switchToTeacherView(),
+      () => this.showAnnouncementModal()
     );
   }
 
@@ -219,33 +341,33 @@ class App {
       (s) => this.switchStage(s),
       (sp) => this.setSpeed(sp),
       () => this.handleLogout(),
-      () => this.switchToTeacherView()
+      () => this.switchToTeacherView(),
+      () => this.showAnnouncementModal()
     );
 
     renderCanvas(this.state, {
       onVote: (propId) => {
-        this.state.stage1.votes[this.state.currentUser] = propId;
+        this.handleVoteCast(propId);
+      },
+      onRefresh: () => {
         this.renderStudentWorkspace();
       },
-      onSectionTabChange: (key) => {
-        this.state.stage2.activeSection = key;
-        this.renderStudentWorkspace();
+      onConfirmContract: () => {
+        this.state.stage1.contract.isConfirmed = true;
+        alert('🎉 全员统一确认成功！学术合作卡片已生效，系统自动解锁阶段二：学术编辑部！');
+        this.switchStage('stage2');
       },
-      onContentChange: (key, newContent) => {
-        this.state.stage2.docSections[key].content = newContent;
-        let wordsA = this.state.stage2.docSections.background.content.length + this.state.stage2.docSections.questions.content.length;
-        let wordsB = this.state.stage2.docSections.literature.content.length;
-        let wordsC = this.state.stage2.docSections.method.content.length + this.state.stage2.docSections.reflection.content.length + this.state.stage2.docSections.references.content.length;
-
-        let total = wordsA + wordsB + wordsC || 1;
+      onUnifiedContentChange: (newContent) => {
+        this.state.stage2.unifiedContent = newContent;
+        let total = newContent.length || 1;
         this.state.stage2.memberContributions = {
-          'A': { words: wordsA, percentage: Math.round((wordsA / total) * 100) },
-          'B': { words: wordsB, percentage: Math.round((wordsB / total) * 100) },
-          'C': { words: wordsC, percentage: Math.round((wordsC / total) * 100) }
+          'A': { words: Math.round(total * 0.42), percentage: 42 },
+          'B': { words: Math.round(total * 0.31), percentage: 31 },
+          'C': { words: Math.round(total * 0.27), percentage: 27 }
         };
       },
       onOpenCaseModal: () => {
-        alert('📖 审稿编辑推送的【研究设计优秀案例】：\n\n示例标题: 《生成式AI感知视角下的协作写作干预实证研究》\n示例范式: 准实验设计，样本量N=120。');
+        alert('📖 审稿编辑推送的【研究设计优秀范例】：\n\n标题: 《生成式AI感知视角下的协作写作干预实证研究》\n范式: 准实验设计，样本量N=150。采用SSRL共享调节量表进行前后测评估，重点包含：明确的研究假设、自变量控制与混合定量定性分析。');
       },
       onOpenMeetingModal: () => {
         this.showMeetingModal();
@@ -253,7 +375,7 @@ class App {
       onAdoptFeedback: (id) => {
         const item = this.state.stage3.feedbackItems.find(f => f.id === id);
         if (item) {
-          const resp = prompt(`请代表小组输入针对【${item.title}】的统一修改方案：`, '已补充说明并纠正维偏差。');
+          const resp = prompt(`请代表小组输入针对【${item.title}】的统一裁决方案：`, '已补充说明并纠正维偏差。');
           if (resp) {
             item.status = 'adopted';
             item.response = resp;
@@ -262,7 +384,7 @@ class App {
         }
       },
       onFinalSubmit: () => {
-        alert('🎉 恭喜小组！《协作学习中的“搭便车”现象：基于注意力分配与AI感知视角》最终稿及SSRL评估报告已成功提交至教师端！');
+        alert('🚀 恭喜小组！《协作学习中的“搭便车”现象：基于注意力分配与AI感知视角》最终方案与评估报告已提交至教师端！');
       }
     });
 
@@ -315,14 +437,14 @@ class App {
       this.state.chatLogs.stage2.push({
         sender: 'managingEditor',
         text: `📢 【编辑会议】全员打分完成（均分 ${selectedStar} 星）。组员评价："${userText}"。请审稿编辑反馈！`,
-        timestamp: new Date().toLocaleTimeString()
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       });
 
       setTimeout(() => {
         this.state.chatLogs.stage2.push({
           sender: 'reviewingEditor',
-          text: `📝 【审稿编辑意见】：结合小组提交的 ${selectedStar} 星打分，建议在“研究背景”末尾补充过度句，并明确H1假设的测量量表。`,
-          timestamp: new Date().toLocaleTimeString()
+          text: `📝 【审稿编辑深度反馈】：结合打分（${selectedStar}星），正文结构的逻辑连贯性良好。重点改进提示：在“二、研究问题与假设”末尾增加一段承上启下的过渡句，并明确 H1 假设的量表来源。审稿编辑只做引导，请团队自行讨论修改！`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         });
         renderChat(this.state);
       }, 1200);

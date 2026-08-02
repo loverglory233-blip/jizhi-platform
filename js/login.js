@@ -1,88 +1,89 @@
 /**
  * Jizhi (集智) Multi-Agent Collaborative Writing Platform
- * Authentication & Login Modal View
+ * Clean, Standard & Modern Login Screen Component
  */
 
 export function renderLoginView(container, authManager, onLoginSuccess) {
   container.innerHTML = `
-    <div class="login-page-overlay">
-      <div class="login-card-box">
-        <div class="login-brand-header">
-          <div class="login-logo">集智 JIZHI</div>
-          <div class="login-subtitle">多智能体支持的在线协作写作平台 (SSRL 支撑)</div>
+    <div class="login-page-container">
+      <div class="login-box-card">
+        <!-- Logo & Header -->
+        <div class="login-header">
+          <div class="login-logo-title">集智 JIZHI</div>
+          <p class="login-subtitle">多智能体支持的在线协作写作平台</p>
         </div>
 
-        <!-- Role Tabs -->
-        <div class="login-tabs">
-          <button class="login-tab-btn active" data-tab="login">账号登录</button>
-          <button class="login-tab-btn" data-tab="register">注册新账号</button>
+        <!-- Role Tabs: Login / Register -->
+        <div class="login-tab-bar">
+          <button class="login-tab active" data-tab="login">账号登录</button>
+          <button class="login-tab" data-tab="register">注册账号</button>
         </div>
 
         <!-- Login Form -->
-        <form class="login-form" id="form-login">
+        <form class="login-form-body" id="form-login">
           <div class="form-group">
-            <label>登录邮箱 / 账号</label>
-            <input type="email" id="login-email" class="form-control" value="teacher@jizhi.edu" required placeholder="请输入注册邮箱 (例: teacher@jizhi.edu)">
+            <label for="login-email">账号 / 邮箱</label>
+            <input type="email" id="login-email" class="form-input" value="teacher@jizhi.edu" placeholder="请输入注册邮箱" required>
           </div>
 
           <div class="form-group">
-            <label>密码</label>
-            <input type="password" id="login-password" class="form-control" value="123" required placeholder="请输入密码">
+            <label for="login-password">密码</label>
+            <input type="password" id="login-password" class="form-input" value="123" placeholder="请输入密码" required>
           </div>
 
-          <div id="login-error-msg" class="error-msg" style="display:none;"></div>
+          <div id="login-error-msg" class="error-banner" style="display:none;"></div>
 
-          <button type="submit" class="btn-primary" style="margin-top:10px; padding:12px; font-size:15px; font-weight:700;">
-            🚀 登录平台
+          <button type="submit" class="login-submit-btn">
+            登录进入平台
           </button>
         </form>
 
         <!-- Register Form -->
-        <form class="login-form" id="form-register" style="display:none;">
+        <form class="login-form-body" id="form-register" style="display:none;">
           <div class="form-group">
-            <label>姓名</label>
-            <input type="text" id="reg-name" class="form-control" placeholder="请输入你的姓名 (例: 张老师 / 李同学)" required>
+            <label for="reg-name">姓名</label>
+            <input type="text" id="reg-name" class="form-input" placeholder="例如：张老师 / 李同学" required>
           </div>
 
           <div class="form-group">
-            <label>注册邮箱</label>
-            <input type="email" id="reg-email" class="form-control" placeholder="请输入邮箱" required>
+            <label for="reg-email">注册邮箱</label>
+            <input type="email" id="reg-email" class="form-input" placeholder="例如：user@jizhi.edu" required>
           </div>
 
           <div class="form-group">
-            <label>设置密码</label>
-            <input type="password" id="reg-password" class="form-control" placeholder="设置登录密码" required>
+            <label for="reg-password">设置密码</label>
+            <input type="password" id="reg-password" class="form-input" placeholder="请输入密码" required>
           </div>
 
           <div class="form-group">
-            <label>角色身份</label>
-            <select id="reg-role" class="form-control" style="background:#0f172a; color:white;">
+            <label for="reg-role">身份类型</label>
+            <select id="reg-role" class="form-input" style="background:#0f172a; color:white;">
               <option value="student">🎓 学生端 (Student)</option>
               <option value="teacher">👩‍🏫 教师端 (Teacher)</option>
             </select>
           </div>
 
-          <div id="reg-error-msg" class="error-msg" style="display:none;"></div>
+          <div id="reg-error-msg" class="error-banner" style="display:none;"></div>
 
-          <button type="submit" class="btn-primary" style="margin-top:10px; padding:12px; font-size:15px; font-weight:700;">
-            ✅ 完成注册并登录
+          <button type="submit" class="login-submit-btn">
+            完成注册并登录
           </button>
         </form>
 
-        <!-- Quick Demo Switcher Section -->
-        <div class="demo-accounts-section">
-          <div style="font-size:12px; color:#94a3b8; margin-bottom:8px; text-align:center;">💡 快捷体验演示账号 (一键登录):</div>
-          <div class="demo-btn-grid">
-            <button class="demo-login-btn" data-email="teacher@jizhi.edu" data-pass="123">
+        <!-- Quick Demo Account Switcher -->
+        <div class="demo-accounts-card">
+          <div class="demo-title">💡 快捷演示账号（点击直接进入）：</div>
+          <div class="demo-grid">
+            <button class="demo-btn" data-email="teacher@jizhi.edu" data-pass="123">
               👩‍🏫 教师端 (张教授)
             </button>
-            <button class="demo-login-btn" data-email="studentA@jizhi.edu" data-pass="123">
+            <button class="demo-btn" data-email="studentA@jizhi.edu" data-pass="123">
               👨‍🎓 学生A (李明/组长)
             </button>
-            <button class="demo-login-btn" data-email="studentB@jizhi.edu" data-pass="123">
+            <button class="demo-btn" data-email="studentB@jizhi.edu" data-pass="123">
               👩‍🎓 学生B (王芳/组员)
             </button>
-            <button class="demo-login-btn" data-email="studentC@jizhi.edu" data-pass="123">
+            <button class="demo-btn" data-email="studentC@jizhi.edu" data-pass="123">
               🧑‍🎓 学生C (陈强/组员)
             </button>
           </div>
@@ -92,7 +93,7 @@ export function renderLoginView(container, authManager, onLoginSuccess) {
     </div>
   `;
 
-  // Attach Event Listeners for Tabs
+  // Attach Listeners for Login/Register Tabs
   const loginTab = container.querySelector('[data-tab="login"]');
   const regTab = container.querySelector('[data-tab="register"]');
   const loginForm = container.querySelector('#form-login');
@@ -145,7 +146,7 @@ export function renderLoginView(container, authManager, onLoginSuccess) {
   });
 
   // Demo Login Buttons
-  container.querySelectorAll('.demo-login-btn').forEach(btn => {
+  container.querySelectorAll('.demo-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const email = btn.dataset.email;
       const pass = btn.dataset.pass;
