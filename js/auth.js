@@ -1,10 +1,10 @@
 /**
  * Jizhi (集智) Multi-Agent Collaborative Writing Platform
- * Clean Chat Log CSV Exporter (Only Chat Stream Dialogue, Excludes System Logs)
+ * Auth Manager - Support Name Pinyin Login & Per-Tab Identity Storage for Multi-Window Real-Time Sync
  */
 
 const STORAGE_KEY_USER = 'jizhi_current_user';
-const STORAGE_KEY_USERS_DB = 'jizhi_users_db';
+const STORAGE_KEY_USERS_DB = 'jizhi_users_db_v2';
 const STORAGE_KEY_CLASSES = 'jizhi_classes_db';
 const STORAGE_KEY_TASKS = 'jizhi_tasks_db';
 const STORAGE_KEY_ANNOUNCEMENTS = 'jizhi_announcements_db';
@@ -21,22 +21,57 @@ const DefaultClasses = [
         name: '第1小组 (AI与协作写作研究组)',
         members: ['u_studentA', 'u_studentB', 'u_studentC'],
         topic: '协作学习中的“搭便车”现象：基于注意力分配与AI感知视角'
-      },
-      {
-        id: 'group_2',
-        name: '第2小组 (生成式AI提问教学组)',
-        members: [],
-        topic: '待定课题'
       }
     ]
   }
 ];
 
 const DefaultUsers = [
-  { id: 'u_teacher1', email: 'teacher@jizhi.edu', password: '123', name: '张教授 (主讲教师)', role: 'teacher', avatar: '👩‍🏫' },
-  { id: 'u_studentA', email: 'studentA@jizhi.edu', password: '123', name: '李明 (学生A/组长)', role: 'student', studentCode: 'A', avatar: '👨‍🎓', classId: 'class_101', groupId: 'group_1' },
-  { id: 'u_studentB', email: 'studentB@jizhi.edu', password: '123', name: '王芳 (学生B/组员)', role: 'student', studentCode: 'B', avatar: '👩‍🎓', classId: 'class_101', groupId: 'group_1' },
-  { id: 'u_studentC', email: 'studentC@jizhi.edu', password: '123', name: '陈强 (学生C/组员)', role: 'student', studentCode: 'C', avatar: '🧑‍🎓', classId: 'class_101', groupId: 'group_1' }
+  { 
+    id: 'u_teacher1', 
+    username: 'teacher',
+    email: 'teacher@jizhi.edu', 
+    password: '123', 
+    name: '张教授 (主讲教师)', 
+    role: 'teacher', 
+    avatar: '👩‍🏫' 
+  },
+  { 
+    id: 'u_studentA', 
+    username: 'liming',
+    email: 'studentA@jizhi.edu', 
+    password: '123', 
+    name: '李明 (学生A/组长)', 
+    role: 'student', 
+    studentCode: 'A', 
+    avatar: '👨‍🎓', 
+    classId: 'class_101', 
+    groupId: 'group_1' 
+  },
+  { 
+    id: 'u_studentB', 
+    username: 'wangfang',
+    email: 'studentB@jizhi.edu', 
+    password: '123', 
+    name: '王芳 (学生B/组员)', 
+    role: 'student', 
+    studentCode: 'B', 
+    avatar: '👩‍🎓', 
+    classId: 'class_101', 
+    groupId: 'group_1' 
+  },
+  { 
+    id: 'u_studentC', 
+    username: 'chenqiang',
+    email: 'studentC@jizhi.edu', 
+    password: '123', 
+    name: '陈强 (学生C/组员)', 
+    role: 'student', 
+    studentCode: 'C', 
+    avatar: '🧑‍🎓', 
+    classId: 'class_101', 
+    groupId: 'group_1' 
+  }
 ];
 
 const DefaultTasks = [
@@ -46,6 +81,8 @@ const DefaultTasks = [
     classId: 'class_101',
     className: '《现代教育技术》2026春01班',
     durationMinutes: 150,
+    startTime: '2026-08-02 20:00',
+    deadline: '2026-08-02 22:30',
     status: 'in_progress',
     createdAt: new Date().toLocaleDateString(),
     instructions: '请在150分钟内，以小组为单位完成一份包含研究背景与意义、研究问题与假设、文献综述、研究设计与方法、不足与反思及参考文献的高质量研究方案。',
@@ -66,7 +103,7 @@ const DefaultAnnouncements = [
     attachment: { name: '学术研究设计导引指南.pdf', size: '2.1 MB' },
     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     author: '张教授',
-    readStatus: { 'group_1': false, 'group_2': false }
+    readStatus: { 'group_1': false }
   }
 ];
 
@@ -96,52 +133,68 @@ export class AuthManager {
   getAnnouncements() { return JSON.parse(localStorage.getItem(STORAGE_KEY_ANNOUNCEMENTS)) || DefaultAnnouncements; }
 
   getCurrentUser() {
-    const data = localStorage.getItem(STORAGE_KEY_USER);
-    return data ? JSON.parse(data) : null;
+    const sessionData = sessionStorage.getItem(STORAGE_KEY_USER);
+    if (sessionData) {
+      try { return JSON.parse(sessionData); } catch (e) {}
+    }
+    const localData = localStorage.getItem(STORAGE_KEY_USER);
+    return localData ? JSON.parse(localData) : null;
   }
 
-  login(email, password) {
+  /**
+   * Login supporting simple username pinyin (teacher, liming, wangfang, chenqiang) OR email
+   */
+  login(accountInput, password) {
     const users = this.getUsers();
-    const user = users.find(u => u.email === email && u.password === password);
+    const query = accountInput.trim().toLowerCase();
+
+    const user = users.find(u => {
+      const uName = (u.username || '').toLowerCase();
+      const uEmail = (u.email || '').toLowerCase();
+      const uCode = (u.studentCode || '').toLowerCase();
+      return (uName === query || uEmail === query || uCode === query || ('student' + uCode) === query) && u.password === password;
+    });
+
     if (user) {
+      sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
       localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
       return { success: true, user };
     }
-    return { success: false, message: '账号或密码错误，请核对后重试！' };
+
+    return { success: false, message: '账号或密码错误 (默认密码均为 123)' };
   }
 
-  register(name, email, password, role) {
-    const users = this.getUsers();
-    if (users.some(u => u.email === email)) {
-      return { success: false, message: '该邮箱已被注册，请直接登录！' };
-    }
-
-    const newUser = {
-      id: 'u_' + Date.now(),
-      email, password, name, role,
-      avatar: role === 'teacher' ? '👨‍🏫' : '🎓',
-      studentCode: role === 'student' ? 'A' : null,
-      classId: 'class_101', groupId: 'group_1'
-    };
-
-    users.push(newUser);
-    localStorage.setItem(STORAGE_KEY_USERS_DB, JSON.stringify(users));
-    localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(newUser));
-    return { success: true, user: newUser };
+  logout() {
+    sessionStorage.removeItem(STORAGE_KEY_USER);
+    localStorage.removeItem(STORAGE_KEY_USER);
   }
 
-  logout() { localStorage.removeItem(STORAGE_KEY_USER); }
-
-  createTask(title, classId, instructions, resourcesList) {
+  createTask(title, classId, instructions, resources = [], startTime = null, deadline = null, durationMinutes = 150) {
     const tasks = this.getTasks();
     const classes = this.getClasses();
     const targetClass = classes.find(c => c.id === classId) || classes[0];
 
+    const now = new Date();
+    const defaultStart = startTime ? startTime.replace('T', ' ') : now.toISOString().slice(0, 16).replace('T', ' ');
+
+    let defaultDeadline = deadline ? deadline.replace('T', ' ') : '';
+    if (!defaultDeadline) {
+      const dObj = new Date(now.getTime() + (parseInt(durationMinutes) || 150) * 60 * 1000);
+      defaultDeadline = dObj.toISOString().slice(0, 16).replace('T', ' ');
+    }
+
     const newTask = {
       id: 'task_' + Date.now(),
-      title, classId: targetClass.id, className: targetClass.name,
-      durationMinutes: 150, status: 'in_progress', createdAt: new Date().toLocaleDateString(),
-      instructions, resources: resourcesList || [{ name: '研究设计指导文件.pdf', size: '1.2MB' }]
+      title,
+      classId,
+      className: targetClass.name,
+      durationMinutes: parseInt(durationMinutes) || 150,
+      startTime: defaultStart,
+      deadline: defaultDeadline,
+      status: 'in_progress',
+      createdAt: new Date().toLocaleDateString(),
+      instructions,
+      resources
     };
 
     tasks.unshift(newTask);
@@ -149,74 +202,92 @@ export class AuthManager {
     return newTask;
   }
 
-  publishAnnouncement(taskId, title, content, attachmentObj) {
-    const annList = this.getAnnouncements();
+  publishAnnouncement(taskId, title, content, attachment = null) {
+    const announcements = this.getAnnouncements();
     const tasks = this.getTasks();
-    const task = tasks.find(t => t.id === taskId) || tasks[0];
+    const task = tasks.find(t => t.id === taskId);
 
     const newAnn = {
       id: 'ann_' + Date.now(),
-      taskId: task.id, taskTitle: task.title, title, content,
-      attachment: attachmentObj || { name: '补充教学参考资料.pdf', size: '1.5MB' },
+      taskId,
+      taskTitle: task ? task.title : '期末协作写作',
+      title,
+      content,
+      attachment,
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-      author: '教师端', readStatus: { 'group_1': false, 'group_2': false }
+      author: '张教授',
+      readStatus: { 'group_1': false }
     };
 
-    annList.unshift(newAnn);
-    localStorage.setItem(STORAGE_KEY_ANNOUNCEMENTS, JSON.stringify(newAnn));
+    announcements.unshift(newAnn);
+    localStorage.setItem(STORAGE_KEY_ANNOUNCEMENTS, JSON.stringify(announcements));
     return newAnn;
   }
 
   markAnnouncementRead(annId, groupId = 'group_1') {
-    const annList = this.getAnnouncements();
-    const ann = annList.find(a => a.id === annId);
+    const announcements = this.getAnnouncements();
+    const ann = announcements.find(a => a.id === annId);
     if (ann) {
       if (!ann.readStatus) ann.readStatus = {};
       ann.readStatus[groupId] = true;
-      localStorage.setItem(STORAGE_KEY_ANNOUNCEMENTS, JSON.stringify(annList));
+      localStorage.setItem(STORAGE_KEY_ANNOUNCEMENTS, JSON.stringify(announcements));
     }
   }
 
   /**
-   * Pure Chat Dialogue Log Exporter for Excel (.csv)
-   * Strictly exports 3 columns: [名字, 时间, 内容] from the chat stream dialogs
+   * Pure Chat Exporter: Export Group Chat Logs to Excel CSV
+   * Columns: 名字, 时间, 内容
    */
-  exportGroupChatLogsToExcel(groupId, chatLogs) {
-    let csvContent = '\uFEFF'; // UTF-8 BOM
-    csvContent += `"名字","时间","内容"\n`;
+  exportGroupChatLogsToExcel(groupId = 'group_1', chatLogsState = null) {
+    const currentChatLogs = chatLogsState || JSON.parse(localStorage.getItem('jizhi_sync_chat_v3')) || {};
+    
+    let csvContent = '\uFEFF名字,时间,内容\n';
 
-    const nameMapping = {
-      'A': '李明 (学生A/组长)',
-      'B': '王芳 (学生B/组员)',
-      'C': '陈强 (学生C/组员)',
-      'auctioneer': '拍卖师 Agent',
-      'managingEditor': '责任编辑 Agent',
-      'reviewingEditor': '审稿编辑 Agent',
-      'proponent': '正方委员 Agent',
-      'opponent': '反方委员 Agent',
-      'neutral': '中间委员 Agent'
+    const stageNames = {
+      stage1: '阶段一：学术拍卖会',
+      stage2: '阶段二：学术编辑部',
+      stage3: '阶段三：答辩擂台'
     };
 
-    ['stage1', 'stage2', 'stage3'].forEach(stageKey => {
-      const logs = chatLogs[stageKey] || [];
-      logs.forEach(msg => {
-        // Exclude system logs/noise if any, keeping purely chat dialogues
-        if (msg.sender && msg.text) {
-          const name = nameMapping[msg.sender] || msg.sender;
-          const time = msg.timestamp || '14:00';
-          const content = (msg.text || '').replace(/"/g, '""');
+    const users = this.getUsers();
 
-          csvContent += `"${name}","${time}","${content}"\n`;
-        }
-      });
+    ['stage1', 'stage2', 'stage3'].forEach(stageKey => {
+      const logs = currentChatLogs[stageKey] || [];
+      if (logs.length > 0) {
+        csvContent += `"[${stageNames[stageKey]}]","",""\n`;
+        
+        logs.forEach(msg => {
+          let senderDisplayName = msg.sender;
+
+          if (msg.sender === 'A' || msg.sender === 'liming') senderDisplayName = '李明 (学生A/组长)';
+          else if (msg.sender === 'B' || msg.sender === 'wangfang') senderDisplayName = '王芳 (学生B/组员)';
+          else if (msg.sender === 'C' || msg.sender === 'chenqiang') senderDisplayName = '陈强 (学生C/组员)';
+          else if (msg.sender === 'auctioneer') senderDisplayName = '拍卖师 Agent';
+          else if (msg.sender === 'managingEditor') senderDisplayName = '责任编辑 Agent';
+          else if (msg.sender === 'reviewingEditor') senderDisplayName = '审稿编辑 Agent';
+          else if (msg.sender === 'opponent') senderDisplayName = '反方委员 Agent';
+          else if (msg.sender === 'proponent') senderDisplayName = '正方委员 Agent';
+          else if (msg.sender === 'neutral') senderDisplayName = '中间委员 Agent';
+          else {
+            const foundUser = users.find(u => u.studentCode === msg.sender || u.username === msg.sender);
+            if (foundUser) senderDisplayName = foundUser.name;
+          }
+
+          const time = msg.timestamp || '';
+          const text = (msg.text || '').replace(/"/g, '""').replace(/\n/g, ' ');
+
+          csvContent += `"${senderDisplayName}","${time}","${text}"\n`;
+        });
+      }
     });
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.href = url;
-    link.download = `第1小组_纯聊天记录表格_${Date.now()}.csv`;
+    link.setAttribute('href', url);
+    link.setAttribute('download', `第2小组_学术对话记录表_${new Date().toISOString().slice(0, 10)}.csv`);
+    document.body.appendChild(link);
     link.click();
-    URL.revokeObjectURL(url);
+    document.body.removeChild(link);
   }
 }
