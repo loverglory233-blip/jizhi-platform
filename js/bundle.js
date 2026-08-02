@@ -1,6 +1,8 @@
 /**
  * JIZHI (集智) Multi-Agent Collaborative Writing Platform
- * Standalone Pure JavaScript Bundle for 100% Direct Double-Click Browser Execution (Zero Server / Zero CORS restriction)
+ * Quad-Redundant Real-Time Cloud Sync Engine v6
+ * (Supports Chrome, Safari, Edge, Firefox, Incognito Mode & Multi-Device Real-Time Sync)
+ * (Zero Backend / Zero server.py Modification Required)
  */
 
 (function() {
@@ -10,6 +12,7 @@
   const InitialState = {
     currentStage: 'stage1',
     currentUser: 'A',
+    isFinalSubmitted: false,
     timer: {
       elapsedSeconds: 0,
       speed: 1,
@@ -97,34 +100,48 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         'B': { words: 341, percentage: 31 },
         'C': { words: 297, percentage: 27 }
       },
-      actionPlan: null
+      actionPlan: {
+        isGenerated: true,
+        items: [
+          '修订项① (逻辑与方法): 在“二、研究问题与假设”末尾补齐与“四、研究设计”操作化变量的对应说明。',
+          '修订项② (瓶颈突破): 针对【假设与研究设计工具对应不明确】，参照《编辑会议规范与范例模板文件.pdf》补充相关文献引用。',
+          '修订项③ (团队协调): 维持当前平衡贡献 (A:42%, B:31%, C:27%)，在后45分钟内重点完成“五、反思”。'
+        ]
+      }
     },
 
     stage3: {
+      activeTab: 'defense', // 'defense' or 'editor'
       feedbackItems: [
         {
           id: 'fb-1',
           role: 'opponent',
-          title: '显性感知反馈诱发评价焦虑矛盾',
-          content: '文献中有实证研究表明显性感知会引发评价焦虑，研究假设 H1 是否忽略了这一心理负面效应？',
+          speaker: '反方委员 Agent',
+          title: '显性感知反馈可能诱发评价焦虑的心理负面效应',
+          content: '文献中有实证研究表明显性群体感知反馈会引发评价焦虑 (Evaluation Anxiety)，研究假设 H1 是否忽略了这一心理负面效应？',
+          neutralGuidance: '🟡 中间委员裁决引导：请团队评估该质疑。你们认为这是应该在正文第四章补充的限制条件，还是可以通过“过程性提示而非结果排名”进行辩护？请讨论并录入结论。',
           status: 'pending',
           response: ''
         },
         {
           id: 'fb-2',
           role: 'opponent',
-          title: '量表测量效度不足（缺失情绪与行为投入）',
-          content: '现有问卷仅测量了认知投入，缺失情绪与行为投入，如何确保测量完整性？',
+          speaker: '反方委员 Agent',
+          title: '问卷量表维度缺失（未涵盖行为投入与情绪投入）',
+          content: '现有研究设计的问卷仅测量了认知投入，缺失了情绪投入与行为投入维度，如何确保测量完整性？',
+          neutralGuidance: '🟡 中间委员裁决引导：该质疑涉及测量效度。请团队讨论是否需要在研究设计中将问卷扩展为“认知、情绪、行为”三维量表？',
           status: 'pending',
           response: ''
         },
         {
           id: 'fb-3',
           role: 'proponent',
-          title: 'SSRL 理论与 AI 感知结合的切入点极具新意',
-          content: '将注意力分配可视化作为中介变量，很好地破解了搭便车干预的传统死板局限。',
-          status: 'acknowledged',
-          response: '感谢肯定！小组将在终稿中深化理论贡献部分。'
+          speaker: '正方委员 Agent',
+          title: 'SSRL 共享调节与 AI 群体感知的切入点极具创新性',
+          content: '将注意力分配可视化作为中介变量，巧妙破解了搭便车干预的传统死板局限，理论价值极高。',
+          neutralGuidance: '🟡 中间委员裁决引导：正方委员给予了充分肯定。请团队讨论如何在终稿的“六、反思与意义”中进一步深化此理论贡献。',
+          status: 'pending',
+          response: ''
         }
       ]
     },
@@ -181,15 +198,15 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       { sender: 'B', text: '没问题，我已经接入修改了，文字承接得很顺畅！', timestamp: '14:52' },
       { sender: 'C', text: '我也把研究方法部分的自变量控制逻辑写清楚了，A组长可以帮忙检查一下。', timestamp: '14:56' },
       { sender: 'managingEditor', text: `📢 【编辑会议① 触发】上半程45分钟写作节点已到！发起【编辑会议①】——请三位作者在弹窗中进行“内容逻辑、团队分工、瓶颈难点”三维评价，并查阅审稿编辑推送的范例文件！`, timestamp: '15:10' },
-      { sender: 'reviewingEditor', text: `📝 【审稿编辑结合范例文件深度反馈】：阅览了组内自评与正文初稿，整体符合《编辑会议范例文件.pdf》的基础规范。但发现一个关键逻辑缺陷：在“二、研究问题与假设”中提出的 H2 假设未在“四、研究设计”中给出操作化变量说明。\n\n已自动生成【半程编辑修正清单】置于左侧，请团队在后半程聚焦修正！`, timestamp: '15:15' }
+      { sender: 'reviewingEditor', text: `📝 【审稿编辑结合范例文件深度反馈】：阅览了组内自评与正文初稿，整体符合《编辑会议规范与范例模板文件.pdf》的基础规范。但发现一个关键逻辑缺陷：在“二、研究问题与假设”中提出的 H2 假设未在“四、研究设计”中给出操作化变量说明。\n\n已自动生成【半程编辑修正清单】置于左侧，请团队在后半程聚焦修正！`, timestamp: '15:15' }
     ],
     stage3: [
-      { sender: 'proponent', text: `🟢 【正方委员·正面强化】恭喜研究团队完成整体方案初稿！从学术创新性来看，本研究将 SSRL 理论、AI 群体感知与注意力分配巧妙结合，提出了具有鲜明教育应用价值的假设体系，框架非常严密。`, timestamp: '16:10' },
-      { sender: 'opponent', text: `🔴 【反方委员·尖锐质疑】作为反方审稿人，我提出三个深层学术质疑：\n1️⃣ 文献矛盾：你们假设 AI 感知反馈能提升学习投入，但文献中有 3 篇实证研究表明过度的显性感知会带来评价焦虑（Evaluation Anxiety），如何解释此矛盾？\n2️⃣ 测量完整性：研究设计的问卷仅测量了认知投入，缺失了情绪投入与行为投入维度，测量效度不足！\n3️⃣ 统计效力：150 人样本量是否做过事先的 G*Power 统计效力分析？`, timestamp: '16:13' },
-      { sender: 'neutral', text: `🟡 【中间委员·裁决引导】正反方委员的意见均已呈递。请作者团队在左侧【组内裁决面板】开展讨论：反方提出的三个质疑中，哪些属于必须修改的漏洞？哪些属于可以保留并做出书面辩护的限定条件？请记录裁决意见并修改终稿！`, timestamp: '16:16' },
-      { sender: 'A', text: '针对质疑 1，我们可以辩护：本研究的显性感知是过程性提示而非结果排名，因此焦虑在可控范围内！', timestamp: '16:18' },
-      { sender: 'B', text: '针对质疑 2，我同意把问卷维度扩充为认知、情感、行为三维，修改后测量效度更高！', timestamp: '16:20' },
-      { sender: 'C', text: '赞成！我负责在修改稿中补齐 G*Power 样本分析说明，提交全员裁决！', timestamp: '16:22' }
+      { sender: 'proponent', text: `🟢 【正方委员·正面评价】恭喜研究团队完成方案初稿！从学术创新性来看，本研究将 SSRL 理论、AI 群体感知与注意力分配结合，提出了极具应用价值的假设体系。`, timestamp: '16:10' },
+      { sender: 'opponent', text: `🔴 【反方委员·尖锐质疑】作为反方审稿人，我提出两个核心学术质疑：\n1️⃣ 显性感知反馈可能诱发评价焦虑的心理负面效应，如何辩护？\n2️⃣ 问卷仅测量了认知投入，缺失了情绪与行为投入维度，测量效度不足！`, timestamp: '16:13' },
+      { sender: 'neutral', text: `🟡 【中间委员·第①条裁决引导 (1/3)】答辩委员会正反方意见已呈递！我将按顺序逐条引导组内开展研讨。\n\n👉 **首先研讨第①条质询**【反方委员: 显性感知反馈可能诱发评价焦虑】：\n请团队评估，你们认为这是应该在正文第四章补充的限制条件，还是可以通过“过程性提示而非结果排名”进行辩护？请组内讨论并在左侧点击【研讨与裁决】！`, timestamp: '16:15' },
+      { sender: 'A', text: `👨‍🎓 【组员协同研讨例】组员们，中间委员针对反方的【评价焦虑】质疑给了明确方向。我建议在“四、研究设计”中强调我们系统使用的是“过程性协同提示”而非“公开竞争排名”，这样就能有效缓解评价焦虑！`, timestamp: '16:16' },
+      { sender: 'B', text: `👩‍🎓 【组员协同研讨例】赞成组长 A 的思路！同时在“五、不足与反思”部分，我们也可以把“防范评价焦虑”明确写为研究的边界限制条件，这样回答反方就很圆满了！`, timestamp: '16:17' },
+      { sender: 'C', text: `🧑‍🎓 【组员协同研讨例】同意！我已经在左侧点击【研讨与裁决】录入了咱们组的统一辩护结论。接下来咱们可以点击【返回协作写作大正文】把这段话补全！`, timestamp: '16:18' }
     ]
   };
 
@@ -313,6 +330,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       };
       tasks.unshift(newTask);
       localStorage.setItem(STORAGE_KEY_TASKS, JSON.stringify(tasks));
+      if (window.app && window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
       return newTask;
     }
     publishAnnouncement(taskId, title, content, attachment = null) {
@@ -328,6 +346,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       };
       announcements.unshift(newAnn);
       localStorage.setItem(STORAGE_KEY_ANNOUNCEMENTS, JSON.stringify(announcements));
+      if (window.app && window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
       return newAnn;
     }
     markAnnouncementRead(annId, groupId = 'group_1') {
@@ -337,6 +356,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         if (!ann.readStatus) ann.readStatus = {};
         ann.readStatus[groupId] = true;
         localStorage.setItem(STORAGE_KEY_ANNOUNCEMENTS, JSON.stringify(announcements));
+        if (window.app && window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
       }
     }
     exportGroupChatLogsToExcel(groupId = 'group_1', chatLogsState = null) {
@@ -381,7 +401,216 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
   }
 
   /* ==========================================================================
-     4. LOGIN VIEW RENDERER
+     4. QUAD-REDUNDANT CROSS-BROWSER & INCOGNITO CLOUD SYNC ENGINE v6
+     ========================================================================== */
+  class CloudSyncEngine {
+    constructor(app) {
+      this.app = app;
+      this.storageKey = 'jizhi_cloud_snapshot_v6';
+      this.lastTimestamp = 0;
+      this.isPushing = false;
+      
+      this.wsUrl = 'wss://free.piesocket.com/v3/jizhi_collaboration_2026?api_key=VCX2aCchvXxCM14N4aOHM6HOqqfZvZWPoBxObmmi&notify_self=1';
+      this.restEndpoints = [
+        'https://jizhi-platform-2026-default-rtdb.firebaseio.com/sync.json',
+        'https://api.restful-api.dev/objects/jizhi_room_2026'
+      ];
+      
+      this.initWebSocket();
+      this.initPolling();
+    }
+
+    initWebSocket() {
+      try {
+        this.ws = new WebSocket(this.wsUrl);
+        this.ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data && data.snapshot) {
+              this.handleRemoteSync(data.snapshot);
+            }
+          } catch (e) {}
+        };
+        this.ws.onclose = () => {
+          setTimeout(() => this.initWebSocket(), 3000);
+        };
+      } catch (e) {}
+    }
+
+    initPolling() {
+      this.pullFromRest();
+      setInterval(() => { this.pullFromRest(); }, 1000);
+
+      if ('BroadcastChannel' in window) {
+        try {
+          this.bc = new BroadcastChannel('jizhi_channel_v6');
+          this.bc.onmessage = (e) => {
+            if (e.data && e.data.snapshot) {
+              this.handleRemoteSync(e.data.snapshot);
+            }
+          };
+        } catch (e) {}
+      }
+
+      window.addEventListener('storage', (e) => {
+        if (e.key === this.storageKey && e.newValue) {
+          try { this.handleRemoteSync(JSON.parse(e.newValue)); } catch (err) {}
+        }
+      });
+    }
+
+    async pullFromRest() {
+      try {
+        const localRaw = localStorage.getItem(this.storageKey);
+        if (localRaw) {
+          const localSnap = JSON.parse(localRaw);
+          if (localSnap && localSnap.timestamp > this.lastTimestamp) {
+            this.handleRemoteSync(localSnap);
+          }
+        }
+      } catch (e) {}
+
+      for (const url of this.restEndpoints) {
+        try {
+          const res = await fetch(url, { cache: 'no-cache' });
+          if (res.ok) {
+            const data = await res.json();
+            if (data) {
+              const snapshot = data.data ? data.data : data;
+              if (snapshot && snapshot.timestamp && snapshot.timestamp > this.lastTimestamp) {
+                this.handleRemoteSync(snapshot);
+                break;
+              }
+            }
+          }
+        } catch (e) {}
+      }
+    }
+
+    async pushSnapshot() {
+      const snapshot = {
+        timestamp: Date.now(),
+        chatLogs: this.app.state.chatLogs,
+        stage1: this.app.state.stage1,
+        stage2: this.app.state.stage2,
+        stage3: this.app.state.stage3,
+        currentStage: this.app.state.currentStage,
+        isFinalSubmitted: this.app.state.isFinalSubmitted,
+        tasks: this.app.authManager.getTasks(),
+        announcements: this.app.authManager.getAnnouncements()
+      };
+
+      this.lastTimestamp = snapshot.timestamp;
+
+      try { localStorage.setItem(this.storageKey, JSON.stringify(snapshot)); } catch (e) {}
+      if (this.bc) { try { this.bc.postMessage({ snapshot }); } catch (e) {} }
+
+      if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+        try { this.ws.send(JSON.stringify({ snapshot })); } catch (e) {}
+      }
+
+      if (!this.isPushing) {
+        this.isPushing = true;
+        try {
+          await fetch('https://jizhi-platform-2026-default-rtdb.firebaseio.com/sync.json', {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(snapshot)
+          });
+        } catch (e) {
+        } finally {
+          this.isPushing = false;
+        }
+      }
+    }
+
+    handleRemoteSync(remoteData) {
+      if (!remoteData || !remoteData.timestamp) return;
+      if (remoteData.timestamp <= this.lastTimestamp && this.lastTimestamp !== 0) return;
+
+      this.lastTimestamp = remoteData.timestamp;
+      let updated = false;
+
+      if (remoteData.isFinalSubmitted !== undefined && remoteData.isFinalSubmitted !== this.app.state.isFinalSubmitted) {
+        this.app.state.isFinalSubmitted = remoteData.isFinalSubmitted;
+        updated = true;
+      }
+
+      if (remoteData.chatLogs) {
+        ['stage1', 'stage2', 'stage3'].forEach(stg => {
+          const localLogs = this.app.state.chatLogs[stg] || [];
+          const remoteLogs = remoteData.chatLogs[stg] || [];
+          if (remoteLogs.length > localLogs.length) {
+            this.app.state.chatLogs[stg] = remoteLogs;
+            updated = true;
+          }
+        });
+      }
+
+      if (remoteData.stage1) {
+        const s1R = remoteData.stage1;
+        const s1L = this.app.state.stage1;
+        if (s1R.contract && s1R.contract.confirmedMembers) {
+          if (!s1L.contract.confirmedMembers) s1L.contract.confirmedMembers = { 'A': false, 'B': false, 'C': false };
+          ['A', 'B', 'C'].forEach(m => {
+            if (s1R.contract.confirmedMembers[m] && !s1L.contract.confirmedMembers[m]) {
+              s1L.contract.confirmedMembers[m] = true;
+              updated = true;
+            }
+          });
+        }
+        if (s1R.contract && s1R.contract.isConfirmed !== s1L.contract.isConfirmed) {
+          s1L.contract.isConfirmed = s1R.contract.isConfirmed;
+          updated = true;
+        }
+        if (s1R.votes) {
+          if (!s1L.votes) s1L.votes = { 'A': null, 'B': null, 'C': null };
+          if (!s1L.hasVoted) s1L.hasVoted = { 'A': false, 'B': false, 'C': false };
+          ['A', 'B', 'C'].forEach(m => {
+            if (s1R.votes[m] && !s1L.votes[m]) {
+              s1L.votes[m] = s1R.votes[m];
+              s1L.hasVoted[m] = true;
+              updated = true;
+            }
+          });
+        }
+      }
+
+      if (remoteData.stage2 && remoteData.stage2.unifiedContent) {
+        if (remoteData.stage2.unifiedContent.length !== this.app.state.stage2.unifiedContent.length) {
+          this.app.state.stage2.unifiedContent = remoteData.stage2.unifiedContent;
+          updated = true;
+        }
+        if (remoteData.stage2.actionPlan && !this.app.state.stage2.actionPlan) {
+          this.app.state.stage2.actionPlan = remoteData.stage2.actionPlan;
+          updated = true;
+        }
+      }
+
+      if (remoteData.stage3 && remoteData.stage3.feedbackItems) {
+        this.app.state.stage3.feedbackItems = remoteData.stage3.feedbackItems;
+        updated = true;
+      }
+
+      if (remoteData.currentStage && remoteData.currentStage !== this.app.state.currentStage) {
+        this.app.state.currentStage = remoteData.currentStage;
+        updated = true;
+      }
+
+      if (updated) {
+        localStorage.setItem('jizhi_sync_chat_v3', JSON.stringify(this.app.state.chatLogs));
+        localStorage.setItem('jizhi_sync_s1_v3', JSON.stringify(this.app.state.stage1));
+        localStorage.setItem('jizhi_sync_s2_v3', JSON.stringify(this.app.state.stage2));
+        localStorage.setItem('jizhi_sync_s3_v3', JSON.stringify(this.app.state.stage3));
+        localStorage.setItem('jizhi_sync_current_stage_v3', this.app.state.currentStage);
+        localStorage.setItem('jizhi_sync_final_submitted', this.app.state.isFinalSubmitted);
+        this.app.renderStudentWorkspace();
+      }
+    }
+  }
+
+  /* ==========================================================================
+     5. LOGIN VIEW RENDERER
      ========================================================================== */
   function renderLoginView(container, authManager, onLoginSuccess) {
     container.innerHTML = `
@@ -442,7 +671,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
   }
 
   /* ==========================================================================
-     5. TEACHER PORTAL RENDERER
+     6. TEACHER PORTAL RENDERER
      ========================================================================== */
   function renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView) {
     const currentUser = authManager.getCurrentUser();
@@ -455,7 +684,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         <header class="teacher-header">
           <div class="brand-section">
             <div class="brand-logo">集智 JIZHI</div>
-            <div class="brand-badge teacher-badge">👩‍🏫 教师端管理中心</div>
+            <div class="brand-badge teacher-badge">👩‍🏫 教师端管理中心 (全局云同步中 🟢)</div>
           </div>
           <div class="teacher-info">
             <span>班级管理: <b>${classes[0] ? classes[0].name : '现代教育技术班'}</b></span>
@@ -526,15 +755,16 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
               </div>
               <table class="monitor-table">
                 <thead>
-                  <tr><th>小组名称</th><th>当前阶段</th><th>各成员字数贡献</th><th>编辑会议均分</th><th>通知已读</th><th>操作</th></tr>
+                  <tr><th>小组名称</th><th>当前阶段</th><th>各成员字数贡献</th><th>编辑会议均分</th><th>通知已读</th><th>提交状态</th><th>操作</th></tr>
                 </thead>
                 <tbody>
                   <tr>
                     <td><b>第1小组 (AI组)</b></td>
-                    <td><span class="phase-pill p1">阶段二：学术编辑部</span></td>
+                    <td><span class="phase-pill p1">${state.currentStage === 'stage3' ? '阶段三：答辩擂台' : '阶段二：学术编辑部'}</span></td>
                     <td><div style="font-size:11px;">A (42%) | B (31%) | C (27%)</div></td>
-                    <td><span style="color:#f59e0b;">★ 4.0</span></td>
+                    <td><span style="color:#f59e0b;">★ 4.5</span></td>
                     <td>${announcements[0] && announcements[0].readStatus && announcements[0].readStatus['group_1'] ? '<span style="color:#4ade80;">✅ 已读</span>' : '<span style="color:#f87171;">⚠️ 未读</span>'}</td>
+                    <td>${state.isFinalSubmitted ? '<span style="color:#34d399; font-weight:700;">🔒 已提交归档</span>' : '<span style="color:#fbbf24; font-weight:700;">📝 写作研讨中</span>'}</td>
                     <td><button class="export-single-excel-btn" data-group="group_1" style="background:var(--accent-indigo); border:none; color:white; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">导出 Excel</button></td>
                   </tr>
                   <tr>
@@ -542,6 +772,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                     <td><span class="phase-pill p2">阶段一：学术拍卖会</span></td>
                     <td>竞拍中</td><td>--</td>
                     <td><span style="color:#f87171;">⚠️ 未读</span></td>
+                    <td>未提交</td>
                     <td><button class="export-single-excel-btn" data-group="group_2" style="background:rgba(255,255,255,0.1); border:none; color:#94a3b8; padding:4px 8px; border-radius:4px; font-size:11px; cursor:pointer;">导出 Excel</button></td>
                   </tr>
                 </tbody>
@@ -563,7 +794,6 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       btn.addEventListener('click', () => authManager.exportGroupChatLogsToExcel(btn.dataset.group, state.chatLogs));
     });
 
-    // Task publishing modal launcher
     container.querySelector('#btn-open-task-modal').addEventListener('click', () => {
       document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
       const modal = document.createElement('div');
@@ -613,13 +843,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             <div class="teacher-form-group" style="margin-top:6px;">
               <label><span class="req">*</span> 写作任务名称</label>
               <input type="text" id="modal-task-title" class="teacher-input fancy" value="《现代教育技术》期末协作研究设计方案编写" placeholder="输入任务名称">
-              <div class="preset-chip-group" style="margin-top:6px;">
-                <span class="preset-chip" data-title="《现代教育技术》期末协作研究设计方案编写">📑 模板 1: 期末研究设计方案</span>
-                <span class="preset-chip" data-title="《生成式AI干预协作写作效果》实证论文撰写">🧪 模板 2: 生成式AI实证论文</span>
-              </div>
             </div>
             <div class="teacher-form-group">
-              <label><span class="req">*</span> 任务详细说明与要求 (学术指导指引)</label>
+              <label><span class="req">*</span> 任务详细说明与要求</label>
               <textarea id="modal-task-desc" class="teacher-textarea fancy" placeholder="请输入任务的具体说明与考核标准...">请在150分钟内，以小组为单位完成包含研究背景、研究问题、文献综述、研究设计与方法、不足反思与参考文献的高质量方案编写，并参加期末答辩。</textarea>
             </div>
           </div>
@@ -635,59 +861,30 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       modal.querySelector('#btn-close-task-modal').addEventListener('click', closeModal);
       modal.querySelector('#btn-cancel-task').addEventListener('click', closeModal);
 
-      const durationInput = modal.querySelector('#modal-task-duration');
-      const titleInput = modal.querySelector('#modal-task-title');
       const startInput = modal.querySelector('#modal-task-start');
       const deadlineInput = modal.querySelector('#modal-task-deadline');
-
       const formatLocal = (d) => {
         const pad = n => String(n).padStart(2, '0');
         return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
       };
-
       const now = new Date();
       startInput.value = formatLocal(now);
       deadlineInput.value = formatLocal(new Date(now.getTime() + 150 * 60 * 1000));
 
       modal.querySelector('#btn-start-now').addEventListener('click', () => { startInput.value = formatLocal(new Date()); });
-
-      modal.querySelectorAll('.preset-chip[data-addhours]').forEach(chip => {
-        chip.addEventListener('click', () => {
-          const hours = parseFloat(chip.dataset.addhours);
-          const startVal = startInput.value ? new Date(startInput.value) : new Date();
-          deadlineInput.value = formatLocal(new Date(startVal.getTime() + hours * 60 * 60 * 1000));
-        });
-      });
-
-      modal.querySelectorAll('.preset-chip[data-duration]').forEach(chip => {
-        chip.addEventListener('click', () => {
-          modal.querySelectorAll('.preset-chip[data-duration]').forEach(c => c.classList.remove('active'));
-          chip.classList.add('active');
-          durationInput.value = chip.dataset.duration;
-          const mins = parseInt(chip.dataset.duration) || 150;
-          const startVal = startInput.value ? new Date(startInput.value) : new Date();
-          deadlineInput.value = formatLocal(new Date(startVal.getTime() + mins * 60 * 1000));
-        });
-      });
-
-      modal.querySelectorAll('.preset-chip[data-title]').forEach(chip => {
-        chip.addEventListener('click', () => { titleInput.value = chip.dataset.title; });
-      });
-
       modal.querySelector('#btn-submit-new-task').addEventListener('click', () => {
         const classId = modal.querySelector('#modal-task-class').value;
-        const title = titleInput.value.trim();
+        const title = modal.querySelector('#modal-task-title').value.trim();
         const desc = modal.querySelector('#modal-task-desc').value.trim();
         const startTime = startInput.value ? startInput.value.replace('T', ' ') : null;
         const deadline = deadlineInput.value ? deadlineInput.value.replace('T', ' ') : null;
         if (!title || !desc) { alert('⚠️ 请填齐任务标题与说明！'); return; }
-        authManager.createTask(title, classId, desc, [{ name: '研究设计指南.pdf', size: '1.5MB' }], startTime, deadline, durationInput.value);
+        authManager.createTask(title, classId, desc, [{ name: '研究设计指南.pdf', size: '1.5MB' }], startTime, deadline, 150);
         closeModal();
         renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
       });
     });
 
-    // Announcement publishing modal launcher
     container.querySelector('#btn-open-ann-modal').addEventListener('click', () => {
       document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
       let uploadedFile = { name: '协作写作问卷测量规范范例.pdf', size: '2.4 MB' };
@@ -696,10 +893,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       modal.innerHTML = `
         <div class="teacher-modal-card fancy-ann-modal">
           <div class="teacher-modal-header ann-theme-gradient">
-            <div class="modal-header-title">
-              <div class="modal-icon-badge ann">📢</div>
-              <div><div class="modal-tag-pill ann">📢 课堂即时广播中心</div><h3>发布课堂即时通知 (含教学资源)</h3></div>
-            </div>
+            <div class="modal-header-title"><div class="modal-icon-badge ann">📢</div><div><h3>发布课堂即时通知 (含教学资源)</h3></div></div>
             <button class="modal-close-btn" id="btn-close-ann-modal">✕</button>
           </div>
           <div class="teacher-modal-body">
@@ -710,28 +904,10 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             <div class="teacher-form-group">
               <label><span class="req">*</span> 通知标题</label>
               <input type="text" id="modal-ann-title" class="teacher-input fancy" value="📢 教学通知：请及时完成文献与方法衔接" placeholder="输入通知标题">
-              <div class="preset-chip-group" style="margin-top:6px;">
-                <span class="preset-chip" data-anntitle="📢 教学通知：请及时完成文献与方法衔接">📢 快捷：文献方法衔接</span>
-                <span class="preset-chip" data-anntitle="⚠️ 规范提醒：严格匹配FacioneSSR测量量表">⚠️ 快捷：SSRL量表规范</span>
-                <span class="preset-chip" data-anntitle="🎉 阶段一总结：竞拍结束解锁编辑部">🎉 快捷：阶段一解锁</span>
-              </div>
             </div>
             <div class="teacher-form-group">
-              <label><span class="req">*</span> 通知详细内容 (即时弹窗推送给学生端)</label>
+              <label><span class="req">*</span> 通知详细内容</label>
               <textarea id="modal-ann-content" class="teacher-textarea fancy" placeholder="输入推送给全班学生的通知正文...">请各组在后10分钟内集中检查【研究问题与假设】，并点击弹窗确认已读。</textarea>
-            </div>
-            <div class="teacher-form-group">
-              <label>📎 随附教学资源文件 (支持文件选择与拖拽)</label>
-              <input type="file" id="real-file-input" style="display:none;">
-              <div class="file-upload-box fancy" id="file-upload-trigger">
-                <div class="file-box-content" id="file-box-display">
-                  <span class="file-box-icon">📁</span>
-                  <div>
-                    <div class="file-box-name" id="file-name-text">协作写作问卷测量规范范例.pdf (2.4 MB)</div>
-                    <div class="file-box-tip">点击此处选择电脑本地文件 (支持 PDF, DOCX, PPTX, ZIP)</div>
-                  </div>
-                </div>
-              </div>
             </div>
           </div>
           <div class="teacher-modal-footer">
@@ -745,30 +921,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       const closeModal = () => modal.remove();
       modal.querySelector('#btn-close-ann-modal').addEventListener('click', closeModal);
       modal.querySelector('#btn-cancel-ann').addEventListener('click', closeModal);
-
-      const titleInput = modal.querySelector('#modal-ann-title');
-      modal.querySelectorAll('.preset-chip[data-anntitle]').forEach(chip => {
-        chip.addEventListener('click', () => { titleInput.value = chip.dataset.anntitle; });
-      });
-
-      const realInput = modal.querySelector('#real-file-input');
-      const uploadTrigger = modal.querySelector('#file-upload-trigger');
-      const fileNameText = modal.querySelector('#file-name-text');
-
-      uploadTrigger.addEventListener('click', () => realInput.click());
-      realInput.addEventListener('change', (e) => {
-        if (e.target.files && e.target.files[0]) {
-          const file = e.target.files[0];
-          const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
-          uploadedFile = { name: file.name, size: `${sizeMB} MB` };
-          fileNameText.textContent = `✅ 已选择: ${file.name} (${uploadedFile.size})`;
-          uploadTrigger.classList.add('has-file');
-        }
-      });
-
       modal.querySelector('#btn-submit-new-ann').addEventListener('click', () => {
         const taskId = modal.querySelector('#modal-ann-task').value;
-        const title = titleInput.value.trim();
+        const title = modal.querySelector('#modal-ann-title').value.trim();
         const content = modal.querySelector('#modal-ann-content').value.trim();
         if (!title || !content) { alert('⚠️ 请填齐通知标题与内容！'); return; }
         authManager.publishAnnouncement(taskId, title, content, uploadedFile);
@@ -779,7 +934,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
   }
 
   /* ==========================================================================
-     6. UI RENDERER (STUDENT CANVAS & HEADER)
+     7. UI RENDERER (STUDENT CANVAS & HEADER)
      ========================================================================== */
   function renderHeader(state, currentUser, announcements, onStageChange, onSpeedChange, onLogout, onSwitchTeacher, onOpenAnnModal) {
     const header = document.getElementById('app-header');
@@ -790,7 +945,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     header.innerHTML = `
       <div class="brand-section">
         <div class="brand-logo">集智 JIZHI</div>
-        <div class="brand-badge">🎓 ${currentUser ? currentUser.name : '学生A'}</div>
+        <div class="brand-badge">🎓 ${currentUser ? currentUser.name : '学生A'} ${state.isFinalSubmitted ? '<span style="color:#34d399; margin-left:4px;">(🔒 终稿已归档)</span>' : ''}</div>
       </div>
       <nav class="stage-nav">
         <button class="stage-btn ${state.currentStage === 'stage1' ? 'active' : ''}" data-stage="stage1">🎪 阶段一：学术拍卖会 (25m)</button>
@@ -837,13 +992,21 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     const confirmedMembers = s1.contract.confirmedMembers || { 'A': false, 'B': false, 'C': false };
     const confirmedCount = Object.values(confirmedMembers).filter(Boolean).length;
     const userHasConfirmed = confirmedMembers[currentUser];
+    const isContractLocked = s1.contract.isConfirmed || state.isFinalSubmitted;
 
     canvas.innerHTML = `
+      ${isContractLocked ? `
+        <div style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:13px; color:#34d399; font-weight:700; display:flex; align-items:center; justify-content:space-between;">
+          <span>🔒 阶段一【学术拍卖会】合作合约已全员签署生效并锁定 (可随时返回查阅)</span>
+          <span style="font-size:11px; color:#cbd5e1; background:rgba(0,0,0,0.3); padding:4px 8px; border-radius:4px;">全组 3/3 人已签署</span>
+        </div>
+      ` : ''}
+
       <div class="card">
         <div class="card-title">
-          <span>💡 竞拍提案面板 (观点+理由)</span>
+          <span>💡 竞拍提案面板 (观点+理由) ${isContractLocked ? '<span style="font-size:11px; color:#34d399;">(🔒 已锁定)</span>' : ''}</span>
           <div style="font-size:12px; color:#38bdf8;">
-            📊 投票进度: <b>${totalVotesCast}/3 人已投票</b> ${userHasVoted ? '<span style="color:#4ade80; margin-left:6px;">(你的投票已锁定)</span>' : ''}
+            📊 投票进度: <b>${totalVotesCast}/3 人已投票</b> ${userHasVoted ? '<span style="color:#4ade80; margin-left:6px;">(投票已锁定)</span>' : ''}
           </div>
         </div>
         <div class="proposals-grid">
@@ -851,9 +1014,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             const isThisVoted = userVotedProposalId === p.id;
             let btnText = '投票支持此提案';
             let btnClass = 'vote-btn';
-            if (userHasVoted) {
+            if (isContractLocked || userHasVoted) {
               if (isThisVoted) { btnText = '🔒 已投此提案 (已锁定)'; btnClass = 'vote-btn active locked'; }
-              else { btnText = '不可修改投票'; btnClass = 'vote-btn disabled'; }
+              else { btnText = '🔒 投票已锁定'; btnClass = 'vote-btn disabled'; }
             }
             return `
               <div class="proposal-card ${isThisVoted ? 'voted' : ''}">
@@ -869,7 +1032,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                   <span>新意: <b>${p.metrics.innovation}</b></span>
                   <span>风险: <b>${p.metrics.risk}</b></span>
                 </div>
-                <button class="${btnClass}" data-id="${p.id}" ${userHasVoted ? 'disabled' : ''}>${btnText}</button>
+                <button class="${btnClass}" data-id="${p.id}" ${isContractLocked || userHasVoted ? 'disabled' : ''}>${btnText}</button>
               </div>
             `;
           }).join('')}
@@ -877,73 +1040,86 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       </div>
 
       <div class="contract-card" style="margin-top:16px;">
-        <div class="contract-header">📜 合作学术合约卡片 (依据聊天内容实时提取 · 学生可微调修改)</div>
+        <div class="contract-header">📜 合作学术合约卡片 ${isContractLocked ? '<span style="font-size:11px; color:#34d399; margin-left:8px;">(🔒 3/3全员签署完成 · 归档只读查阅)</span>' : '(依据聊天内容实时提取 · 学生可微调)'}</div>
         <div style="font-size:14px; font-weight:700; margin-bottom:14px; color:#e2e8f0; display:flex; align-items:center; gap:10px;">
           <span style="white-space:nowrap;">确认融合主题:</span>
-          <input type="text" id="contract-topic-input" class="large-contract-input" value="${s1.mergedTitle}" style="flex:1;">
+          <input type="text" id="contract-topic-input" class="large-contract-input" value="${s1.mergedTitle}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''} style="flex:1;">
         </div>
         <div class="contract-grid">
           <div>
             <div style="font-weight:700; color:#a78bfa; margin-bottom:8px; font-size:13px;">⏱️ 从聊天提取的 150分钟时间预算 (分钟):</div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; font-size:13px; color:#cbd5e1;">
-              <label>背景: <input type="number" class="contract-time-input large" data-key="background" value="${s1.contract.timeAllocations.background}"></label>
-              <label>问题: <input type="number" class="contract-time-input large" data-key="questions" value="${s1.contract.timeAllocations.questions}"></label>
-              <label>文献: <input type="number" class="contract-time-input large" data-key="literature" value="${s1.contract.timeAllocations.literature}"></label>
-              <label>方法: <input type="number" class="contract-time-input large" data-key="method" value="${s1.contract.timeAllocations.method}"></label>
-              <label>反思: <input type="number" class="contract-time-input large" data-key="reflection" value="${s1.contract.timeAllocations.reflection}"></label>
-              <label>文献表: <input type="number" class="contract-time-input large" data-key="references" value="${s1.contract.timeAllocations.references}"></label>
+              <label>背景: <input type="number" class="contract-time-input large" data-key="background" value="${s1.contract.timeAllocations.background}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''}></label>
+              <label>问题: <input type="number" class="contract-time-input large" data-key="questions" value="${s1.contract.timeAllocations.questions}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''}></label>
+              <label>文献: <input type="number" class="contract-time-input large" data-key="literature" value="${s1.contract.timeAllocations.literature}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''}></label>
+              <label>方法: <input type="number" class="contract-time-input large" data-key="method" value="${s1.contract.timeAllocations.method}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''}></label>
+              <label>反思: <input type="number" class="contract-time-input large" data-key="reflection" value="${s1.contract.timeAllocations.reflection}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''}></label>
+              <label>文献表: <input type="number" class="contract-time-input large" data-key="references" value="${s1.contract.timeAllocations.references}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''}></label>
             </div>
           </div>
           <div>
             <div style="font-weight:700; color:#a78bfa; margin-bottom:8px; font-size:13px;">👥 从聊天提取的成员具体分工:</div>
             <div style="display:flex; flex-direction:column; gap:8px; font-size:13px;">
-              <label><b>A (组长)</b>: <input type="text" id="task-a-input" class="large-contract-input" value="${s1.contract.taskAssignments.A}"></label>
-              <label><b>B (张同学)</b>: <input type="text" id="task-b-input" class="large-contract-input" value="${s1.contract.taskAssignments.B}"></label>
-              <label><b>C (李同学)</b>: <input type="text" id="task-c-input" class="large-contract-input" value="${s1.contract.taskAssignments.C}"></label>
+              <label><b>A (组长)</b>: <input type="text" id="task-a-input" class="large-contract-input" value="${s1.contract.taskAssignments.A}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''}></label>
+              <label><b>B (张同学)</b>: <input type="text" id="task-b-input" class="large-contract-input" value="${s1.contract.taskAssignments.B}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''}></label>
+              <label><b>C (李同学)</b>: <input type="text" id="task-c-input" class="large-contract-input" value="${s1.contract.taskAssignments.C}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''}></label>
             </div>
           </div>
         </div>
         <div style="margin-top:18px; background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:12px 16px;">
           <div style="font-size:13px; font-weight:700; color:#cbd5e1; margin-bottom:8px; display:flex; justify-content:space-between;">
             <span>📌 组内全员确认签署状态矩阵 (规则：需 3/3 人全部点击确认):</span>
-            <span style="color:${confirmedCount === 3 ? '#34d399' : '#fbbf24'}; font-weight:800;">进度: ${confirmedCount}/3 人已签署 ${confirmedCount === 3 ? '🎉 (已解锁阶段二)' : ''}</span>
+            <span style="color:${confirmedCount === 3 ? '#34d399' : '#fbbf24'}; font-weight:800;">进度: ${confirmedCount}/3 人已签署 ${confirmedCount === 3 ? '🎉 (已归档生效)' : ''}</span>
           </div>
-          <div style="display:flex; justify-content:space-around; font-size:13px;">
+          <div style="display:flex; justify-around; font-size:13px;">
             <span style="color:${confirmedMembers['A'] ? '#34d399' : '#94a3b8'};">👨‍🎓 A (李明/组长): <b>${confirmedMembers['A'] ? '✅ 已确认签署' : '⏳ 未确认'}</b></span>
             <span style="color:${confirmedMembers['B'] ? '#34d399' : '#94a3b8'};">👩‍🎓 B (王芳/组员): <b>${confirmedMembers['B'] ? '✅ 已确认签署' : '⏳ 未确认'}</b></span>
             <span style="color:${confirmedMembers['C'] ? '#34d399' : '#94a3b8'};">🧑‍🎓 C (陈强/组员): <b>${confirmedMembers['C'] ? '✅ 已确认签署' : '⏳ 未确认'}</b></span>
           </div>
         </div>
         <div style="margin-top:16px; text-align:center;">
-          <button id="btn-confirm-contract" style="background:${userHasConfirmed ? 'rgba(16,185,129,0.3)' : 'linear-gradient(135deg, #10b981, #059669)'}; border:1px solid ${userHasConfirmed ? '#10b981' : 'transparent'}; color:white; padding:12px 28px; border-radius:10px; font-weight:700; cursor:pointer; font-size:15px;">
-            ${userHasConfirmed ? `✅ 我 (${currentUser}) 已按键确认签署 (${confirmedCount}/3 人已完成)` : `✍️ 我以 (${currentUser}) 身份按键确认签署合约 (已确认 ${confirmedCount}/3 人)`}
+          <button id="btn-confirm-contract" ${isContractLocked ? 'disabled' : ''} style="background:${isContractLocked ? 'rgba(16,185,129,0.2)' : userHasConfirmed ? 'rgba(16,185,129,0.3)' : 'linear-gradient(135deg, #10b981, #059669)'}; border:1px solid ${isContractLocked || userHasConfirmed ? '#10b981' : 'transparent'}; color:${isContractLocked ? '#34d399' : 'white'}; padding:12px 28px; border-radius:10px; font-weight:700; cursor:${isContractLocked ? 'not-allowed' : 'pointer'}; font-size:15px;">
+            ${isContractLocked ? '🔒 学术合作合约已全员签署生效并锁定 (只读归档查阅)' : userHasConfirmed ? `✅ 我 (${currentUser}) 已按键确认签署 (${confirmedCount}/3 人已完成)` : `✍️ 我以 (${currentUser}) 身份按键确认签署合约 (已确认 ${confirmedCount}/3 人)`}
           </button>
         </div>
       </div>
     `;
 
-    canvas.querySelectorAll('.vote-btn:not([disabled])').forEach(btn => {
-      btn.addEventListener('click', () => handlers.onVote(btn.dataset.id));
-    });
-    canvas.querySelector('#btn-confirm-contract').addEventListener('click', () => handlers.onConfirmContract());
+    if (!isContractLocked) {
+      canvas.querySelectorAll('.vote-btn:not([disabled])').forEach(btn => {
+        btn.addEventListener('click', () => handlers.onVote(btn.dataset.id));
+      });
+      canvas.querySelector('#btn-confirm-contract').addEventListener('click', () => handlers.onConfirmContract());
+    }
   }
 
   function renderStage2Canvas(canvas, state, handlers) {
     const s2 = state.stage2;
     const actionPlan = s2.actionPlan;
+    const isStage2MeetingLocked = state.currentStage === 'stage3' || state.isFinalSubmitted;
+    const isEditorReadonly = state.isFinalSubmitted;
 
     canvas.innerHTML = `
+      ${isStage2MeetingLocked ? `
+        <div style="background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.3); border-radius:8px; padding:10px 14px; margin-bottom:10px; font-size:13px; color:#a5b4fc; font-weight:700; display:flex; justify-content:space-between; align-items:center;">
+          <span>🔒 阶段二【半程编辑会议】打分与修正清单已完成并锁定 ${isEditorReadonly ? '· 全盘终稿已提交只读查阅' : '· 可随时回看'}</span>
+          <span style="font-size:11px; color:#cbd5e1; background:rgba(0,0,0,0.3); padding:4px 8px; border-radius:4px;">归档只读</span>
+        </div>
+      ` : ''}
+
       <div class="card" style="height:100%; display:flex; flex-direction:column; padding:20px;">
         <div class="card-title" style="margin-bottom:10px;">
           <span>📝 统一协作写作大文本框 (论文全篇大正文)</span>
           <div style="display:flex; gap:10px;">
             <button id="btn-show-case" style="background:rgba(99,102,241,0.2); border:1px solid #6366f1; color:#a5b4fc; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:600;">📖 查阅审稿编辑推送的《范例文件.pdf》</button>
-            <button id="btn-trigger-meeting" style="background:linear-gradient(135deg, #10b981, #059669); border:none; color:white; padding:6px 14px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:700;">📢 发起【编辑会议】</button>
+            <button id="btn-trigger-meeting" ${isStage2MeetingLocked ? 'disabled' : ''} style="background:${isStage2MeetingLocked ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #10b981, #059669)'}; border:${isStage2MeetingLocked ? '1px solid rgba(255,255,255,0.15)' : 'none'}; color:${isStage2MeetingLocked ? '#94a3b8' : 'white'}; padding:6px 14px; border-radius:6px; font-size:12px; cursor:${isStage2MeetingLocked ? 'not-allowed' : 'pointer'}; font-weight:700;">
+              ${isStage2MeetingLocked ? '🔒 编辑会议已结束' : '📢 发起【编辑会议】'}
+            </button>
           </div>
         </div>
         ${actionPlan && actionPlan.isGenerated ? `
           <div style="background:linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.1)); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:10px 14px; margin-bottom:10px;">
-            <div style="font-size:13px; font-weight:700; color:#34d399; margin-bottom:4px;">📋 编辑会议产出：【半程编辑修正清单】</div>
+            <div style="font-size:13px; font-weight:700; color:#34d399; margin-bottom:4px;">📋 编辑会议产出：【半程编辑修正清单】(已锁定归档)</div>
             <div style="font-size:12px; color:#cbd5e1; display:flex; flex-direction:column; gap:2px;">
               ${actionPlan.items.map(item => `<div>• ${item}</div>`).join('')}
             </div>
@@ -952,9 +1128,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         <div style="flex:1; display:flex; flex-direction:column; gap:8px; min-height:0;">
           <div style="font-size:12px; color:#94a3b8; display:flex; justify-content:space-between; flex-shrink:0;">
             <span>包含《一、背景》《二、问题假设》《三、文献》《四、方法》《五、反思》《六、参考文献》全篇论文</span>
-            <span>整篇实时字数: <b style="color:#38bdf8; font-size:14px;">${s2.unifiedContent.length}</b> 字</span>
+            <span>整篇实时字数: <b style="color:#38bdf8; font-size:14px;">${s2.unifiedContent.length}</b> 字 ${isEditorReadonly ? '(🔒 终稿只读)' : ''}</span>
           </div>
-          <textarea class="editor-textarea unified-large-editor-full" id="main-unified-editor">${s2.unifiedContent}</textarea>
+          <textarea class="editor-textarea unified-large-editor-full" id="main-unified-editor" ${isEditorReadonly ? 'readonly style="opacity:0.85; background:rgba(15,23,42,0.9);"' : ''}>${s2.unifiedContent}</textarea>
         </div>
         <div style="margin-top:14px; background:rgba(15,23,42,0.7); padding:14px; border-radius:10px; border:1px solid var(--border-glass); flex-shrink:0;">
           <div style="font-size:12px; font-weight:600; margin-bottom:8px; color:#cbd5e1; display:flex; justify-content:space-between;">
@@ -967,7 +1143,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
               <div class="contrib-segment" style="width:${s2.memberContributions.B.percentage}%; background:#06b6d4;"></div>
               <div class="contrib-segment" style="width:${s2.memberContributions.C.percentage}%; background:#f59e0b;"></div>
             </div>
-            <div style="display:flex; justify-content:space-around; font-size:12px; font-weight:600; color:#cbd5e1; margin-top:6px;">
+            <div style="display:flex; justify-around; font-size:12px; font-weight:600; color:#cbd5e1; margin-top:6px;">
               <span style="color:#818cf8;">● A (组长): ${s2.memberContributions.A.percentage}%</span>
               <span style="color:#22d3ee;">● B (张同学): ${s2.memberContributions.B.percentage}%</span>
               <span style="color:#fbbf24;">● C (李同学): ${s2.memberContributions.C.percentage}%</span>
@@ -977,44 +1153,119 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       </div>
     `;
 
-    canvas.querySelector('#main-unified-editor').addEventListener('input', (e) => handlers.onUnifiedContentChange(e.target.value));
+    if (!isEditorReadonly) {
+      canvas.querySelector('#main-unified-editor').addEventListener('input', (e) => handlers.onUnifiedContentChange(e.target.value));
+    }
     canvas.querySelector('#btn-show-case').addEventListener('click', () => handlers.onOpenCaseModal());
-    canvas.querySelector('#btn-trigger-meeting').addEventListener('click', () => handlers.onOpenMeetingModal());
+    if (!isStage2MeetingLocked) {
+      canvas.querySelector('#btn-trigger-meeting').addEventListener('click', () => handlers.onOpenMeetingModal());
+    }
   }
 
   function renderStage3Canvas(canvas, state, handlers) {
     const s3 = state.stage3;
+    const activeTab = s3.activeTab || 'defense';
+    const isFinalSubmitted = state.isFinalSubmitted;
+
     canvas.innerHTML = `
-      <div class="card">
-        <div class="card-title">
-          <span>🎓 答辩委员会改进意见清单 (组内裁决面板)</span>
-          <span style="font-size:12px; color:#38bdf8;">答辩阶段</span>
+      <div style="height:100%; display:flex; flex-direction:column; gap:12px;">
+        ${isFinalSubmitted ? `
+          <div style="background:rgba(16,185,129,0.15); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:10px 14px; font-size:13px; color:#34d399; font-weight:700; text-align:center; flex-shrink:0;">
+            🔒 期末论文终稿与评估报告已成功提交至教师端！全盘模式已转为【归档只读查阅】，支持随时切页回看所有阶段。
+          </div>
+        ` : ''}
+
+        <!-- Stage 3 Navigation Sub-Bar -->
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(30,41,59,0.8); border:1px solid rgba(255,255,255,0.1); border-radius:10px; padding:8px 12px; flex-shrink:0;">
+          <div style="display:flex; gap:10px;">
+            <button id="tab-btn-defense" style="background:${activeTab === 'defense' ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'rgba(255,255,255,0.08)'}; border:none; color:white; padding:8px 16px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer;">
+              🎓 答辩委员会质询与中间委员引导面板
+            </button>
+            <button id="tab-btn-editor" style="background:${activeTab === 'editor' ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(255,255,255,0.08)'}; border:none; color:white; padding:8px 16px; border-radius:8px; font-weight:700; font-size:13px; cursor:pointer;">
+              📝 返回协作写作大正文 (依据意见修改终稿)
+            </button>
+          </div>
+          <button id="btn-final-submit" ${isFinalSubmitted ? 'disabled' : ''} style="background:${isFinalSubmitted ? 'rgba(16,185,129,0.2)' : 'linear-gradient(135deg, #10b981, #059669)'}; border:${isFinalSubmitted ? '1px solid #10b981' : 'none'}; color:${isFinalSubmitted ? '#34d399' : 'white'}; padding:8px 18px; border-radius:8px; font-weight:700; cursor:${isFinalSubmitted ? 'not-allowed' : 'pointer'}; font-size:13px;">
+            ${isFinalSubmitted ? '🔒 论文终稿已成功提交 (归档只读)' : '🚀 提交期末论文终稿'}
+          </button>
         </div>
-        <div style="display:flex; flex-direction:column; gap:12px;">
-          ${s3.feedbackItems.map(item => `
-            <div style="background:rgba(15,23,42,0.6); padding:12px; border-radius:8px; border:1px solid ${item.role === 'opponent' ? 'rgba(239,68,68,0.3)' : 'rgba(34,197,94,0.3)'};">
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                <span style="font-weight:700; color:${item.role === 'opponent' ? '#f87171' : '#4ade80'};">${item.role === 'opponent' ? '🔴 质疑要点' : '🟢 肯定要点'}: ${item.title}</span>
-                <span style="font-size:11px; padding:2px 8px; border-radius:10px; background:rgba(255,255,255,0.08);">状态: ${item.status === 'adopted' ? '✅ 已采纳优化' : item.status === 'acknowledged' ? '👍 已保留确认' : '⏳ 待讨论'}</span>
-              </div>
-              <div style="font-size:13px; color:#cbd5e1; margin-bottom:8px;">${item.content}</div>
-              ${item.response ? `<div style="font-size:12px; color:#94a3b8; background:rgba(30,41,59,0.8); padding:8px; border-radius:6px; border-left:3px solid var(--accent-indigo);"><b>小组成员统一裁决回复:</b> ${item.response}</div>` : `<button class="adopt-btn" data-id="${item.id}" style="background:var(--accent-indigo); border:none; color:white; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer;">讨论并确认采纳修改</button>`}
+
+        ${activeTab === 'defense' ? `
+          <div class="card" style="flex:1; overflow-y:auto; padding:20px;">
+            <div class="card-title" style="margin-bottom:14px;">
+              <span>🎓 答辩委员会改进意见与组内裁决矩阵 ${isFinalSubmitted ? '<span style="font-size:11px; color:#34d399; margin-left:6px;">(🔒 已提交归档)</span>' : ''}</span>
+              <span style="font-size:12px; color:#38bdf8;">正反方提意见 ➔ 中间委员逐条引导 ➔ 学生研讨裁决</span>
             </div>
-          `).join('')}
-        </div>
-      </div>
-      <div class="card" style="margin-top:16px; background:linear-gradient(135deg, rgba(16,185,129,0.1), rgba(6,182,212,0.15)); border-color:rgba(16,185,129,0.3);">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-          <div><div style="font-weight:700; font-size:16px; color:#34d399;">终稿提交与终极反思</div><div style="font-size:12px; color:#94a3b8;">全员确认裁决后即可点击提交，报告自动呈递给教师端。</div></div>
-          <button id="btn-final-submit" style="background:linear-gradient(135deg, #10b981, #059669); border:none; color:white; padding:10px 20px; border-radius:8px; font-weight:700; cursor:pointer;">🚀 确认提交最终方案</button>
-        </div>
+            <div style="display:flex; flex-direction:column; gap:16px;">
+              ${s3.feedbackItems.map((item, idx) => `
+                <div style="background:rgba(15,23,42,0.7); padding:16px; border-radius:12px; border:1px solid ${item.role === 'opponent' ? 'rgba(239,68,68,0.4)' : 'rgba(34,197,94,0.4)'}; box-shadow:0 4px 12px rgba(0,0,0,0.3);">
+                  <!-- 1. Speaker Header & Title -->
+                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                    <div style="display:flex; align-items:center; gap:8px;">
+                      <span style="font-size:18px;">${item.role === 'opponent' ? '🔴' : '🟢'}</span>
+                      <span style="font-weight:800; font-size:15px; color:${item.role === 'opponent' ? '#f87171' : '#4ade80'};">质询点 ${idx + 1}: ${item.speaker || (item.role === 'opponent' ? '反方委员 Agent' : '正方委员 Agent')} - ${item.title}</span>
+                    </div>
+                    <span style="font-size:11px; padding:3px 10px; border-radius:12px; font-weight:700; background:${item.status === 'adopted' ? 'rgba(34,197,94,0.2)' : 'rgba(234,179,8,0.2)'}; color:${item.status === 'adopted' ? '#4ade80' : '#fbbf24'}; border:1px solid ${item.status === 'adopted' ? 'rgba(34,197,94,0.4)' : 'rgba(234,179,8,0.4)'};">
+                      ${item.status === 'adopted' ? '✅ 已研讨并归档' : '⏳ 待组内研讨裁决'}
+                    </span>
+                  </div>
+
+                  <!-- 2. Original Critique Content -->
+                  <div style="font-size:13px; color:#f1f5f9; background:rgba(30,41,59,0.8); padding:10px 14px; border-radius:8px; margin-bottom:10px; line-height:1.6;">
+                    <b>${item.speaker}意见原文:</b> ${item.content}
+                  </div>
+
+                  <!-- 3. Intermediate Agent Guidance per Suggestion -->
+                  <div style="font-size:13px; color:#fef08a; background:rgba(234,179,8,0.12); border:1px solid rgba(234,179,8,0.3); padding:10px 14px; border-radius:8px; margin-bottom:12px; line-height:1.6;">
+                    <b>🟡 中间委员 Agent 针对性引导思考:</b><br>${item.neutralGuidance}
+                  </div>
+
+                  <!-- 4. Student Resolution & Button -->
+                  ${item.response ? `
+                    <div style="font-size:13px; color:#a5b4fc; background:rgba(99,102,241,0.15); border-left:4px solid var(--accent-indigo); padding:10px 14px; border-radius:6px;">
+                      <b>👥 组内研讨统一裁决结论:</b> ${item.response}
+                    </div>
+                  ` : `
+                    <button class="discuss-item-btn" data-id="${item.id}" ${isFinalSubmitted ? 'disabled' : ''} style="background:${isFinalSubmitted ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #6366f1, #4f46e5)'}; border:none; color:${isFinalSubmitted ? '#94a3b8' : 'white'}; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:700; cursor:${isFinalSubmitted ? 'not-allowed' : 'pointer'};">
+                      ${isFinalSubmitted ? '🔒 已提交只读' : '💬 组内针对此条开展研讨与裁决'}
+                    </button>
+                  `}
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        ` : `
+          <!-- Unified Editor inside Stage 3 -->
+          <div class="card" style="flex:1; display:flex; flex-direction:column; padding:20px;">
+            <div class="card-title" style="margin-bottom:10px;">
+              <span>📝 论文全篇大正文 ${isFinalSubmitted ? '<span style="font-size:11px; color:#34d399; margin-left:6px;">(🔒 终稿已提交 · 归档只读查阅)</span>' : '(依据答辩意见实时修改终稿)'}</span>
+              <span style="font-size:12px; color:#38bdf8;">实时字数: <b>${state.stage2.unifiedContent.length}</b> 字</span>
+            </div>
+            <textarea class="editor-textarea unified-large-editor-full" id="stage3-unified-editor" ${isFinalSubmitted ? 'readonly style="opacity:0.85; background:rgba(15,23,42,0.9);"' : ''} style="flex:1;">${state.stage2.unifiedContent}</textarea>
+          </div>
+        `}
       </div>
     `;
 
-    canvas.querySelectorAll('.adopt-btn').forEach(btn => {
-      btn.addEventListener('click', () => handlers.onAdoptFeedback(btn.dataset.id));
-    });
-    canvas.querySelector('#btn-final-submit').addEventListener('click', () => handlers.onFinalSubmit());
+    // Event Bindings for Stage 3 Tabs
+    const tabDefense = canvas.querySelector('#tab-btn-defense');
+    const tabEditor = canvas.querySelector('#tab-btn-editor');
+    if (tabDefense) tabDefense.addEventListener('click', () => handlers.onSwitchStage3Tab('defense'));
+    if (tabEditor) tabEditor.addEventListener('click', () => handlers.onSwitchStage3Tab('editor'));
+
+    const editorEl = canvas.querySelector('#stage3-unified-editor');
+    if (editorEl && !isFinalSubmitted) {
+      editorEl.addEventListener('input', (e) => handlers.onUnifiedContentChange(e.target.value));
+    }
+
+    if (!isFinalSubmitted) {
+      canvas.querySelectorAll('.discuss-item-btn').forEach(btn => {
+        btn.addEventListener('click', () => handlers.onDiscussItem(btn.dataset.id));
+      });
+    }
+
+    const submitBtn = canvas.querySelector('#btn-final-submit');
+    if (submitBtn && !isFinalSubmitted) submitBtn.addEventListener('click', () => handlers.onFinalSubmit());
   }
 
   function renderChat(state) {
@@ -1051,11 +1302,12 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
   }
 
   /* ==========================================================================
-     7. APP CONTROLLER
+     8. APP CONTROLLER
      ========================================================================== */
   const STORAGE_KEY_CHAT = 'jizhi_sync_chat_v3';
   const STORAGE_KEY_STAGE1 = 'jizhi_sync_s1_v3';
   const STORAGE_KEY_STAGE2 = 'jizhi_sync_s2_v3';
+  const STORAGE_KEY_STAGE3 = 'jizhi_sync_s3_v3';
   const STORAGE_KEY_STAGE_CURRENT = 'jizhi_sync_current_stage_v3';
 
   class App {
@@ -1064,14 +1316,21 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       this.state = JSON.parse(JSON.stringify(InitialState));
       this.studentMsgCountSinceLastAgent = 0;
       this.initSyncStorage();
-      this.initRealtimeSync();
+      this.cloudSyncEngine = new CloudSyncEngine(this);
       this.initTimer();
       this.renderMain();
     }
 
     initSyncStorage() {
       const savedChat = localStorage.getItem(STORAGE_KEY_CHAT);
-      if (savedChat) { try { this.state.chatLogs = JSON.parse(savedChat); } catch (e) { this.initPresetMessages(); } }
+      if (savedChat) { 
+        try { 
+          this.state.chatLogs = JSON.parse(savedChat);
+          if (!this.state.chatLogs.stage3 || this.state.chatLogs.stage3.length < 5) {
+            this.state.chatLogs.stage3 = PresetMessages.stage3;
+          }
+        } catch (e) { this.initPresetMessages(); } 
+      }
       else { this.initPresetMessages(); }
 
       const savedS1 = localStorage.getItem(STORAGE_KEY_STAGE1);
@@ -1080,8 +1339,14 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       const savedS2 = localStorage.getItem(STORAGE_KEY_STAGE2);
       if (savedS2) { try { this.state.stage2 = { ...this.state.stage2, ...JSON.parse(savedS2) }; } catch (e) {} }
 
+      const savedS3 = localStorage.getItem(STORAGE_KEY_STAGE3);
+      if (savedS3) { try { this.state.stage3 = { ...this.state.stage3, ...JSON.parse(savedS3) }; } catch (e) {} }
+
       const savedStage = localStorage.getItem(STORAGE_KEY_STAGE_CURRENT);
       if (savedStage) { this.state.currentStage = savedStage; }
+
+      const savedSubmitted = localStorage.getItem('jizhi_sync_final_submitted');
+      if (savedSubmitted === 'true') { this.state.isFinalSubmitted = true; }
     }
 
     initPresetMessages() {
@@ -1093,74 +1358,30 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(this.state.chatLogs));
     }
 
-    initRealtimeSync() {
-      if ('BroadcastChannel' in window) {
-        this.bc = new BroadcastChannel('jizhi_pure_sync_channel');
-        this.bc.onmessage = (e) => { this.handleSyncMessage(e.data); };
-      }
-
-      window.addEventListener('storage', (e) => {
-        if (e.key === STORAGE_KEY_CHAT && e.newValue) {
-          try { this.state.chatLogs = JSON.parse(e.newValue); renderChat(this.state); } catch (err) {}
-        } else if (e.key === STORAGE_KEY_STAGE1 && e.newValue) {
-          try { this.state.stage1 = JSON.parse(e.newValue); if (this.state.currentStage === 'stage1') this.renderStudentWorkspace(); } catch (err) {}
-        } else if (e.key === STORAGE_KEY_STAGE2 && e.newValue) {
-          try { this.state.stage2 = JSON.parse(e.newValue); if (this.state.currentStage === 'stage2') this.renderStudentWorkspace(); } catch (err) {}
-        } else if (e.key === STORAGE_KEY_STAGE_CURRENT && e.newValue) {
-          this.state.currentStage = e.newValue; this.renderStudentWorkspace();
-        }
-      });
-
-      setInterval(() => {
-        const latestChat = localStorage.getItem(STORAGE_KEY_CHAT);
-        if (latestChat && latestChat !== JSON.stringify(this.state.chatLogs)) {
-          try { this.state.chatLogs = JSON.parse(latestChat); renderChat(this.state); } catch (e) {}
-        }
-
-        const latestS1 = localStorage.getItem(STORAGE_KEY_STAGE1);
-        if (latestS1 && latestS1 !== JSON.stringify(this.state.stage1)) {
-          try { this.state.stage1 = JSON.parse(latestS1); if (this.state.currentStage === 'stage1') this.renderStudentWorkspace(); } catch (e) {}
-        }
-
-        const latestS2 = localStorage.getItem(STORAGE_KEY_STAGE2);
-        if (latestS2 && latestS2 !== JSON.stringify(this.state.stage2)) {
-          try { this.state.stage2 = JSON.parse(latestS2); if (this.state.currentStage === 'stage2') this.renderStudentWorkspace(); } catch (e) {}
-        }
-
-        const latestStage = localStorage.getItem(STORAGE_KEY_STAGE_CURRENT);
-        if (latestStage && latestStage !== this.state.currentStage) {
-          this.state.currentStage = latestStage;
-          this.renderStudentWorkspace();
-        }
-      }, 200);
-    }
-
-    handleSyncMessage(data) {
-      if (!data) return;
-      if (data.type === 'CHAT_UPDATE') { this.state.chatLogs = data.chatLogs; renderChat(this.state); }
-      else if (data.type === 'STAGE1_UPDATE') { this.state.stage1 = data.stage1; if (this.state.currentStage === 'stage1') this.renderStudentWorkspace(); }
-      else if (data.type === 'STAGE2_UPDATE') { this.state.stage2 = data.stage2; if (this.state.currentStage === 'stage2') this.renderStudentWorkspace(); }
-      else if (data.type === 'STAGE_CHANGE') { this.state.currentStage = data.stage; this.renderStudentWorkspace(); }
-    }
-
     syncChatLogs() {
       localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(this.state.chatLogs));
-      if (this.bc) this.bc.postMessage({ type: 'CHAT_UPDATE', chatLogs: this.state.chatLogs });
+      if (this.cloudSyncEngine) this.cloudSyncEngine.pushSnapshot();
     }
 
     syncStage1() {
       localStorage.setItem(STORAGE_KEY_STAGE1, JSON.stringify(this.state.stage1));
-      if (this.bc) this.bc.postMessage({ type: 'STAGE1_UPDATE', stage1: this.state.stage1 });
+      if (this.cloudSyncEngine) this.cloudSyncEngine.pushSnapshot();
     }
 
     syncStage2() {
       localStorage.setItem(STORAGE_KEY_STAGE2, JSON.stringify(this.state.stage2));
-      if (this.bc) this.bc.postMessage({ type: 'STAGE2_UPDATE', stage2: this.state.stage2 });
+      if (this.cloudSyncEngine) this.cloudSyncEngine.pushSnapshot();
+    }
+
+    syncStage3() {
+      localStorage.setItem(STORAGE_KEY_STAGE3, JSON.stringify(this.state.stage3));
+      localStorage.setItem('jizhi_sync_final_submitted', this.state.isFinalSubmitted);
+      if (this.cloudSyncEngine) this.cloudSyncEngine.pushSnapshot();
     }
 
     syncStageChange(stage) {
       localStorage.setItem(STORAGE_KEY_STAGE_CURRENT, stage);
-      if (this.bc) this.bc.postMessage({ type: 'STAGE_CHANGE', stage });
+      if (this.cloudSyncEngine) this.cloudSyncEngine.pushSnapshot();
     }
 
     initTimer() {
@@ -1215,7 +1436,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             <main class="canvas-panel" id="canvas-panel"></main>
             <aside class="chat-panel">
               <div class="chat-header">
-                <div class="chat-title"><span>💬 多智能体协同对话管道</span></div>
+                <div class="chat-title"><span>💬 多智能体协同对话管道 (全域云端实时同步 🟢)</span></div>
                 <div class="active-agent-pills">
                   <span class="agent-pill" style="color:#a78bfa; border-color:#8b5cf6;">🎪 拍卖师</span>
                   <span class="agent-pill" style="color:#34d399; border-color:#10b981;">🤝 责任编辑</span>
@@ -1234,7 +1455,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                   <div class="at-item agent" data-mention="@拍卖师 Agent">🎪 @拍卖师 Agent (选题与竞拍指导)</div>
                   <div class="at-item agent" data-mention="@责任编辑 Agent">🤝 @责任编辑 Agent (分工与过程学伴)</div>
                   <div class="at-item agent" data-mention="@审稿编辑 Agent">📝 @审稿编辑 Agent (学术结构与规范导师)</div>
-                  <div class="at-item agent" data-mention="@反方委员 Agent">🔴 @反方委员 Agent (答辩质疑推演)</div>
+                  <div class="at-item agent" data-mention="@中间委员 Agent">🟡 @中间委员 Agent (答辩裁决引导)</div>
                 </div>
               </div>
               <div class="emoji-bar" id="emoji-bar">
@@ -1340,7 +1561,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       const input = document.getElementById('chat-input');
       const sendBtn = document.getElementById('send-btn');
       const emojiBar = document.getElementById('emoji-bar');
-      const atMenu = document.getElementById('at-mention-menu');
+      const atMentionMenu = document.getElementById('at-mention-menu');
       if (!input || !sendBtn) return;
 
       if (emojiBar) {
@@ -1352,17 +1573,17 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       input.addEventListener('input', (e) => {
         const val = input.value;
         const lastChar = val.slice(-1);
-        if (lastChar === '@' || (val.includes('@') && !val.includes(' '))) atMenu.style.display = 'block';
-        else if (!val.includes('@')) atMenu.style.display = 'none';
+        if (lastChar === '@' || (val.includes('@') && !val.includes(' '))) atMentionMenu.style.display = 'block';
+        else if (!val.includes('@')) atMentionMenu.style.display = 'none';
       });
 
-      atMenu.querySelectorAll('.at-item').forEach(item => {
+      atMentionMenu.querySelectorAll('.at-item').forEach(item => {
         item.addEventListener('click', () => {
           const mentionTag = item.dataset.mention;
           const lastAtIndex = input.value.lastIndexOf('@');
           if (lastAtIndex !== -1) input.value = input.value.substring(0, lastAtIndex) + mentionTag + ' ';
           else input.value += mentionTag + ' ';
-          atMenu.style.display = 'none';
+          atMentionMenu.style.display = 'none';
           input.focus();
         });
       });
@@ -1377,7 +1598,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         if (!this.state.chatLogs[currentStage]) this.state.chatLogs[currentStage] = [];
         this.state.chatLogs[currentStage].push(msgObj);
         input.value = '';
-        atMenu.style.display = 'none';
+        atMentionMenu.style.display = 'none';
         this.studentMsgCountSinceLastAgent += 1;
         this.syncChatLogs();
         renderChat(this.state);
@@ -1399,28 +1620,28 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         let replyAgent = 'reviewingEditor';
         let replyText = '';
 
-        if (userMsg.includes('@审稿编辑') || userMsg.includes('@审稿编辑 Agent')) {
+        if (userMsg.includes('@中间委员') || userMsg.includes('@中间委员 Agent')) {
+          replyAgent = 'neutral';
+          replyText = `🟡 【中间委员裁决引导】：收到关注！请团队针对正反方意见做权衡：对于评价焦虑，可通过强调“过程提示”进行辩护；对于量表维度，建议在第四章补充行为与情感投入维度，提高测量完整性！`;
+        } else if (userMsg.includes('@审稿编辑') || userMsg.includes('@审稿编辑 Agent')) {
           replyAgent = 'reviewingEditor';
-          replyText = `📝 【审稿编辑针对性指导】：收到你的求助问询！在写作过程中，关于《编辑会议规范与范例模板文件.pdf》提倡的规范：必须确保“三、文献综述”中提出的学术概念与“四、研究设计与方法”中的测量量表（如 FacioneSSR框架）实现 1 对 1 精确匹配。只提供结构建议，请组员自行讨论填补具体文本！`;
+          replyText = `📝 【审稿编辑针对性指导】：收到你的求助问询！关于规范：必须确保“三、文献综述”中提出的学术概念与“四、研究设计与方法”中的测量量表实现 1 对 1 精确匹配！`;
         } else if (userMsg.includes('@责任编辑') || userMsg.includes('@责任编辑 Agent')) {
           replyAgent = 'managingEditor';
-          replyText = `🤝 【责任编辑过程学伴回复】：收到 @ 呼叫！目前小组字数分配与协同节奏良好（A:42%, B:31%, C:27%）。如果个别组员遇到撰写卡顿，建议组长 A 在大文本框中先列出二级标题子纲，协助同伴拆解任务。`;
+          replyText = `🤝 【责任编辑过程学伴回复】：收到 @ 呼叫！目前小组字数分配与协同节奏良好。如果个别组员遇到撰写卡顿，建议组长 A 在大文本框中先列出二级标题子纲。`;
         } else if (userMsg.includes('@拍卖师') || userMsg.includes('@拍卖师 Agent')) {
           replyAgent = 'auctioneer';
-          replyText = `🎪 【拍卖师选题顾问回复】：收到 @ 呼叫！针对课题《协作学习中的“搭便车”现象：基于注意力分配与AI感知视角》，建议将重点聚焦在“注意力分配可视化”作为干预中介变量，以提升学术新意与可操作性！`;
-        } else if (userMsg.includes('@反方委员') || userMsg.includes('@反方委员 Agent')) {
-          replyAgent = 'opponent';
-          replyText = `🔴 【反方委员预演提醒】：收到 @ 呼叫！提前提醒团队：在答辩阶段我将重点攻防“150人样本量的 G*Power 统计效力分析”以及“显性感知是否会诱发评价焦虑”。请务必在正文第四与第五章做好学术防御准备！`;
+          replyText = `🎪 【拍卖师选题顾问回复】：收到 @ 呼叫！针对课题《协作学习中的“搭便车”现象》，建议将重点聚焦在“注意力分配可视化”作为干预中介变量！`;
         } else {
           if (stage === 'stage1') {
             replyAgent = 'auctioneer';
             replyText = `🎪 【拍卖师评估与总结】注意到组内已完成一轮关于选题与任务分工的讨论！建议组员在提案面板中投票并按键确认签署合作学术合约！`;
           } else if (stage === 'stage2') {
             replyAgent = 'reviewingEditor';
-            replyText = `📝 【审稿编辑高阶引导】关注到组内针对大正文与文献框架的讨论。请参考《编辑会议规范与范例模板文件.pdf》，在研究设计章节，必须明确自变量（AI干预模式）与因变量（SSRL得分）之间的因果链条！`;
+            replyText = `📝 【审稿编辑高阶引导】关注到组内针对大正文与文献框架的讨论。在研究设计章节，必须明确自变量（AI干预模式）与因变量（SSRL得分）之间的因果链条！`;
           } else if (stage === 'stage3') {
             replyAgent = 'neutral';
-            replyText = `🟡 【中间委员裁决提示】针对意见，请小组在修改稿中补充一段限定说明，并在左侧确认采纳！`;
+            replyText = `🟡 【中间委员裁决提示】针对辩护意见，请小组在左侧卡片中确认裁决，并切回写作大正文补充限定说明！`;
           }
         }
 
@@ -1434,6 +1655,10 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     }
 
     handleVoteCast(proposalId) {
+      if (this.state.stage1.contract.isConfirmed || this.state.isFinalSubmitted) {
+        alert('🔒 学术合作合约已签署锁定，不可再更改投票。');
+        return;
+      }
       const user = this.state.currentUser;
       const s1 = this.state.stage1;
       if (s1.hasVoted && s1.hasVoted[user]) { alert('⚠️ 投票已被锁定！每位成员首次投票后不能再修改选项。'); return; }
@@ -1484,6 +1709,10 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         onVote: (propId) => { this.handleVoteCast(propId); },
         onRefresh: () => { this.renderStudentWorkspace(); },
         onConfirmContract: () => {
+          if (this.state.stage1.contract.isConfirmed) {
+            alert('🔒 学术合作合约已被全员确认签署并锁定！无法二次修改。');
+            return;
+          }
           const user = this.state.currentUser;
           const s1 = this.state.stage1;
           if (!s1.contract.confirmedMembers) { s1.contract.confirmedMembers = { 'A': false, 'B': false, 'C': false }; }
@@ -1495,22 +1724,23 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           this.syncStage1();
           this.syncChatLogs();
           if (confirmedCount < 3) {
-            alert(`✅ 你 (${memberName}) 已成功按键确认签署合约！\n\n目前组内签署进度：${confirmedCount}/3 人。\n需全组 3 名成员全部按键确认后方可解锁阶段二！\n\n💡 提示：在 VS Code 中新建一个 Simple Browser 窗口或右键标签页，登录 wangfang 或 chenqiang 按键确认即可体验多窗口实时同步！`);
+            alert(`✅ 你 (${memberName}) 已成功按键确认签署合约！\n\n目前组内签署进度：${confirmedCount}/3 人。\n需全组 3 名成员全部按键确认后方可解锁阶段二！`);
           } else {
             s1.contract.isConfirmed = true;
             this.syncStage1();
             this.syncStageChange('stage2');
             setTimeout(() => {
-              const finalMsg = { sender: 'auctioneer', text: `🎪 【拍卖师宣布】：恭喜！组内全员 3/3 名成员已全部完成按键确认签署！学术合作合约正式生效，阶段一圆满结束，系统自动解锁【阶段二：学术编辑部】！`, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+              const finalMsg = { sender: 'auctioneer', text: `🎪 【拍卖师宣布】：恭喜！组内全员 3/3 名成员已全部完成按键确认签署！学术合作合约正式生效并锁定，阶段一圆满结束，系统自动解锁【阶段二：学术编辑部】！`, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
               this.state.chatLogs.stage1.push(finalMsg);
               this.syncChatLogs();
-              alert('🎉 恭喜！组内 3 位成员全部完成按键确认签署！学术合作合约生效，系统解锁【阶段二：学术编辑部】！');
+              alert('🎉 恭喜！组内 3 位成员全部完成按键确认签署！学术合作合约生效并锁定，系统解锁【阶段二：学术编辑部】！');
               this.switchStage('stage2');
             }, 600);
           }
           this.renderStudentWorkspace();
         },
         onUnifiedContentChange: (newContent) => {
+          if (this.state.isFinalSubmitted) return;
           this.state.stage2.unifiedContent = newContent;
           let total = newContent.length || 1;
           this.state.stage2.memberContributions = {
@@ -1523,15 +1753,104 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         onOpenCaseModal: () => {
           alert('📖 审稿编辑推送的【编辑会议规范与范例模板文件.pdf】：\n\n标题: 《生成式AI感知视角下的协作写作干预实证研究》\n规范指引: 准实验设计，样本量N=150。采用SSRL共享调节量表进行前后测评估，重点包含：明确的研究假设、自变量控制与混合定量定性分析。');
         },
-        onOpenMeetingModal: () => { this.showMeetingModal(); },
-        onAdoptFeedback: (id) => {
-          const item = this.state.stage3.feedbackItems.find(f => f.id === id);
+        onOpenMeetingModal: () => { 
+          if (this.state.currentStage === 'stage3' || this.state.isFinalSubmitted) {
+            alert('🔒 阶段二半程编辑会议已结束并归档，不可再次发起。你可随时查阅已锁定的【半程编辑修正清单】！');
+            return;
+          }
+          this.showMeetingModal(); 
+        },
+        onSwitchStage3Tab: (tabKey) => {
+          this.state.stage3.activeTab = tabKey;
+          this.syncStage3();
+          this.renderStudentWorkspace();
+        },
+        onDiscussItem: (id) => {
+          if (this.state.isFinalSubmitted) {
+            alert('🔒 论文终稿已提交，处于全盘只读归档模式！无法再修改研讨结论。');
+            return;
+          }
+          const items = this.state.stage3.feedbackItems;
+          const currentIndex = items.findIndex(f => f.id === id);
+          const item = items[currentIndex];
+
           if (item) {
-            const resp = prompt(`请代表小组输入针对【${item.title}】的统一裁决方案：`, '已补充说明并纠正维偏差。');
-            if (resp) { item.status = 'adopted'; item.response = resp; this.renderStudentWorkspace(); }
+            const resp = prompt(`请代表小组输入针对【${item.title}】的统一裁决方案与修改结论：`, item.response || '已在正文第四章补充限制条件，并扩充情绪与行为投入维度。');
+            if (resp) {
+              item.status = 'adopted';
+              item.response = resp;
+              const currentStage = this.state.currentStage;
+              const currentUser = this.state.currentUser;
+              const discMsg = {
+                sender: currentUser,
+                text: `📢 [答辩质询研讨结论]: 组内已对质询点 ${currentIndex + 1}【${item.title}】完成裁决并达成共识：“${resp}”！`,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+              };
+              if (!this.state.chatLogs[currentStage]) this.state.chatLogs[currentStage] = [];
+              this.state.chatLogs[currentStage].push(discMsg);
+
+              const nextItem = items[currentIndex + 1];
+
+              setTimeout(() => {
+                if (nextItem) {
+                  const stepNum = currentIndex + 2;
+                  const totalSteps = items.length;
+                  const neutralMsg = {
+                    sender: 'neutral',
+                    text: `🟡 【中间委员·第${currentIndex + 1}条已归档 ➔ 开启第${stepNum}条引导 (${stepNum}/${totalSteps})】\n已成功记录第${currentIndex + 1}条裁决结论：“${resp}”！\n\n👉 **接下来请研讨第 ${stepNum} 条质询**【${nextItem.speaker}: ${nextItem.title}】：\n${nextItem.neutralGuidance}`,
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  };
+                  this.state.chatLogs[currentStage].push(neutralMsg);
+                } else {
+                  const finalNeutralMsg = {
+                    sender: 'neutral',
+                    text: `🎉 【中间委员·全员答辩裁决完毕】恭喜！组内已完成答辩委员会所有 3 条质询与建议的研讨与裁决！\n请团队点击上方【返回协作写作大正文】按钮，将裁决结论落实至论文终稿后提交！`,
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                  };
+                  this.state.chatLogs[currentStage].push(finalNeutralMsg);
+                }
+                this.syncStage3();
+                this.syncChatLogs();
+                renderChat(this.state);
+              }, 800);
+
+              this.syncStage3();
+              this.syncChatLogs();
+              this.renderStudentWorkspace();
+            }
           }
         },
-        onFinalSubmit: () => { alert('🚀 恭喜小组！《协作学习中的“搭便车”现象：基于注意力分配与AI感知视角》最终方案与评估报告已提交至教师端！'); }
+        onFinalSubmit: () => { 
+          if (this.state.isFinalSubmitted) {
+            alert('🔒 论文终稿已于此前成功提交！目前处于全盘只读归档模式，可随时切页查阅各阶段记录。');
+            return;
+          }
+          const confirmSub = confirm('🚀 确认提交《协作学习中的“搭便车”现象：基于注意力分配与AI感知视角》期末论文终稿？\n\n提交后全篇论文与研讨矩阵将锁定归档不可再修改，但随时可重新登录返回查阅！');
+          if (confirmSub) {
+            this.state.isFinalSubmitted = true;
+            const currentStage = this.state.currentStage;
+            const currentUser = this.state.currentUser;
+            const submitMsg = {
+              sender: currentUser,
+              text: `🎉 【期末论文终稿成功提交告知】全组已完成论文终稿与答辩质询归档，方案已锁定并提交至教师端！大家可以随时返回各阶段查阅！`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            if (!this.state.chatLogs[currentStage]) this.state.chatLogs[currentStage] = [];
+            this.state.chatLogs[currentStage].push(submitMsg);
+
+            const neutralFinalMsg = {
+              sender: 'neutral',
+              text: `🏆 【中间委员 Agent 祝贺】热烈祝贺小组圆满完成本期写作任务与答辩！终稿已全盘锁入云端归档库。`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            this.state.chatLogs[currentStage].push(neutralFinalMsg);
+
+            this.syncStage3();
+            this.syncChatLogs();
+            this.renderStudentWorkspace();
+            alert('🎉 恭喜！期末论文终稿已成功提交至教师端！系统已全盘转为【只读归档查阅模式】。');
+          }
+        }
       });
 
       renderChat(this.state);
@@ -1551,20 +1870,28 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
               <div><div style="font-size:13px; font-weight:700; color:#a5b4fc;">📎 审稿编辑推送范例文件:</div><div style="font-size:12px; color:#cbd5e1;">《编辑会议规范与范例模板文件.pdf》 (1.8 MB)</div></div>
               <button onclick="alert('📖 已打开审稿编辑推送的《编辑会议规范与范例模板文件.pdf》')" style="background:var(--accent-indigo); border:none; color:white; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer;">查阅范例文件</button>
             </div>
-            <div class="teacher-form-group">
-              <label style="font-size:13px;">🌟 维度 ①：内容逻辑与学术严谨度打分 (1-5星)</label>
-              <div class="rating-stars" id="star-rating-logic" style="margin:4px 0;">
-                <span class="star active" data-val="1">★</span><span class="star active" data-val="2">★</span><span class="star active" data-val="3">★</span><span class="star active" data-val="4">★</span><span class="star" data-val="5">★</span>
+            <div class="teacher-form-group" style="margin-top:12px;">
+              <label style="font-size:13px; font-weight:700;">🌟 维度 ①：内容逻辑与学术严谨度打分 (点击星级打分)</label>
+              <div class="rating-stars" id="star-rating-logic" style="margin:6px 0; font-size:24px; cursor:pointer; user-select:none;">
+                <span class="star" data-val="1" style="color:#f59e0b;">★</span>
+                <span class="star" data-val="2" style="color:#f59e0b;">★</span>
+                <span class="star" data-val="3" style="color:#f59e0b;">★</span>
+                <span class="star" data-val="4" style="color:#f59e0b;">★</span>
+                <span class="star" data-val="5" style="color:#475569;">★</span>
               </div>
             </div>
             <div class="teacher-form-group">
-              <label style="font-size:13px;">👥 维度 ②：团队分工与参与平衡度打分 (1-5星)</label>
-              <div class="rating-stars" id="star-rating-balance" style="margin:4px 0;">
-                <span class="star active" data-val="1">★</span><span class="star active" data-val="2">★</span><span class="star active" data-val="3">★</span><span class="star active" data-val="4">★</span><span class="star active" data-val="5">★</span>
+              <label style="font-size:13px; font-weight:700;">👥 维度 ②：团队分工与参与平衡度打分 (点击星级打分)</label>
+              <div class="rating-stars" id="star-rating-balance" style="margin:6px 0; font-size:24px; cursor:pointer; user-select:none;">
+                <span class="star" data-val="1" style="color:#f59e0b;">★</span>
+                <span class="star" data-val="2" style="color:#f59e0b;">★</span>
+                <span class="star" data-val="3" style="color:#f59e0b;">★</span>
+                <span class="star" data-val="4" style="color:#f59e0b;">★</span>
+                <span class="star" data-val="5" style="color:#f59e0b;">★</span>
               </div>
             </div>
             <div class="teacher-form-group">
-              <label style="font-size:13px;">⚠️ 维度 ③：当前组内面临的最大难点瓶颈</label>
+              <label style="font-size:13px; font-weight:700;">⚠️ 维度 ③：当前组内面临的最大难点瓶颈</label>
               <select id="meeting-bottleneck-select" class="teacher-input">
                 <option value="假设与研究设计工具对应不明确">假设与研究设计工具对应不明确</option>
                 <option value="相关文献支撑力度不足">相关文献支撑力度不足</option>
@@ -1573,7 +1900,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
               </select>
             </div>
             <div class="teacher-form-group">
-              <label style="font-size:13px;">✍️ 组内自评与补充修正说明</label>
+              <label style="font-size:13px; font-weight:700;">✍️ 组内自评与补充修正说明</label>
               <textarea id="meeting-input-text" class="teacher-textarea" style="min-height:80px;" placeholder="请输入组内自我检讨或需要审稿编辑解答的问题...">背景与问题部分已完成，请审稿编辑评价假设与方法的衔接。</textarea>
             </div>
           </div>
@@ -1595,14 +1922,20 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       modal.querySelectorAll('#star-rating-logic .star').forEach(s => {
         s.addEventListener('click', (e) => {
           logicRating = Number(e.target.dataset.val);
-          modal.querySelectorAll('#star-rating-logic .star').forEach(st => { st.classList.toggle('active', Number(st.dataset.val) <= logicRating); });
+          modal.querySelectorAll('#star-rating-logic .star').forEach(st => {
+            const v = Number(st.dataset.val);
+            st.style.color = v <= logicRating ? '#f59e0b' : '#475569';
+          });
         });
       });
 
-      modal.querySelectorAll('.star-rating-balance .star').forEach(s => {
+      modal.querySelectorAll('#star-rating-balance .star').forEach(s => {
         s.addEventListener('click', (e) => {
           balanceRating = Number(e.target.dataset.val);
-          modal.querySelectorAll('#star-rating-balance .star').forEach(st => { st.classList.toggle('active', Number(st.dataset.val) <= balanceRating); });
+          modal.querySelectorAll('#star-rating-balance .star').forEach(st => {
+            const v = Number(st.dataset.val);
+            st.style.color = v <= balanceRating ? '#f59e0b' : '#475569';
+          });
         });
       });
 
