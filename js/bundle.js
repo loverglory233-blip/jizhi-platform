@@ -1063,7 +1063,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                     <tbody>
                       ${classStudents.length === 0 ? '<tr><td colspan="6" style="text-align:center; color:#94a3b8; padding:24px;">当前班级暂无学生账号，请点击右上角按钮创建！</td></tr>' : ''}
                       ${classStudents.map(s => {
-                        const grp = activeClass.groups ? activeClass.groups.find(g => g.id === s.groupId) : null;
+                        const grp = (activeClass.groups || []).find(g => g.members && (g.members.includes(s.id) || g.members.includes(s.studentCode)));
                         return `
                           <tr>
                             <td><b>${s.avatar || '👤'} ${s.name}</b></td>
@@ -1195,90 +1195,189 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             </div>
           ` : ''}
 
-          ${activeTab === 'view_monitoring' ? `
-            <div style="display:flex; flex-direction:column; gap:20px; width:100%;">
+          ${activeTab === 'view_monitoring' ? (() => {
+            const monitorStageMode = state.teacherMonitorStageMode || 'auto';
+            const actualStage = state.currentStage || 'stage1';
+            const effectiveMonitorStage = monitorStageMode === 'auto' ? actualStage : monitorStageMode;
 
-              <div class="card" style="border-top:4px solid #10b981; width:100%; padding:20px; display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center; gap:14px;">
-                  <span style="font-size:18px; font-weight:800; color:#34d399;">🖥️ 实际操作实时监控终端:</span>
-                  <div style="display:flex; gap:8px;">
-                    ${(activeClass.groups || []).map(g => {
-                      const isSel = g.id === activeMonitorGId;
-                      return `
-                        <button class="btn-switch-monitor-group ${isSel ? 'active' : ''}" data-gid="${g.id}" style="background:${isSel ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(30,41,59,0.8)'}; border:1px solid ${isSel ? '#10b981' : 'rgba(255,255,255,0.1)'}; color:white; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;">
-                          👥 同屏监控: ${g.name} ${isSel ? '🟢' : ''}
-                        </button>
-                      `;
-                    }).join('')}
-                  </div>
-                </div>
-                <button id="btn-export-all-excel" style="background:linear-gradient(135deg, #6366f1, #4f46e5); border:none; color:white; padding:10px 20px; border-radius:10px; font-size:14px; font-weight:800; cursor:pointer; box-shadow:0 4px 14px rgba(99,102,241,0.4);">
-                  📊 一键导出本组 Excel 聊天与研讨记录
-                </button>
-              </div>
+            return `
+              <div style="display:flex; flex-direction:column; gap:16px; width:100%;">
 
-              <div style="display:grid; grid-template-columns: 1.6fr 1fr; gap:20px; width:100%;">
-
-                <div class="card" style="padding:20px; display:flex; flex-direction:column; background:radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0f172a 90%); border:1px solid rgba(52,211,153,0.3);">
-                  <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <div style="display:flex; align-items:center; gap:8px;">
-                      <span style="font-size:16px; font-weight:800; color:#34d399;">📝 实时写作大正文镜像 (Live Document Stream - ${activeMonitorGroup.name})</span>
-                      <span style="font-size:11px; background:rgba(52,211,153,0.15); color:#34d399; padding:2px 8px; border-radius:10px; font-weight:700; border:1px solid rgba(52,211,153,0.3);">🟢 实时同步键入中</span>
-                    </div>
-                    <span style="font-size:13px; color:#cbd5e1;">实时总字数: <b style="color:#38bdf8; font-size:15px;">${state.stage2.unifiedContent.length}</b> 字</span>
-                  </div>
-
-                  <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:12px; color:#a5b4fc; display:flex; justify-content:space-between;">
-                    <span>⚡ <b>当前【${activeMonitorGroup.name}】组内架构 (${monitorMembersList.length}人):</b> ${monitorMembersList.map(m => m.name).join('、')}</span>
-                    <span>${state.isFinalSubmitted ? '<b style="color:#34d399;">🔒 论文终稿已提交归档</b>' : '<b style="color:#fbbf24;">✍️ 组员写作推进中</b>'}</span>
-                  </div>
-
-                  <textarea id="teacher-live-doc-mirror" class="teacher-textarea" readonly style="flex:1; min-height:360px; font-family:sans-serif; font-size:14px; line-height:1.6; background:rgba(15,23,42,0.85); color:#f8fafc; border:1px solid rgba(255,255,255,0.1); opacity:0.95;">${state.stage2.unifiedContent}</textarea>
-
-                  <div style="margin-top:14px; background:rgba(15,23,42,0.7); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
-                    <div style="font-size:12px; font-weight:700; color:#cbd5e1; margin-bottom:6px;">📊 本组 SSRL 成员字数贡献比率 (${monitorMembersList.length} 位成员)</div>
-                    <div style="height:14px; background:rgba(0,0,0,0.4); border-radius:7px; overflow:hidden; display:flex;">
-                      ${monitorMembersList.map((m) => {
-                        const pct = Math.round(100 / monitorMembersList.length);
-                        return `<div style="width:${pct}%; background:${m.color || '#818cf8'};" title="${m.name}: ${pct}%"></div>`;
-                      }).join('')}
-                    </div>
-                    <div style="display:flex; justify-content:space-between; font-size:11px; color:#cbd5e1; margin-top:6px; flex-wrap:wrap; gap:8px;">
-                      ${monitorMembersList.map(m => {
-                        const pct = Math.round(100 / monitorMembersList.length);
-                        return `<span style="color:${m.color || '#a5b4fc'}; font-weight:600;">● ${m.name}: ${pct}%</span>`;
+                <div class="card" style="border-top:4px solid #10b981; width:100%; padding:18px 22px; display:flex; justify-content:space-between; align-items:center;">
+                  <div style="display:flex; align-items:center; gap:14px;">
+                    <span style="font-size:17px; font-weight:800; color:#34d399;">🖥️ 实际操作实时监控终端:</span>
+                    <div style="display:flex; gap:8px;">
+                      ${(activeClass.groups || []).map(g => {
+                        const isSel = g.id === activeMonitorGId;
+                        return `
+                          <button class="btn-switch-monitor-group ${isSel ? 'active' : ''}" data-gid="${g.id}" style="background:${isSel ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(30,41,59,0.8)'}; border:1px solid ${isSel ? '#10b981' : 'rgba(255,255,255,0.1)'}; color:white; padding:8px 16px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer;">
+                            👥 同屏监控: ${g.name} ${isSel ? '🟢' : ''}
+                          </button>
+                        `;
                       }).join('')}
                     </div>
                   </div>
+                  <button id="btn-export-all-excel" style="background:linear-gradient(135deg, #6366f1, #4f46e5); border:none; color:white; padding:10px 20px; border-radius:10px; font-size:13.5px; font-weight:800; cursor:pointer; box-shadow:0 4px 14px rgba(99,102,241,0.4);">
+                    📊 一键导出本组 Excel 聊天与研讨记录
+                  </button>
                 </div>
 
-                <div class="card" style="padding:20px; display:flex; flex-direction:column; background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.1);">
-                  <div style="font-size:16px; font-weight:800; color:#fbbf24; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
-                    <span>💬 实时学术对话流 (${activeMonitorGroup.name})</span>
-                    <span class="phase-pill p1" style="font-size:11px;">${state.currentStage === 'stage3' ? '阶段三：答辩' : '阶段二：编辑部'}</span>
+                <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(30,41,59,0.7); border:1px solid var(--border-glass); border-radius:12px; padding:12px 18px; width:100%;">
+                  <div style="display:flex; align-items:center; gap:12px;">
+                    <span style="font-size:13px; font-weight:700; color:#cbd5e1;">📍 实时跟随指示: 当前【${activeMonitorGroup.name}】实际处于: <b style="color:#34d399;">${actualStage === 'stage1' ? '🎪 阶段一：学术拍卖会' : actualStage === 'stage2' ? '📰 阶段二：学术编辑部' : '🎓 阶段三：答辩擂台'}</b></span>
                   </div>
-                  <div style="flex:1; max-height:480px; overflow-y:auto; background:rgba(30,41,59,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px; font-size:12px; display:flex; flex-direction:column; gap:10px;">
-                    ${(state.chatLogs[state.currentStage] || []).map(m => {
-                      const isAgent = AgentProfiles[m.sender] !== undefined;
-                      const senderName = isAgent ? AgentProfiles[m.sender].name : (monitorMembersObj[m.sender] ? monitorMembersObj[m.sender].name : m.sender);
-                      const color = isAgent ? AgentProfiles[m.sender].color : (monitorMembersObj[m.sender] ? monitorMembersObj[m.sender].color : '#38bdf8');
-                      return `
-                        <div style="background:rgba(15,23,42,0.6); padding:8px 12px; border-radius:8px; border-left:3px solid ${color};">
-                          <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
-                            <b style="color:${color}; font-size:12px;">${senderName}</b>
-                            <span style="color:#64748b; font-size:10px;">${m.timestamp || ''}</span>
-                          </div>
-                          <div style="color:#f8fafc; line-height:1.5;">${m.text}</div>
+                  <div style="display:flex; align-items:center; gap:8px;">
+                    <span style="font-size:12px; color:#94a3b8; font-weight:600;">🔀 切换同屏切页 (可选查看):</span>
+                    <button class="btn-monitor-stage-tab ${monitorStageMode === 'auto' ? 'active' : ''}" data-stg="auto" style="background:${monitorStageMode === 'auto' ? 'linear-gradient(135deg, #10b981, #059669)' : 'rgba(15,23,42,0.6)'}; border:1px solid ${monitorStageMode === 'auto' ? '#10b981' : 'rgba(255,255,255,0.1)'}; color:white; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">
+                      ⚡ 自动跟随学生 (${actualStage === 'stage1' ? '阶段一' : actualStage === 'stage2' ? '阶段二' : '阶段三'}) 🟢
+                    </button>
+                    <button class="btn-monitor-stage-tab ${monitorStageMode === 'stage1' ? 'active' : ''}" data-stg="stage1" style="background:${monitorStageMode === 'stage1' ? 'linear-gradient(135deg, #6366f1, #4f46e5)' : 'rgba(15,23,42,0.6)'}; border:1px solid ${monitorStageMode === 'stage1' ? '#6366f1' : 'rgba(255,255,255,0.1)'}; color:white; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">
+                      🎪 查看阶段一
+                    </button>
+                    <button class="btn-monitor-stage-tab ${monitorStageMode === 'stage2' ? 'active' : ''}" data-stg="stage2" style="background:${monitorStageMode === 'stage2' ? 'linear-gradient(135deg, #06b6d4, #0891b2)' : 'rgba(15,23,42,0.6)'}; border:1px solid ${monitorStageMode === 'stage2' ? '#06b6d4' : 'rgba(255,255,255,0.1)'}; color:white; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">
+                      📰 查看阶段二
+                    </button>
+                    <button class="btn-monitor-stage-tab ${monitorStageMode === 'stage3' ? 'active' : ''}" data-stg="stage3" style="background:${monitorStageMode === 'stage3' ? 'linear-gradient(135deg, #a855f7, #9333ea)' : 'rgba(15,23,42,0.6)'}; border:1px solid ${monitorStageMode === 'stage3' ? '#a855f7' : 'rgba(255,255,255,0.1)'}; color:white; padding:6px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;">
+                      🎓 查看阶段三
+                    </button>
+                  </div>
+                </div>
+
+                ${effectiveMonitorStage === 'stage1' ? `
+                  <div style="display:grid; grid-template-columns: 1.6fr 1fr; gap:20px; width:100%;">
+                    <div class="card" style="padding:20px; display:flex; flex-direction:column; background:radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0f172a 90%); border:1px solid rgba(99,102,241,0.3);">
+                      <div style="font-size:16px; font-weight:800; color:#818cf8; margin-bottom:12px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>🎪 阶段一实操同屏: 竞拍提案与学术合作合约 (${activeMonitorGroup.name})</span>
+                        <span class="phase-pill p1">阶段一实况</span>
+                      </div>
+                      <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px; margin-bottom:14px;">
+                        <div style="font-size:13px; font-weight:700; color:#38bdf8; margin-bottom:6px;">📌 确认融合论文研究主题:</div>
+                        <div style="font-size:14px; font-weight:800; color:#f8fafc;">${state.stage1.mergedTitle || '【尚待确定】'}</div>
+                      </div>
+                      <div style="background:rgba(15,23,42,0.6); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px; font-size:13px;">
+                        <div style="font-weight:700; color:#a78bfa; margin-bottom:8px;">👥 合作合约签署矩阵:</div>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                          ${monitorMembersList.map(m => {
+                            const isConf = state.stage1.contract.confirmedMembers && state.stage1.contract.confirmedMembers[m.id];
+                            return `
+                              <span style="color:${isConf ? '#34d399' : '#94a3b8'}; border:1px solid ${isConf ? 'rgba(52,211,153,0.3)' : 'rgba(255,255,255,0.1)'}; background:${isConf ? 'rgba(52,211,153,0.1)' : 'rgba(0,0,0,0.2)'}; padding:4px 10px; border-radius:6px; font-size:12px;">
+                                ${m.avatar || '👤'} ${m.name}: <b>${isConf ? '✅ 已签署' : '⏳ 未签署'}</b>
+                              </span>
+                            `;
+                          }).join('')}
                         </div>
-                      `;
-                    }).join('')}
+                      </div>
+                    </div>
+                    <div class="card" style="padding:20px; display:flex; flex-direction:column; background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.1);">
+                      <div style="font-size:16px; font-weight:800; color:#fbbf24; margin-bottom:12px;">💬 阶段一学术研讨对话流 (${activeMonitorGroup.name})</div>
+                      <div style="flex:1; max-height:420px; overflow-y:auto; background:rgba(30,41,59,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px; font-size:12px; display:flex; flex-direction:column; gap:10px;">
+                        ${(state.chatLogs['stage1'] || []).map(m => {
+                          const isAgent = AgentProfiles[m.sender] !== undefined;
+                          const senderName = isAgent ? AgentProfiles[m.sender].name : (monitorMembersObj[m.sender] ? monitorMembersObj[m.sender].name : m.sender);
+                          const color = isAgent ? AgentProfiles[m.sender].color : (monitorMembersObj[m.sender] ? monitorMembersObj[m.sender].color : '#38bdf8');
+                          return `
+                            <div style="background:rgba(15,23,42,0.6); padding:8px 12px; border-radius:8px; border-left:3px solid ${color};">
+                              <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+                                <b style="color:${color}; font-size:12px;">${senderName}</b>
+                                <span style="color:#64748b; font-size:10px;">${m.timestamp || ''}</span>
+                              </div>
+                              <div style="color:#f8fafc; line-height:1.5;">${m.text}</div>
+                            </div>
+                          `;
+                        }).join('')}
+                      </div>
+                    </div>
                   </div>
-                </div>
+                ` : ''}
+
+                ${effectiveMonitorStage === 'stage2' ? `
+                  <div style="display:grid; grid-template-columns: 1.6fr 1fr; gap:20px; width:100%;">
+                    <div class="card" style="padding:20px; display:flex; flex-direction:column; background:radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0f172a 90%); border:1px solid rgba(52,211,153,0.3);">
+                      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                        <div style="display:flex; align-items:center; gap:8px;">
+                          <span style="font-size:16px; font-weight:800; color:#34d399;">📝 实时写作大正文镜像 (Live Document Stream - ${activeMonitorGroup.name})</span>
+                          <span style="font-size:11px; background:rgba(52,211,153,0.15); color:#34d399; padding:2px 8px; border-radius:10px; font-weight:700; border:1px solid rgba(52,211,153,0.3);">🟢 实时同步键入中</span>
+                        </div>
+                        <span style="font-size:13px; color:#cbd5e1;">实时总字数: <b style="color:#38bdf8; font-size:15px;">${state.stage2.unifiedContent.length}</b> 字</span>
+                      </div>
+                      <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:12px; color:#a5b4fc; display:flex; justify-content:space-between;">
+                        <span>⚡ <b>当前【${activeMonitorGroup.name}】组内架构 (${monitorMembersList.length}人):</b> ${monitorMembersList.map(m => m.name).join('、')}</span>
+                        <span>${state.isFinalSubmitted ? '<b style="color:#34d399;">🔒 论文终稿已提交归档</b>' : '<b style="color:#fbbf24;">✍️ 组员写作推进中</b>'}</span>
+                      </div>
+                      <textarea id="teacher-live-doc-mirror" class="teacher-textarea" readonly style="flex:1; min-height:360px; font-family:sans-serif; font-size:14px; line-height:1.6; background:rgba(15,23,42,0.85); color:#f8fafc; border:1px solid rgba(255,255,255,0.1); opacity:0.95;">${state.stage2.unifiedContent}</textarea>
+                      <div style="margin-top:14px; background:rgba(15,23,42,0.7); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
+                        <div style="font-size:12px; font-weight:700; color:#cbd5e1; margin-bottom:6px;">📊 本组 SSRL 成员字数贡献比率 (${monitorMembersList.length} 位成员)</div>
+                        <div style="height:14px; background:rgba(0,0,0,0.4); border-radius:7px; overflow:hidden; display:flex;">
+                          ${monitorMembersList.map((m) => {
+                            const pct = Math.round(100 / monitorMembersList.length);
+                            return `<div style="width:${pct}%; background:${m.color || '#818cf8'};" title="${m.name}: ${pct}%"></div>`;
+                          }).join('')}
+                        </div>
+                        <div style="display:flex; justify-content:space-between; font-size:11px; color:#cbd5e1; margin-top:6px; flex-wrap:wrap; gap:8px;">
+                          ${monitorMembersList.map(m => {
+                            const pct = Math.round(100 / monitorMembersList.length);
+                            return `<span style="color:${m.color || '#a5b4fc'}; font-weight:600;">● ${m.name}: ${pct}%</span>`;
+                          }).join('')}
+                        </div>
+                      </div>
+                    </div>
+                    <div class="card" style="padding:20px; display:flex; flex-direction:column; background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.1);">
+                      <div style="font-size:16px; font-weight:800; color:#fbbf24; margin-bottom:12px;">💬 阶段二编辑部学术对话流 (${activeMonitorGroup.name})</div>
+                      <div style="flex:1; max-height:480px; overflow-y:auto; background:rgba(30,41,59,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px; font-size:12px; display:flex; flex-direction:column; gap:10px;">
+                        ${(state.chatLogs['stage2'] || []).map(m => {
+                          const isAgent = AgentProfiles[m.sender] !== undefined;
+                          const senderName = isAgent ? AgentProfiles[m.sender].name : (monitorMembersObj[m.sender] ? monitorMembersObj[m.sender].name : m.sender);
+                          const color = isAgent ? AgentProfiles[m.sender].color : (monitorMembersObj[m.sender] ? monitorMembersObj[m.sender].color : '#38bdf8');
+                          return `
+                            <div style="background:rgba(15,23,42,0.6); padding:8px 12px; border-radius:8px; border-left:3px solid ${color};">
+                              <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+                                <b style="color:${color}; font-size:12px;">${senderName}</b>
+                                <span style="color:#64748b; font-size:10px;">${m.timestamp || ''}</span>
+                              </div>
+                              <div style="color:#f8fafc; line-height:1.5;">${m.text}</div>
+                            </div>
+                          `;
+                        }).join('')}
+                      </div>
+                    </div>
+                  </div>
+                ` : ''}
+
+                ${effectiveMonitorStage === 'stage3' ? `
+                  <div style="display:grid; grid-template-columns: 1.6fr 1fr; gap:20px; width:100%;">
+                    <div class="card" style="padding:20px; display:flex; flex-direction:column; background:radial-gradient(circle at 50% 10%, #1e1b4b 0%, #0f172a 90%); border:1px solid rgba(168,85,247,0.3);">
+                      <div style="font-size:16px; font-weight:800; color:#c084fc; margin-bottom:12px;">🎓 阶段三实操同屏: 答辩擂台与成员裁决 (${activeMonitorGroup.name})</div>
+                      <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:14px; margin-bottom:14px;">
+                        <div style="font-size:13px; font-weight:700; color:#c084fc; margin-bottom:6px;">⚖️ 成员辩护裁决状态:</div>
+                        <div style="font-size:13px; color:#cbd5e1;">${state.isFinalSubmitted ? '🔒 本组论文终稿已全员答辩完成并成功提交归档！' : '🎓 组员答辩质询辩护中...'}</div>
+                      </div>
+                      <textarea class="teacher-textarea" readonly style="flex:1; min-height:360px; font-family:sans-serif; font-size:14px; line-height:1.6; background:rgba(15,23,42,0.85); color:#f8fafc; opacity:0.95;">${state.stage2.unifiedContent}</textarea>
+                    </div>
+                    <div class="card" style="padding:20px; display:flex; flex-direction:column; background:rgba(15,23,42,0.7); border:1px solid rgba(255,255,255,0.1);">
+                      <div style="font-size:16px; font-weight:800; color:#c084fc; margin-bottom:12px;">💬 阶段三答辩对话流 (${activeMonitorGroup.name})</div>
+                      <div style="flex:1; max-height:480px; overflow-y:auto; background:rgba(30,41,59,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:10px; padding:12px; font-size:12px; display:flex; flex-direction:column; gap:10px;">
+                        ${(state.chatLogs['stage3'] || []).map(m => {
+                          const isAgent = AgentProfiles[m.sender] !== undefined;
+                          const senderName = isAgent ? AgentProfiles[m.sender].name : (monitorMembersObj[m.sender] ? monitorMembersObj[m.sender].name : m.sender);
+                          const color = isAgent ? AgentProfiles[m.sender].color : (monitorMembersObj[m.sender] ? monitorMembersObj[m.sender].color : '#38bdf8');
+                          return `
+                            <div style="background:rgba(15,23,42,0.6); padding:8px 12px; border-radius:8px; border-left:3px solid ${color};">
+                              <div style="display:flex; justify-content:space-between; margin-bottom:3px;">
+                                <b style="color:${color}; font-size:12px;">${senderName}</b>
+                                <span style="color:#64748b; font-size:10px;">${m.timestamp || ''}</span>
+                              </div>
+                              <div style="color:#f8fafc; line-height:1.5;">${m.text}</div>
+                            </div>
+                          `;
+                        }).join('')}
+                      </div>
+                    </div>
+                  </div>
+                ` : ''}
 
               </div>
-
-            </div>
-          ` : ''}
+            `;
+          })() : ''}
 
         </main>
       </div>
@@ -1723,6 +1822,13 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       btn.addEventListener('click', () => {
         state.activeMonitorGroupId = btn.dataset.gid;
         if (window.app) window.app.loadGroupState(btn.dataset.gid);
+        renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
+      });
+    });
+
+    container.querySelectorAll('.btn-monitor-stage-tab').forEach(btn => {
+      btn.addEventListener('click', () => {
+        state.teacherMonitorStageMode = btn.dataset.stg;
         renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
       });
     });
