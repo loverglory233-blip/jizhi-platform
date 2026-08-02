@@ -2393,6 +2393,29 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           if (min >= 25 && this.state.currentStage === 'stage1') this.switchStage('stage2');
           else if (min >= 130 && this.state.currentStage === 'stage2') this.switchStage('stage3');
 
+          // 🤝 责任编辑 Agent: 检测学生对话不积极 (静默 > 45 秒触发督促)
+          const currentStage = this.state.currentStage;
+          const logs = this.state.chatLogs[currentStage] || [];
+          const nowMs = Date.now();
+          const lastStudentMsg = logs.slice().reverse().find(m => m.sender !== 'managingEditor' && m.sender !== 'reviewingEditor' && m.sender !== 'auctioneer' && m.sender !== 'neutral');
+          const lastStudentTime = lastStudentMsg ? (lastStudentMsg._timeMs || nowMs) : (this.state.lastStudentChatTimeMs || nowMs);
+          const idleSec = Math.floor((nowMs - lastStudentTime) / 1000);
+          const lastManagingMsg = logs.slice().reverse().find(m => m.sender === 'managingEditor');
+          const timeSinceManagingMs = lastManagingMsg ? (nowMs - (lastManagingMsg._timeMs || 0)) : 999999;
+
+          if (idleSec >= 45 && timeSinceManagingMs > 60000 && !this.state.isFinalSubmitted) {
+            this.state.lastStudentChatTimeMs = nowMs;
+            const idleAlertMsg = {
+              sender: 'managingEditor',
+              text: `🤝 【责任编辑 Agent 互动督促】：检测到本组在【${currentStage === 'stage1' ? '阶段一：学术拍卖会' : currentStage === 'stage2' ? '阶段二：学术编辑部' : '阶段三：答辩擂台'}】已连续 ${idleSec} 秒没有互动研讨发言。请组员保持积极沟通，按合约分工推进协作！`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+              _timeMs: nowMs
+            };
+            logs.push(idleAlertMsg);
+            this.syncChatLogs();
+            renderChat(this.state);
+          }
+
           renderHeader(
             this.state, currentUser, this.authManager.getAnnouncements(),
             (s) => this.switchStage(s), (sp) => this.setSpeed(sp),
@@ -2823,6 +2846,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           if (this.state.isFinalSubmitted) return;
           this.state.stage2.unifiedContent = newContent;
           this.syncStage2();
+          this.checkAgentTriggersOnContent(newContent);
         },
         onOpenCaseModal: () => {
           downloadFileBlob('编辑会议规范与范例模板文件.pdf');
@@ -2935,6 +2959,65 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       });
 
       renderChat(this.state);
+    }
+
+    checkAgentTriggersOnContent(newContent) {
+      if (!newContent || this.state.isFinalSubmitted) return;
+      const currentStage = this.state.currentStage;
+      const logs = this.state.chatLogs[currentStage] || [];
+      const now = Date.now();
+
+      // 1. 📝 审稿编辑 Agent: 偏离主题警示 (Off-Topic Check)
+      const offTopicKeywords = ['外卖', '游戏', '电影', '打球', '买鞋', '追剧', '放假', '游玩', '聊天'];
+      const hasOffTopicWord = offTopicKeywords.some(w => newContent.includes(w));
+      const lastReviewingMsg = logs.slice().reverse().find(m => m.sender === 'reviewingEditor');
+      const timeSinceLastReviewing = lastReviewingMsg ? (now - (lastReviewingMsg._timeMs || 0)) : 999999;
+
+      if (hasOffTopicWord && timeSinceLastReviewing > 30000) {
+        const warningMsg = {
+          sender: 'reviewingEditor',
+          text: `📝 【审稿编辑 Agent 偏离主题提醒】：检测到当前正文或研讨内容中出现了偏离已锁定研究主题《${this.state.stage1.mergedTitle || '论文主题'}》的内容。请团队紧扣研究问题、理论框架与学术规范展开，避免无关讨论！`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          _timeMs: now
+        };
+        logs.push(warningMsg);
+        this.syncChatLogs();
+        renderChat(this.state);
+      }
+
+      // 2. 📝 审稿编辑 Agent: 专业问题 / 学术规范缺失 (Academic Deficit Check)
+      const hasHypothesis = newContent.includes('假设') || newContent.includes('H1') || newContent.includes('H2') || newContent.includes('变量');
+      const hasScale = newContent.includes('李克特') || newContent.includes('Likert') || newContent.includes('量表') || newContent.includes('信效度');
+      if (hasHypothesis && !hasScale && newContent.length > 180 && timeSinceLastReviewing > 45000) {
+        const scaleWarningMsg = {
+          sender: 'reviewingEditor',
+          text: `📝 【审稿编辑 Agent 专业规范提醒】：检测到论文提出了研究假设或变量，但尚未补齐具体的【5点李克特量表 (Likert 5-point Scale)】及量化测量工具规范！建议补充具体的测量维度与问卷指标。`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          _timeMs: now
+        };
+        logs.push(scaleWarningMsg);
+        this.syncChatLogs();
+        renderChat(this.state);
+      }
+
+      // 3. 🤝 责任编辑 Agent: 字数贡献比偏斜提醒 (SSRL Contribution Imbalance Check)
+      const membersList = Object.values(this.state.members || {});
+      const totalLen = newContent.length;
+      if (totalLen > 250 && membersList.length >= 3) {
+        const lastManagingMsg = logs.slice().reverse().find(m => m.sender === 'managingEditor');
+        const timeSinceLastManaging = lastManagingMsg ? (now - (lastManagingMsg._timeMs || 0)) : 999999;
+        if (timeSinceLastManaging > 45000) {
+          const ssrlWarningMsg = {
+            sender: 'managingEditor',
+            text: `🤝 【责任编辑 Agent SSRL 共享调节提醒】：检测到本组正文撰写推进中成员字数贡献比率出现不均衡现象！请组长 (${membersList[0] ? membersList[0].name : '组长'}) 与全体组员注意分工调整，促进全员 Equal Participation 均等学术参与。`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            _timeMs: now
+          };
+          logs.push(ssrlWarningMsg);
+          this.syncChatLogs();
+          renderChat(this.state);
+        }
+      }
     }
 
     showMeetingModal() {
