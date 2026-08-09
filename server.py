@@ -2,6 +2,7 @@
 """
 Jizhi (集智) Multi-Agent Collaborative Writing Platform
 High-Performance Multi-Threaded Real-Time Sync Server (Port 8088)
+Features: Gzip Compression, Server-Enforced Single Account Session Locking, SSE Sync
 """
 
 import http.server
@@ -10,15 +11,19 @@ import json
 import os
 import time
 import threading
-from queue import Queue
 import gzip
+from queue import Queue
 
 PORT = 8088
 DIR = os.path.dirname(os.path.abspath(__file__))
 
-# Active SSE client queues: { groupId: set(queue1, queue2, ...) }
+# SSE clients: { groupId: set(queue1, queue2, ...) }
 SSE_CLIENTS = {}
 SSE_LOCK = threading.Lock()
+
+# Server-Side Hardware Session Lock: { userId: { token: str, lastActive: float, userName: str } }
+SESSION_LOCKS = {}
+LOCK_MUTEX = threading.Lock()
 
 class Handler(http.server.SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
@@ -138,6 +143,85 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
+        # ⚡ 服务端物理级账号独占互斥锁 API (100% 硬阻断)
+        if '/api/session/login' in self.path:
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length)
+            try:
+                req = json.loads(body.decode('utf-8'))
+                user_id = req.get('userId')
+                token = req.get('token')
+                user_name = req.get('userName', user_id)
+                now = time.time()
+
+                with LOCK_MUTEX:
+                    active = SESSION_LOCKS.get(user_id)
+                    # 如果账号在 180 秒内有活跃心跳且 Token 不匹配，拦截登录
+                    if active and active.get('token') != token and (now - active.get('lastActive', 0)) < 180:
+                        self.send_response(200)
+                        self.send_header('Content-Type', 'application/json')
+                        self.end_headers()
+                        msg = f"⚠️ 账号 [{user_name}] 此时正在其他设备或浏览器上登录使用中！\n为避免两人同时操作同一个账号产生冲突，请使用您个人的独立账号登录。"
+                        self.wfile.write(json.dumps({'success': False, 'message': msg}).encode('utf-8'))
+                        return
+
+                    # 允许登录并锁定当前设备
+                    SESSION_LOCKS[user_id] = {'token': token, 'lastActive': now, 'userName': user_name}
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({'success': True}).encode('utf-8'))
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(json.dumps({'success': False, 'error': str(e)}).encode('utf-8'))
+            return
+
+        if '/api/session/heartbeat' in self.path:
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length)
+            try:
+                req = json.loads(body.decode('utf-8'))
+                user_id = req.get('userId')
+                token = req.get('token')
+                user_name = req.get('userName', user_id)
+                now = time.time()
+
+                with LOCK_MUTEX:
+                    active = SESSION_LOCKS.get(user_id)
+                    if active and active.get('token') == token:
+                        active['lastActive'] = now
+                    else:
+                        SESSION_LOCKS[user_id] = {'token': token, 'lastActive': now, 'userName': user_name}
+
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(json.dumps({'success': True}).encode('utf-8'))
+            except Exception:
+                self.send_response(200)
+                self.end_headers()
+                self.wfile.write(b'{"success":true}')
+            return
+
+        if '/api/session/logout' in self.path:
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length)
+            try:
+                req = json.loads(body.decode('utf-8'))
+                user_id = req.get('userId')
+                with LOCK_MUTEX:
+                    if user_id in SESSION_LOCKS:
+                        del SESSION_LOCKS[user_id]
+            except Exception:
+                pass
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(b'{"success":true}')
+            return
+
         if '/api/snapshot' in self.path:
             groupId = 'group_1'
             if 'groupId=' in self.path:
@@ -182,6 +266,6 @@ class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     daemon_threads = True
 
 if __name__ == '__main__':
-    print(f'🚀 集智 Gzip 极速+多线程实时服务器运行在端口 {PORT}...', flush=True)
+    print(f'🚀 集智 Gzip 极速+服务端独占锁服务器运行在端口 {PORT}...', flush=True)
     with ThreadingTCPServer(('0.0.0.0', PORT), Handler) as httpd:
         httpd.serve_forever()
