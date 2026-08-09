@@ -2154,25 +2154,29 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     const unreadAnnCount = announcements ? announcements.filter(a => !a.readStatus || !a.readStatus[groupId]).length : 0;
     const isFinalSubmitted = state.isFinalSubmitted;
 
+    header.style.background = 'linear-gradient(135deg, #001233 0%, #002266 50%, #0052cc 100%)';
+    header.style.borderBottom = '2px solid #00d2ff';
+    header.style.boxShadow = '0 6px 20px rgba(0, 18, 51, 0.4)';
+
     header.innerHTML = `
       <div class="brand-section" style="flex-shrink:0;">
-        <div class="brand-logo">集智 JIZHI</div>
-        <div class="brand-badge">🎓 ${currentUser ? currentUser.name : '学生A'} ${isFinalSubmitted ? '<span style="color:#34d399; margin-left:4px;">(🔒 终稿已归档)</span>' : ''}</div>
+        <div class="brand-logo" style="color:#ffffff; font-weight:900; letter-spacing:1px; text-shadow:0 0 12px rgba(0,210,255,0.6);">集智 JIZHI</div>
+        <div class="brand-badge" style="background:linear-gradient(135deg, #0077ff, #00d2ff); color:#ffffff; font-weight:800; padding:3px 10px; border-radius:4px; box-shadow:0 2px 8px rgba(0,210,255,0.4);">🎓 ${currentUser ? currentUser.name : '学生A'} ${isFinalSubmitted ? '<span style="color:#34d399; margin-left:4px;">(🔒 终稿已归档)</span>' : ''}</div>
       </div>
       <nav class="stage-nav" style="flex-shrink:1; min-width:0; overflow-x:auto;">
-        <button class="stage-btn ${state.currentStage === 'stage1' ? 'active' : ''}" data-stage="stage1">🎪 阶段一：学术拍卖会 (25m)</button>
-        <button class="stage-btn ${state.currentStage === 'stage2' ? 'active' : ''}" data-stage="stage2">📰 阶段二：学术编辑部 (105m)</button>
-        <button class="stage-btn ${state.currentStage === 'stage3' ? 'active' : ''}" data-stage="stage3">🎓 阶段三：答辩擂台 (20m)</button>
+        <button class="stage-btn ${state.currentStage === 'stage1' ? 'active' : ''}" data-stage="stage1" style="${state.currentStage === 'stage1' ? 'background:linear-gradient(135deg, #0077ff, #00d2ff); color:#ffffff; font-weight:800; box-shadow:0 0 14px rgba(0,210,255,0.6);' : 'color:#b0d4ff; background:rgba(255,255,255,0.08);'}">🎪 阶段一：学术拍卖会 (25m)</button>
+        <button class="stage-btn ${state.currentStage === 'stage2' ? 'active' : ''}" data-stage="stage2" style="${state.currentStage === 'stage2' ? 'background:linear-gradient(135deg, #0077ff, #00d2ff); color:#ffffff; font-weight:800; box-shadow:0 0 14px rgba(0,210,255,0.6);' : 'color:#b0d4ff; background:rgba(255,255,255,0.08);'}">📰 阶段二：学术编辑部 (105m)</button>
+        <button class="stage-btn ${state.currentStage === 'stage3' ? 'active' : ''}" data-stage="stage3" style="${state.currentStage === 'stage3' ? 'background:linear-gradient(135deg, #0077ff, #00d2ff); color:#ffffff; font-weight:800; box-shadow:0 0 14px rgba(0,210,255,0.6);' : 'color:#b0d4ff; background:rgba(255,255,255,0.08);'}">🎓 阶段三：答辩擂台 (20m)</button>
       </nav>
       <div class="header-controls" style="display:flex; align-items:center; gap:8px; flex-shrink:0; margin-left:auto;">
-        <button id="btn-header-survey-link" style="background:${isFinalSubmitted ? 'linear-gradient(135deg, #8b5cf6, #6366f1)' : 'rgba(139,92,246,0.2)'}; border:1px solid rgba(139,92,246,0.4); color:white; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:${isFinalSubmitted ? '0 0 10px rgba(139,92,246,0.5)' : 'none'}; transition:all 0.2s;" title="课程评估问卷">
+        <button id="btn-header-survey-link" style="background:${isFinalSubmitted ? 'linear-gradient(135deg, #7c3aed, #00d2ff)' : 'rgba(255,255,255,0.12)'}; border:1px solid #00d2ff; color:white; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:${isFinalSubmitted ? '0 0 12px rgba(0,210,255,0.5)' : 'none'};" title="课程评估问卷">
           📋 ${isFinalSubmitted ? '📬 填写评估问卷' : '问卷'}
         </button>
-        <button class="nav-ann-bell-btn ${unreadAnnCount > 0 ? 'has-unread' : ''}" id="btn-header-ann-bell" title="课堂通知">
+        <button class="nav-ann-bell-btn ${unreadAnnCount > 0 ? 'has-unread' : ''}" id="btn-header-ann-bell" style="background:rgba(255,255,255,0.12); color:#ffffff; border:1px solid rgba(255,255,255,0.2);" title="课堂通知">
           🔔 消息 ${unreadAnnCount > 0 ? `<span class="unread-count">${unreadAnnCount}</span>` : ''}
         </button>
-        <div class="timer-box">⏱️ ${remainingMin}m</div>
-        <button id="btn-switch-teacher-view" class="header-icon-btn" style="background:rgba(99,102,241,0.2); color:#a5b4fc; border:1px solid rgba(99,102,241,0.4); padding:7px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;" title="切换至教师端">👩‍🏫 教师端</button>
+        <div class="timer-box" style="background:rgba(0,34,102,0.8); border:1px solid #0077ff; color:#00d2ff; font-weight:800;">⏱️ ${remainingMin}m</div>
+        <button id="btn-switch-teacher-view" class="header-icon-btn" style="background:rgba(0,119,255,0.3); color:#ffffff; border:1px solid #00d2ff; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;" title="切换至教师端">👩‍🏫 教师端</button>
         <button id="btn-user-logout" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 18px; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; box-shadow:0 4px 14px rgba(239,68,68,0.4); flex-shrink:0; white-space:nowrap; display:inline-flex; align-items:center; justify-content:center; min-width:105px; text-shadow:0 1px 2px rgba(0,0,0,0.3);" title="退出登录">🚪 退出登录</button>
       </div>
     `;
