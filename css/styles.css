@@ -1164,3 +1164,70 @@ body {
 ::-webkit-scrollbar-track { background: rgba(15, 23, 42, 0.4); }
 ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.25); border-radius: 4px; }
 ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.45); }
+
+/* ==========================================================================
+   PERSONA 3 RELOAD (P3R) BLUE-WHITE ART & UI SYSTEM OVERRIDES
+   ========================================================================== */
+.card {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-left: 5px solid #0052cc !important;
+  box-shadow: 0 8px 25px rgba(0, 82, 204, 0.08) !important;
+  color: #0f172a !important;
+  border-radius: 12px !important;
+}
+
+.card-title {
+  color: #001e4d !important;
+  font-weight: 800 !important;
+  letter-spacing: 0.5px !important;
+}
+
+.chat-panel {
+  background: #ffffff !important;
+  border-left: 2px solid #cbd5e1 !important;
+}
+
+.chat-header {
+  background: linear-gradient(135deg, #001233 0%, #002266 50%, #0052cc 100%) !important;
+  color: #ffffff !important;
+  border-bottom: 2px solid #00d2ff !important;
+}
+
+.chat-title {
+  color: #ffffff !important;
+  font-weight: 800 !important;
+  text-shadow: 0 0 10px rgba(0, 210, 255, 0.5) !important;
+}
+
+.chat-input-bar {
+  background: #001233 !important;
+  border-top: 2px solid #00d2ff !important;
+}
+
+.modern-spacious-input {
+  background: #ffffff !important;
+  color: #0f172a !important;
+  border: 1px solid #cbd5e1 !important;
+}
+
+.modern-spacious-input:focus {
+  border-color: #0077ff !important;
+  box-shadow: 0 0 0 3px rgba(0, 210, 255, 0.3) !important;
+}
+
+.modern-send-btn {
+  background: linear-gradient(135deg, #0052cc, #00d2ff) !important;
+  box-shadow: 0 4px 14px rgba(0, 210, 255, 0.4) !important;
+}
+
+.proposal-card {
+  background: #f8fafc !important;
+  border: 1px solid #cbd5e1 !important;
+  color: #0f172a !important;
+}
+
+.proposal-card.voted {
+  border-color: #0077ff !important;
+  background: #eff6ff !important;
+}
