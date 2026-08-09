@@ -831,18 +831,45 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           try {
             if (event.data) {
               const data = JSON.parse(event.data);
-              if (data && data.timestamp) {
+              if (data && data.type === 'presence_update' && data.presence) {
+                this.handlePresenceUpdate(data.presence);
+              } else if (data && data.timestamp) {
                 this.handleRemoteSync(data);
               }
             }
           } catch (e) {}
         };
         this.eventSource.onerror = () => {
-          // 断线 3 秒后自动重连
           if (this.eventSource) this.eventSource.close();
           setTimeout(() => this.initSSE(), 3000);
         };
       } catch (e) {}
+    }
+
+    handlePresenceUpdate(presence) {
+      if (!presence || !presence.userId) return;
+      if (!this.app.state.activePresences) this.app.state.activePresences = {};
+      this.app.state.activePresences[presence.userId] = presence;
+      const bar = document.getElementById('co-writer-presence-bar') || document.getElementById('co-writer-presence-bar-s3');
+      if (bar) {
+        const now = Date.now();
+        const activeList = Object.values(this.app.state.activePresences).filter(p => (now - (p.lastSeen || 0)) < 15000);
+        let html = `<span style="font-weight:700; color:#475569; display:inline-flex; align-items:center; gap:6px;">
+          <span style="width:8px; height:8px; border-radius:50%; background:#10b981; display:inline-block; animation:presencePulse 1.5s infinite;"></span>
+          👥 组内协同编辑光标感知:
+        </span>`;
+        if (activeList.length === 0) {
+          html += `<span style="color:#94a3b8; font-style:italic;">仅你在当前页面，组员光标定位后将自动同步感知</span>`;
+        } else {
+          html += activeList.map(p => `
+            <span style="background:${p.bg || '#f0f9ff'}; color:${p.color || '#0284c7'}; border:1px solid ${p.border || '#bae6fd'}; padding:4px 12px; border-radius:16px; font-weight:700; display:inline-flex; align-items:center; gap:6px; box-shadow:0 1px 4px rgba(0,0,0,0.02);">
+              <span style="width:6px; height:6px; border-radius:50%; background:${p.color || '#0284c7'};"></span>
+              👤 ${p.userName}: 正在编辑「${p.snippet || '正文段落'}」
+            </span>
+          `).join('');
+        }
+        bar.innerHTML = html;
+      }
     }
 
     initPolling() {
@@ -2577,20 +2604,27 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           </div>
         </div>
 
-        <div style="margin-top:16px; background:#ffffff; padding:14px 18px; border-radius:12px; border:1px solid #e2e8f0; box-shadow:0 2px 10px rgba(15,23,42,0.03); flex-shrink:0;">
-          <div style="font-size:12.5px; font-weight:700; margin-bottom:10px; color:#0f172a; display:flex; justify-content:space-between; align-items:center;">
-            <span>📊 本组 SSRL 成员贡献度动态分析 (实时平滑)</span>
+        <!-- 📊 吸底固定悬浮贡献比分析栏 (随学生上下滑动页面贴合在最底部) -->
+        <div style="position:sticky; bottom:0; left:0; right:0; z-index:90; background:#ffffff; border:1px solid #e2e8f0; border-top:2px solid #0284c7; box-shadow:0 -4px 20px rgba(15,23,42,0.06); padding:10px 18px; border-radius:12px 12px 0 0; margin-top:16px;">
+          <div style="font-size:12.5px; font-weight:700; margin-bottom:8px; color:#0f172a; display:flex; justify-content:space-between; align-items:center;">
+            <span>📊 本组 SSRL 成员贡献度动态分析 (随页面滑动吸底)</span>
             <span style="font-size:11.5px; color:#64748b;">整篇总字数: <b id="live-word-count-footer" style="color:#0284c7;">${wordCount}</b> 字</span>
           </div>
           <div class="contribution-bar-container" id="live-contrib-container">
             ${(() => {
+              const defaultGroupMembers = [
+                { id: 'liming', studentCode: 'A', name: '李明', color: '#0284c7', avatar: '👨‍🎓' },
+                { id: 'wangfang', studentCode: 'B', name: '王芳', color: '#059669', avatar: '👩‍🎓' },
+                { id: 'chenqiang', studentCode: 'C', name: '陈强', color: '#7c3aed', avatar: '👨‍🎓' }
+              ];
+              const fullMembersList = (membersList && membersList.length >= 3) ? membersList : defaultGroupMembers;
               const totalChatMsgs = ((state.chatLogs.stage1 || []).length + (state.chatLogs.stage2 || []).length + (state.chatLogs.stage3 || []).length) || 1;
-              const memberStats = membersList.map(m => {
+              const memberStats = fullMembersList.map(m => {
                 const mMsgs = (state.chatLogs.stage1 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
                             + (state.chatLogs.stage2 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
                             + (state.chatLogs.stage3 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length;
                 const typed = (state.memberTypedCounts && state.memberTypedCounts[m.id || m.studentCode]) || 0;
-                return { member: m, raw: 10 + (mMsgs * 3) + typed };
+                return { member: m, raw: 10 + (mMsgs * 3) + (typed * 2) };
               });
               const sumRaw = memberStats.reduce((acc, curr) => acc + curr.raw, 0) || 1;
               let accumulatedPct = 0;
@@ -3172,12 +3206,22 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         `;
       }
 
-      const isMe = msg.sender === currentUser;
+      const myUserObj = state.authManager ? state.authManager.getCurrentUser() : null;
+      const myId = myUserObj ? myUserObj.id : state.currentUser;
+      const myCode = myUserObj ? myUserObj.studentCode : 'A';
+      const isMe = msg.sender === currentUser || msg.sender === myId || msg.sender === myCode;
+
       const isAgent = AgentProfiles[msg.sender] !== undefined;
-      const profile = isAgent ? AgentProfiles[msg.sender] : state.members[msg.sender];
+      let profile = isAgent ? AgentProfiles[msg.sender] : (state.members[msg.sender] || Object.values(state.members || {}).find(m => m.id === msg.sender || m.studentCode === msg.sender));
+      if (!profile && !isAgent) {
+        if (msg.sender === 'A' || msg.sender === 'liming') profile = { name: '李明', avatar: '👨‍🎓', color: '#0284c7' };
+        else if (msg.sender === 'B' || msg.sender === 'wangfang') profile = { name: '王芳', avatar: '👩‍🎓', color: '#059669' };
+        else if (msg.sender === 'C' || msg.sender === 'chenqiang') profile = { name: '陈强', avatar: '👨‍🎓', color: '#7c3aed' };
+      }
+
       const avatar = profile ? profile.avatar : '👤';
       const name = profile ? (profile.name || profile.roleTitle) : msg.sender;
-      const color = profile ? profile.color : '#94a3b8';
+      const color = profile ? profile.color : '#0284c7';
 
       let formattedText = msg.text || '';
       formattedText = formattedText.replace(/(@[^\s@]+)/g, '<span class="mention-tag">$1</span>');
@@ -3609,9 +3653,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         const text = input.value.trim();
         if (!text) return;
         const currentUser = this.authManager.getCurrentUser();
-        const studentCode = currentUser ? (currentUser.studentCode || 'A') : 'A';
+        const senderId = currentUser ? (currentUser.id || currentUser.studentCode || 'liming') : 'liming';
         const currentStage = this.state.currentStage;
-        const msgObj = { sender: studentCode, text, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+        const msgObj = { sender: senderId, text, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
         if (!this.state.chatLogs[currentStage]) this.state.chatLogs[currentStage] = [];
         this.state.chatLogs[currentStage].push(msgObj);
 
@@ -3791,7 +3835,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           };
           const c = colorMap[currentUser.id] || { color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd' };
           
+          const groupId = currentUser.groupId || 'group_1';
           const payload = {
+            groupId: groupId,
             userId: currentUser.id || currentUser.studentCode || 'A',
             userName: currentUser.name || '组员',
             snippet: snippet || '正文段落',
@@ -3803,11 +3849,21 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
           this.state.activePresences[payload.userId] = payload;
 
+          // ⚡ 1. 0ms 同机 BroadcastChannel 镜像
           if (this.cloudSyncEngine && this.cloudSyncEngine.bc) {
             try {
               this.cloudSyncEngine.bc.postMessage({ type: 'presence_update', presence: payload, senderToken: window.__jizhi_tab_token });
             } catch (e) {}
           }
+
+          // ⚡ 2. 远端 SSE 跨设备实时广播
+          try {
+            fetch('/api/presence', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(payload)
+            }).catch(() => {});
+          } catch (e) {}
         },
         onUnifiedContentChange: (newContent) => {
           if (this.state.isFinalSubmitted) return;

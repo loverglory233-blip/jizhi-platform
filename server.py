@@ -142,9 +142,32 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             except Exception:
                 pass
 
-        super().do_GET()
-
     def do_POST(self):
+        # ⚡ 实时多角色编辑光标与位置广播 API
+        if '/api/presence' in self.path:
+            length = int(self.headers.get('Content-Length', 0))
+            body = self.rfile.read(length)
+            try:
+                req = json.loads(body.decode('utf-8'))
+                group_id = req.get('groupId', 'group_1')
+                payload = json.dumps({'type': 'presence_update', 'presence': req})
+                with SSE_LOCK:
+                    clients = list(SSE_CLIENTS.get(group_id, []))
+                for q in clients:
+                    try:
+                        q.put_nowait(payload)
+                    except Exception:
+                        pass
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/json')
+                self.end_headers()
+                self.wfile.write(b'{"success":true}')
+                return
+            except Exception as e:
+                self.send_response(500)
+                self.end_headers()
+                self.wfile.write(b'{"success":false}')
+                return
         # ⚡ 服务端物理级账号独占互斥锁 API (100% 硬阻断)
         if '/api/session/login' in self.path:
             length = int(self.headers.get('Content-Length', 0))
