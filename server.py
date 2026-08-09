@@ -142,28 +142,7 @@ class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     allow_reuse_address = True
     daemon_threads = True
 
-def git_auto_pull_daemon():
-    print("🔄 GitHub 自动检测服务已启动 (每 10 秒自动同步 GitHub 最新提交)...", flush=True)
-    while True:
-        try:
-            time.sleep(10)
-            subprocess.run(['git', 'config', '--global', '--add', 'safe.directory', DIR], check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            subprocess.run(['git', 'fetch', 'origin', 'main'], cwd=DIR, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-
-            local_head = subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=DIR).decode().strip()
-            remote_head = subprocess.check_output(['git', 'rev-parse', 'origin/main'], cwd=DIR).decode().strip()
-
-            if local_head != remote_head:
-                print(f"🚀 检测到 GitHub 新代码 [{remote_head[:7]}]，自动拉取更新中...", flush=True)
-                res = subprocess.run(['git', 'reset', '--hard', 'origin/main'], cwd=DIR, capture_output=True, text=True, check=False)
-                print(f"✅ GitHub 代码已全自动同步: {res.stdout.strip()}", flush=True)
-        except Exception as e:
-            pass
-
 if __name__ == '__main__':
-    # 启动后台自动代码检测与更新守护线程
-    threading.Thread(target=git_auto_pull_daemon, daemon=True).start()
-
     print(f'🚀 集智多线程+SSE毫秒级实时服务器运行在端口 {PORT}...', flush=True)
     with ThreadingTCPServer(('0.0.0.0', PORT), Handler) as httpd:
         httpd.serve_forever()
