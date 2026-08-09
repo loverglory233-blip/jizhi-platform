@@ -859,6 +859,30 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             if (e.data && e.data.snapshot) {
               this.handleRemoteSync(e.data.snapshot);
             }
+            if (e.data && e.data.type === 'presence_update' && e.data.senderToken !== window.__jizhi_tab_token) {
+              if (!this.app.state.activePresences) this.app.state.activePresences = {};
+              this.app.state.activePresences[e.data.presence.userId] = e.data.presence;
+              const bar = document.getElementById('co-writer-presence-bar') || document.getElementById('co-writer-presence-bar-s3');
+              if (bar) {
+                const now = Date.now();
+                const activeList = Object.values(this.app.state.activePresences).filter(p => (now - p.lastSeen) < 15000);
+                let html = `<span style="font-weight:700; color:#475569; display:inline-flex; align-items:center; gap:6px;">
+                  <span style="width:8px; height:8px; border-radius:50%; background:#10b981; display:inline-block; animation:presencePulse 1.5s infinite;"></span>
+                  👥 组内协同编辑光标感知:
+                </span>`;
+                if (activeList.length === 0) {
+                  html += `<span style="color:#94a3b8; font-style:italic;">仅你在当前页面，组员光标定位后将自动同步感知</span>`;
+                } else {
+                  html += activeList.map(p => `
+                    <span style="background:${p.bg || '#f0f9ff'}; color:${p.color || '#0284c7'}; border:1px solid ${p.border || '#bae6fd'}; padding:4px 12px; border-radius:16px; font-weight:700; display:inline-flex; align-items:center; gap:6px; box-shadow:0 1px 4px rgba(0,0,0,0.02);">
+                      <span style="width:6px; height:6px; border-radius:50%; background:${p.color || '#0284c7'};"></span>
+                      👤 ${p.userName}: 正在编辑「${p.snippet || '正文段落'}」
+                    </span>
+                  `).join('');
+                }
+                bar.innerHTML = html;
+              }
+            }
           };
         } catch (e) {}
       }
@@ -2524,8 +2548,31 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             </div>
           ` : ''}
 
-          <!-- Nordic 宽广大视野 A4 页面排版工作台 -->
+          <!-- Nordic 宽广大视野 A4 页面排版工作台 + 多角色实时光标与编辑位置感知 -->
           <div class="word-nordic-workspace" style="flex:1; overflow-y:auto; background:#f1f5f9; padding:24px 16px; border-bottom-left-radius:12px; border-bottom-right-radius:12px; border:1px solid #e2e8f0; display:flex; flex-direction:column; align-items:center; min-height:600px;">
+            
+            <!-- 实时多角色协同编辑光标感知条 (High-end INS Soft Colors) -->
+            <div id="co-writer-presence-bar" style="max-width:900px; width:100%; margin:0 auto 10px auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:#ffffff; border:1px solid #e2e8f0; padding:8px 14px; border-radius:20px; font-size:12px; box-shadow:0 2px 8px rgba(15,23,42,0.03);">
+              <span style="font-weight:700; color:#475569; display:inline-flex; align-items:center; gap:6px;">
+                <span style="width:8px; height:8px; border-radius:50%; background:#10b981; display:inline-block; animation:presencePulse 1.5s infinite;"></span>
+                👥 组内协同编辑光标感知:
+              </span>
+              ${(() => {
+                const presences = state.activePresences || {};
+                const now = Date.now();
+                const activeList = Object.values(presences).filter(p => (now - p.lastSeen) < 15000);
+                if (activeList.length === 0) {
+                  return `<span style="color:#94a3b8; font-style:italic;">仅你在当前页面，组员光标定位后将自动同步感知</span>`;
+                }
+                return activeList.map(p => `
+                  <span style="background:${p.bg || '#f0f9ff'}; color:${p.color || '#0284c7'}; border:1px solid ${p.border || '#bae6fd'}; padding:4px 12px; border-radius:16px; font-weight:700; display:inline-flex; align-items:center; gap:6px; box-shadow:0 1px 4px rgba(0,0,0,0.02);">
+                    <span style="width:6px; height:6px; border-radius:50%; background:${p.color || '#0284c7'};"></span>
+                    👤 ${p.userName}: 正在编辑「${p.snippet || '正文段落'}」
+                  </span>
+                `).join('');
+              })()}
+            </div>
+
             <div class="editor-textarea unified-large-editor-full" id="main-unified-editor" contenteditable="${!isEditorReadonly}" style="background:#ffffff; color:#1e293b; padding:50px 60px; border:1px solid #cbd5e1; box-shadow:0 8px 30px rgba(15,23,42,0.06); border-radius:8px; font-size:15px; line-height:1.8; min-height:640px; max-width:900px; width:100%; margin:0 auto; outline:none; font-family:SimSun, 'Times New Roman', serif; ${isEditorReadonly ? 'opacity:0.9; background:#f8fafc;' : ''}">${s2.unifiedContent}</div>
           </div>
         </div>
@@ -2576,7 +2623,22 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
     if (!isEditorReadonly) {
       const editorEl = canvas.querySelector('#main-unified-editor');
-      editorEl.addEventListener('input', () => handlers.onUnifiedContentChange(editorEl.innerHTML));
+      const sendPresence = () => {
+        const sel = window.getSelection();
+        let snippet = '正文段落';
+        if (sel && sel.anchorNode) {
+          let t = sel.anchorNode.textContent || '';
+          if (t.trim()) snippet = t.trim().substring(0, 16);
+        }
+        if (handlers.onUpdatePresence) handlers.onUpdatePresence(snippet);
+      };
+      editorEl.addEventListener('keyup', sendPresence);
+      editorEl.addEventListener('click', sendPresence);
+
+      editorEl.addEventListener('input', () => {
+        handlers.onUnifiedContentChange(editorEl.innerHTML);
+        sendPresence();
+      });
       editorEl.addEventListener('keydown', (e) => {
         if (e.key === 'Tab') {
           e.preventDefault();
@@ -2941,8 +3003,29 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
               </div>
             ` : ''}
 
-            <!-- 阶段三 900px 居中 A4 纸张排版工作台 -->
+            <!-- 阶段三 900px 居中 A4 纸张排版工作台 + 多角色协同光标感知 -->
             <div class="word-nordic-workspace" style="flex:1; overflow-y:auto; background:#f1f5f9; padding:24px 16px; border-bottom-left-radius:12px; border-bottom-right-radius:12px; border:1px solid #e2e8f0; display:flex; flex-direction:column; align-items:center; min-height:550px;">
+              <div id="co-writer-presence-bar-s3" style="max-width:900px; width:100%; margin:0 auto 10px auto; display:flex; align-items:center; gap:8px; flex-wrap:wrap; background:#ffffff; border:1px solid #e2e8f0; padding:8px 14px; border-radius:20px; font-size:12px; box-shadow:0 2px 8px rgba(15,23,42,0.03);">
+                <span style="font-weight:700; color:#475569; display:inline-flex; align-items:center; gap:6px;">
+                  <span style="width:8px; height:8px; border-radius:50%; background:#10b981; display:inline-block; animation:presencePulse 1.5s infinite;"></span>
+                  👥 组内协同编辑光标感知:
+                </span>
+                ${(() => {
+                  const presences = state.activePresences || {};
+                  const now = Date.now();
+                  const activeList = Object.values(presences).filter(p => (now - p.lastSeen) < 15000);
+                  if (activeList.length === 0) {
+                    return `<span style="color:#94a3b8; font-style:italic;">仅你在当前页面，组员光标定位后将自动同步感知</span>`;
+                  }
+                  return activeList.map(p => `
+                    <span style="background:${p.bg || '#f0f9ff'}; color:${p.color || '#0284c7'}; border:1px solid ${p.border || '#bae6fd'}; padding:4px 12px; border-radius:16px; font-weight:700; display:inline-flex; align-items:center; gap:6px; box-shadow:0 1px 4px rgba(0,0,0,0.02);">
+                      <span style="width:6px; height:6px; border-radius:50%; background:${p.color || '#0284c7'};"></span>
+                      👤 ${p.userName}: 正在编辑「${p.snippet || '正文段落'}」
+                    </span>
+                  `).join('');
+                })()}
+              </div>
+
               <div class="editor-textarea unified-large-editor-full" id="stage3-unified-editor" contenteditable="${!isFinalSubmitted}" style="background:#ffffff; color:#1e293b; padding:50px 60px; border:1px solid #cbd5e1; box-shadow:0 8px 30px rgba(15,23,42,0.06); border-radius:8px; font-size:15px; line-height:1.8; min-height:540px; max-width:900px; width:100%; margin:0 auto; outline:none; font-family:SimSun, 'Times New Roman', serif; ${isFinalSubmitted ? 'opacity:0.9; background:#f8fafc;' : ''}">${state.stage2.unifiedContent}</div>
             </div>
           </div>
@@ -2957,7 +3040,22 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
     const editorEl = canvas.querySelector('#stage3-unified-editor');
     if (editorEl && !isFinalSubmitted) {
-      editorEl.addEventListener('input', () => handlers.onUnifiedContentChange(editorEl.innerHTML));
+      const sendPresenceS3 = () => {
+        const sel = window.getSelection();
+        let snippet = '正文段落';
+        if (sel && sel.anchorNode) {
+          let t = sel.anchorNode.textContent || '';
+          if (t.trim()) snippet = t.trim().substring(0, 16);
+        }
+        if (handlers.onUpdatePresence) handlers.onUpdatePresence(snippet);
+      };
+      editorEl.addEventListener('keyup', sendPresenceS3);
+      editorEl.addEventListener('click', sendPresenceS3);
+
+      editorEl.addEventListener('input', () => {
+        handlers.onUnifiedContentChange(editorEl.innerHTML);
+        sendPresenceS3();
+      });
       editorEl.addEventListener('keydown', (e) => {
         if (e.key === 'Tab') {
           e.preventDefault();
@@ -3678,6 +3776,37 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             }, 600);
           }
           this.renderStudentWorkspace();
+        },
+        onUpdatePresence: (snippet) => {
+          const currentUser = this.authManager.getCurrentUser();
+          if (!currentUser) return;
+          if (!this.state.activePresences) this.state.activePresences = {};
+          
+          const colorMap = {
+            'liming': { color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd' },
+            'wangfang': { color: '#059669', bg: '#ecfdf5', border: '#a7f3d0' },
+            'chenqiang': { color: '#7c3aed', bg: '#f5f3ff', border: '#ddd6fe' },
+            'zhanglaoshi': { color: '#e11d48', bg: '#fff1f2', border: '#fecdd3' }
+          };
+          const c = colorMap[currentUser.id] || { color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd' };
+          
+          const payload = {
+            userId: currentUser.id || currentUser.studentCode || 'A',
+            userName: currentUser.name || '组员',
+            snippet: snippet || '正文段落',
+            color: c.color,
+            bg: c.bg,
+            border: c.border,
+            lastSeen: Date.now()
+          };
+
+          this.state.activePresences[payload.userId] = payload;
+
+          if (this.cloudSyncEngine && this.cloudSyncEngine.bc) {
+            try {
+              this.cloudSyncEngine.bc.postMessage({ type: 'presence_update', presence: payload, senderToken: window.__jizhi_tab_token });
+            } catch (e) {}
+          }
         },
         onUnifiedContentChange: (newContent) => {
           if (this.state.isFinalSubmitted) return;
