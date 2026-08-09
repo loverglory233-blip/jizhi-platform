@@ -1123,37 +1123,34 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     const monitorMembersList = Object.values(monitorMembersObj);
 
     container.innerHTML = `
-      <div class="teacher-portal-layout" style="min-height:100vh; height:auto; overflow-y:auto !important; background:#0b0f19; padding:0; display:flex; flex-direction:column;">
-        <!-- 全屏头部导航 -->
-        <header class="teacher-header" style="padding:16px 32px; background:rgba(15,23,42,0.9); border-bottom:1px solid rgba(255,255,255,0.1); width:100%; flex-shrink:0;">
-          <div class="brand-section">
-    container.innerHTML = `
-      <div style="min-height:100vh; background:#f0f7ff; display:flex; flex-direction:column; color:#001e4d;">
+      <div style="min-height:100vh; background:transparent; display:flex; flex-direction:column; color:#fff;">
         <!-- 教师端专用独立顶部 Navigation Header (P3R 深海夜蓝) -->
-        <header style="background:linear-gradient(135deg, #001233 0%, #002266 50%, #0052cc 100%); border-bottom:3px solid #00d2ff; padding:14px 32px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 8px 30px rgba(0,18,51,0.35); flex-shrink:0;">
+        <header style="background:rgba(3,12,28,0.95); border-bottom:2px solid var(--p3r-cyan); padding:16px 32px; display:flex; justify-content:space-between; align-items:center; box-shadow:var(--p3r-cyan-glow); flex-shrink:0;">
           <div class="brand" style="display:flex; align-items:center; gap:16px;">
-            <div class="brand-logo" style="font-size:24px; font-weight:900; color:#ffffff; letter-spacing:1px; text-shadow:0 0 14px rgba(0,210,255,0.6);">集智 JIZHI 教师端</div>
-            <div class="brand-badge teacher-badge" style="background:linear-gradient(135deg, #0077ff, #00d2ff); color:#ffffff; padding:4px 14px; border-radius:4px; font-size:12px; font-weight:800; clip-path:polygon(0 0, 100% 0, 92% 100%, 0 100%); box-shadow:0 2px 10px rgba(0,210,255,0.4);">👩‍🏫 全局实时教务控制中心 🟢</div>
+            <div class="brand-logo" style="font-size:22px; font-weight:900; color:#ffffff; letter-spacing:1.5px; font-family:'Outfit', sans-serif;">
+              集智 <span>JIZHI</span> <span style="font-size:12px; color:var(--p3r-cyan); font-family:var(--p3r-font-mono);">// VELVET COMMAND CENTER</span>
+            </div>
+            <div class="brand-tag">// 教师实时教务台</div>
           </div>
           <div class="teacher-info" style="display:flex; align-items:center; gap:20px;">
-            <span style="font-size:14px; color:#b0d4ff; font-weight:600;">当前班级: <b style="color:#00d2ff; font-size:15px;">${activeClass.name}</b></span>
-            <span style="font-size:14px; color:#b0d4ff; font-weight:600;">教师: <b style="color:#ffffff;">${currentUser.name}</b></span>
-            <button id="btn-switch-student-preview" class="header-icon-btn" style="background:rgba(255,255,255,0.15); color:#ffffff; border:1px solid #00d2ff; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:800; cursor:pointer;">👀 切换至学生视角</button>
-            <button id="btn-logout" class="header-icon-btn logout" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 16px; border-radius:6px; font-size:13px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(239,68,68,0.4);">🚪 退出登录</button>
+            <span style="font-size:13px; color:var(--p3r-text-muted); font-family:var(--p3r-font-mono);">当前班级: <b style="color:var(--p3r-cyan);">${activeClass.name}</b></span>
+            <span style="font-size:13px; color:var(--p3r-text-muted); font-family:var(--p3r-font-mono);">教师: <b style="color:#ffffff;">${currentUser.name}</b></span>
+            <button id="btn-switch-student-preview" class="p3r-icon-btn" title="切换至学生视角"><span>👀 切换至学生视角</span></button>
+            <button id="btn-logout" class="p3r-icon-btn logout" title="退出登录"><span>🚪 退出登录</span></button>
           </div>
         </header>
 
-        <!-- 三大界面导航卡片 (P5R 平行四边形切角导航) -->
-        <div style="padding:16px 32px 0 32px; background:#e6f0fa; width:100%; flex-shrink:0;">
-          <div style="display:flex; gap:16px; width:100%; background:#ffffff; padding:8px; border-radius:12px; border:1px solid #cbd5e1; box-shadow:0 4px 16px rgba(0,82,204,0.08);">
-            <button class="teacher-tab-nav ${activeTab === 'view_architecture' ? 'active' : ''}" data-tab="view_architecture" style="flex:1; padding:14px; border-radius:6px; font-size:15px; font-weight:900; cursor:pointer; border:none; color:${activeTab === 'view_architecture' ? '#ffffff' : '#002266'}; background:${activeTab === 'view_architecture' ? 'linear-gradient(135deg, #0052cc, #00d2ff)' : 'transparent'}; clip-path:polygon(4% 0, 100% 0, 96% 100%, 0% 100%); box-shadow:${activeTab === 'view_architecture' ? '0 4px 14px rgba(0,210,255,0.4)' : 'none'}; transition:all 0.2s ease;">
-              🛠️ 界面一：基础架构管理 (班级 / 学生 / 小组)
+        <!-- 三大界面导航卡片 (P3R 斜切导航) -->
+        <div style="padding:16px 32px 0 32px; background:transparent; width:100%; flex-shrink:0;">
+          <div style="display:flex; gap:12px; width:100%; background:rgba(3,12,28,0.8); padding:8px; border:1px solid var(--p3r-border-cyan);">
+            <button class="stage-tab ${activeTab === 'view_architecture' ? 'active' : ''}" data-tab="view_architecture" style="flex:1;">
+              <span>🛠️ 界面一：基础架构管理 (班级 / 学生 / 小组)</span>
             </button>
-            <button class="teacher-tab-nav ${activeTab === 'view_publishing' ? 'active' : ''}" data-tab="view_publishing" style="flex:1; padding:14px; border-radius:6px; font-size:15px; font-weight:900; cursor:pointer; border:none; color:${activeTab === 'view_publishing' ? '#ffffff' : '#002266'}; background:${activeTab === 'view_publishing' ? 'linear-gradient(135deg, #0052cc, #00d2ff)' : 'transparent'}; clip-path:polygon(4% 0, 100% 0, 96% 100%, 0% 100%); box-shadow:${activeTab === 'view_publishing' ? '0 4px 14px rgba(0,210,255,0.4)' : 'none'}; transition:all 0.2s ease;">
-              📢 界面二：任务与通知发布 (含已读小组矩阵与附件上传)
+            <button class="stage-tab ${activeTab === 'view_publishing' ? 'active' : ''}" data-tab="view_publishing" style="flex:1;">
+              <span>📢 界面二：任务与通知发布 (全组进度)</span>
             </button>
-            <button class="teacher-tab-nav ${activeTab === 'view_monitoring' ? 'active' : ''}" data-tab="view_monitoring" style="flex:1; padding:14px; border-radius:6px; font-size:15px; font-weight:900; cursor:pointer; border:none; color:${activeTab === 'view_monitoring' ? '#ffffff' : '#002266'}; background:${activeTab === 'view_monitoring' ? 'linear-gradient(135deg, #0052cc, #00d2ff)' : 'transparent'}; clip-path:polygon(4% 0, 100% 0, 96% 100%, 0% 100%); box-shadow:${activeTab === 'view_monitoring' ? '0 4px 14px rgba(0,210,255,0.4)' : 'none'}; transition:all 0.2s ease;">
-              🖥️ 界面三：学生实际操作同屏实时监控终端 (实操同屏)
+            <button class="stage-tab ${activeTab === 'view_monitoring' ? 'active' : ''}" data-tab="view_monitoring" style="flex:1;">
+              <span>🖥️ 界面三：学生实操同屏实时监控终端</span>
             </button>
           </div>
         </div>
@@ -1163,10 +1160,10 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           ${activeTab === 'view_architecture' ? `
             <div style="display:flex; flex-direction:column; gap:24px; width:100%;">
 
-              <div class="card" style="background:#ffffff; border:1px solid #cbd5e1; border-top:4px solid #0052cc; border-radius:12px; padding:24px; box-shadow:0 10px 30px rgba(0,82,204,0.08); width:100%;">
-                <div class="card-title" style="margin-bottom:16px; color:#001e4d; font-weight:900;">
-                  <span style="font-size:18px;">🎓 教学班级管理 (${classes.length} 个班级)</span>
-                  <button id="btn-v1-create-class" class="teacher-action-btn indigo" style="background:linear-gradient(135deg, #0052cc, #00d2ff); color:white; border:none; padding:8px 18px; border-radius:6px; font-size:13px; font-weight:800; cursor:pointer; box-shadow:0 4px 12px rgba(0,210,255,0.3);">+ 创建全新教学班</button>
+              <div class="p3r-card" style="width:100%;">
+                <div class="p3r-card-header">
+                  <span class="p3r-card-title">🎓 教学班级管理 (${classes.length} 个班级)</span>
+                  <button id="btn-v1-create-class" class="vote-btn" style="width:auto; padding:6px 16px;"><span>+ 创建全新教学班</span></button>
                 </div>
                 <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(340px, 1fr)); gap:16px;">
                   ${classes.map(c => {
@@ -2169,40 +2166,50 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     const unreadAnnCount = announcements ? announcements.filter(a => !a.readStatus || !a.readStatus[groupId]).length : 0;
     const isFinalSubmitted = state.isFinalSubmitted;
 
-    header.style.background = 'linear-gradient(135deg, #001233 0%, #002266 50%, #0052cc 100%)';
-    header.style.borderBottom = '2px solid #00d2ff';
-    header.style.boxShadow = '0 6px 20px rgba(0, 18, 51, 0.4)';
-
     header.innerHTML = `
-      <div class="brand-section" style="flex-shrink:0;">
-        <div class="brand-logo" style="color:#ffffff; font-weight:900; letter-spacing:1px; text-shadow:0 0 12px rgba(0,210,255,0.6);">集智 JIZHI</div>
-        <div class="brand-badge" style="background:linear-gradient(135deg, #0077ff, #00d2ff); color:#ffffff; font-weight:800; padding:3px 10px; border-radius:4px; box-shadow:0 2px 8px rgba(0,210,255,0.4);">🎓 ${currentUser ? currentUser.name : '学生A'} ${isFinalSubmitted ? '<span style="color:#34d399; margin-left:4px;">(🔒 终稿已归档)</span>' : ''}</div>
+      <div class="brand-section">
+        <div class="brand-logo">
+          <div class="p3r-icon">⚡</div>
+          集智 <span>JIZHI</span>
+        </div>
+        <div class="brand-tag">// P3R RELOAD</div>
+        <div class="user-chip">
+          <div class="user-avatar">${currentUser ? (state.members && state.members[currentUser.id] ? state.members[currentUser.id].avatar : '👨‍🎓') : '👨‍🎓'}</div>
+          <div class="user-info">
+            <div class="user-name">${currentUser ? currentUser.name : '学生A'}</div>
+            <div class="user-role">${currentUser ? (currentUser.roleTitle || '组员') : '组员'} ${isFinalSubmitted ? '🔒 已归档' : ''}</div>
+          </div>
+        </div>
       </div>
-      <nav class="stage-nav" style="flex-shrink:1; min-width:0; overflow-x:auto;">
-        <button class="stage-btn ${state.currentStage === 'stage1' ? 'active' : ''}" data-stage="stage1" style="${state.currentStage === 'stage1' ? 'background:linear-gradient(135deg, #0077ff, #00d2ff); color:#ffffff; font-weight:800; box-shadow:0 0 14px rgba(0,210,255,0.6);' : 'color:#b0d4ff; background:rgba(255,255,255,0.08);'}">🎪 阶段一：学术拍卖会 (25m)</button>
-        <button class="stage-btn ${state.currentStage === 'stage2' ? 'active' : ''}" data-stage="stage2" style="${state.currentStage === 'stage2' ? 'background:linear-gradient(135deg, #0077ff, #00d2ff); color:#ffffff; font-weight:800; box-shadow:0 0 14px rgba(0,210,255,0.6);' : 'color:#b0d4ff; background:rgba(255,255,255,0.08);'}">📰 阶段二：学术编辑部 (105m)</button>
-        <button class="stage-btn ${state.currentStage === 'stage3' ? 'active' : ''}" data-stage="stage3" style="${state.currentStage === 'stage3' ? 'background:linear-gradient(135deg, #0077ff, #00d2ff); color:#ffffff; font-weight:800; box-shadow:0 0 14px rgba(0,210,255,0.6);' : 'color:#b0d4ff; background:rgba(255,255,255,0.08);'}">🎓 阶段三：答辩擂台 (20m)</button>
+      <nav class="stage-nav">
+        <button class="stage-tab ${state.currentStage === 'stage1' ? 'active' : ''}" data-stage="stage1"><span>🎪 PHASE 01 // 学术拍卖会 (25m)</span></button>
+        <button class="stage-tab ${state.currentStage === 'stage2' ? 'active' : ''}" data-stage="stage2"><span>📰 PHASE 02 // 学术编辑部 (105m)</span></button>
+        <button class="stage-tab ${state.currentStage === 'stage3' ? 'active' : ''}" data-stage="stage3"><span>🎓 PHASE 03 // 答辩擂台 (20m)</span></button>
       </nav>
-      <div class="header-controls" style="display:flex; align-items:center; gap:8px; flex-shrink:0; margin-left:auto;">
-        <button id="btn-header-survey-link" style="background:${isFinalSubmitted ? 'linear-gradient(135deg, #7c3aed, #00d2ff)' : 'rgba(255,255,255,0.12)'}; border:1px solid #00d2ff; color:white; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:${isFinalSubmitted ? '0 0 12px rgba(0,210,255,0.5)' : 'none'};" title="课程评估问卷">
-          📋 ${isFinalSubmitted ? '📬 填写评估问卷' : '问卷'}
+      <div class="header-actions">
+        <button id="btn-header-survey-link" class="p3r-icon-btn" title="课程评估问卷">
+          <span>📋 ${isFinalSubmitted ? '📬 评估问卷' : '问卷'}</span>
         </button>
-        <button class="nav-ann-bell-btn ${unreadAnnCount > 0 ? 'has-unread' : ''}" id="btn-header-ann-bell" style="background:rgba(255,255,255,0.12); color:#ffffff; border:1px solid rgba(255,255,255,0.2);" title="课堂通知">
-          🔔 消息 ${unreadAnnCount > 0 ? `<span class="unread-count">${unreadAnnCount}</span>` : ''}
+        <button class="p3r-icon-btn ${unreadAnnCount > 0 ? 'has-unread' : ''}" id="btn-header-ann-bell" title="课堂通知">
+          <span>🔔 消息 ${unreadAnnCount > 0 ? `(${unreadAnnCount})` : ''}</span>
         </button>
-        <div class="timer-box" style="background:rgba(0,34,102,0.8); border:1px solid #0077ff; color:#00d2ff; font-weight:800;">⏱️ ${remainingMin}m</div>
-        <button id="btn-switch-teacher-view" class="header-icon-btn" style="background:rgba(0,119,255,0.3); color:#ffffff; border:1px solid #00d2ff; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer;" title="切换至教师端">👩‍🏫 教师端</button>
-        <button id="btn-user-logout" style="background:linear-gradient(135deg, #ef4444, #dc2626); color:white; border:none; padding:8px 18px; border-radius:8px; font-size:13px; font-weight:800; cursor:pointer; box-shadow:0 4px 14px rgba(239,68,68,0.4); flex-shrink:0; white-space:nowrap; display:inline-flex; align-items:center; justify-content:center; min-width:105px; text-shadow:0 1px 2px rgba(0,0,0,0.3);" title="退出登录">🚪 退出登录</button>
+        <div class="user-chip" style="padding:6px 12px; color:var(--p3r-cyan); font-family:var(--p3r-font-mono); font-weight:800;">
+          ⏱️ ${remainingMin}m
+        </div>
+        <button id="btn-switch-teacher-view" class="p3r-icon-btn" title="切换至教师端"><span>👩‍🏫 教师端</span></button>
+        <button id="btn-user-logout" class="p3r-icon-btn logout" title="退出登录"><span>🚪 退出</span></button>
       </div>
     `;
 
-    header.querySelectorAll('.stage-btn').forEach(btn => {
+    header.querySelectorAll('.stage-tab').forEach(btn => {
       btn.addEventListener('click', () => onStageChange(btn.dataset.stage));
     });
     header.querySelector('#btn-user-logout').addEventListener('click', () => onLogout());
     header.querySelector('#btn-switch-teacher-view').addEventListener('click', () => onSwitchTeacher());
     header.querySelector('#btn-header-ann-bell').addEventListener('click', () => onOpenAnnModal());
     const surveyHeaderBtn = header.querySelector('#btn-header-survey-link');
+    if (surveyHeaderBtn) surveyHeaderBtn.addEventListener('click', () => onOpenSurveyModal());
+  }
     if (surveyHeaderBtn) surveyHeaderBtn.addEventListener('click', () => onOpenSurveyModal());
   }
 
@@ -2229,17 +2236,17 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
     canvas.innerHTML = `
       ${isContractLocked ? `
-        <div style="background:#ecfdf5; border:1px solid #6ee7b7; border-radius:8px; padding:12px 18px; margin-bottom:16px; font-size:13px; color:#047857; font-weight:800; display:flex; align-items:center; justify-content:space-between;">
+        <div style="background:rgba(0,230,118,0.15); border:1px solid var(--p3r-emerald); clip-path:polygon(0 0, 100% 0, 96% 100%, 0 100%); padding:12px 18px; margin-bottom:16px; font-size:13px; color:var(--p3r-emerald); font-weight:800; display:flex; align-items:center; justify-content:space-between;">
           <span>🔒 阶段一【学术拍卖会】合作合约已全员签署生效并锁定</span>
-          <span style="font-size:11px; color:#065f46; background:#a7f3d0; padding:4px 10px; border-radius:4px;">全组 ${confirmedCount}/${totalMembersCount} 人已签署</span>
+          <span style="font-size:11px; color:#fff; background:rgba(0,230,118,0.3); padding:4px 10px;">全组 ${confirmedCount}/${totalMembersCount} 人已签署</span>
         </div>
       ` : ''}
 
-      <div class="card" style="background:#ffffff; border:1px solid #e2e8f0; border-top:4px solid #0052cc; border-radius:12px; padding:22px; box-shadow:0 4px 12px rgba(0,0,0,0.05); margin-bottom:20px;">
-        <div class="card-title" style="color:#001e4d; font-weight:900; font-size:16px; border-bottom:2px solid #e2e8f0; padding-bottom:10px; margin-bottom:16px; display:flex; justify-content:space-between; align-items:center;">
-          <span>💡 竞拍提案面板 ${isContractLocked ? '<span style="font-size:11px; color:#059669;">(🔒 已锁定)</span>' : ''}</span>
-          <div style="font-size:13px; color:#475569; font-weight:700;">
-            📊 投票进度: <b style="color:#0052cc;">${totalVotesCast}/${totalMembersCount} 人已投票</b>
+      <div class="p3r-card" style="margin-bottom:20px;">
+        <div class="p3r-card-header">
+          <span class="p3r-card-title">💡 竞拍提案面板 ${isContractLocked ? '<span style="font-size:11px; color:var(--p3r-emerald);">(🔒 已锁定)</span>' : ''}</span>
+          <div style="font-size:13px; color:var(--p3r-cyan); font-family:var(--p3r-font-mono); font-weight:700;">
+            📊 投票进度: <b>${totalVotesCast}/${totalMembersCount} 人已投票</b>
           </div>
         </div>
         <div class="proposals-grid">
@@ -2248,72 +2255,72 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             let btnText = '🗳️ 投票支持此提案';
             let btnClass = 'vote-btn';
             if (isContractLocked || userHasVoted) {
-              if (isThisVoted) { btnText = '🔒 已投此提案 (已锁定)'; btnClass = 'vote-btn active locked'; }
+              if (isThisVoted) { btnText = '🔒 已投此提案 (已锁定)'; btnClass = 'vote-btn voted'; }
               else { btnText = '🔒 投票已锁定'; btnClass = 'vote-btn disabled'; }
             }
             return `
-              <div class="proposal-card ${isThisVoted ? 'voted' : ''}" style="background:#ffffff; border:1px solid #cbd5e1; border-top:3px solid #0052cc; border-radius:10px; padding:16px; box-shadow:0 4px 14px rgba(0,82,204,0.05); display:flex; flex-direction:column;">
+              <div class="proposal-card ${isThisVoted ? 'selected' : ''}">
                 <div class="proposal-header" style="margin-bottom:8px;">
-                  <div class="proposal-title" style="font-weight:800; color:#001e4d; font-size:15px;">💡 ${p.title}</div>
-                  <span class="proposal-tag" style="background:#e0f2fe; color:#0284c7; padding:2px 8px; border-radius:4px; font-size:11px; font-weight:700;">${p.category}</span>
+                  <span class="proposal-badge">${p.category}</span>
+                  <div class="proposal-title">💡 ${p.title}</div>
                 </div>
-                <div style="font-size:12px; color:#334155; margin-bottom:10px; background:#f8fafc; border:1px solid #e2e8f0; padding:10px; border-radius:6px; line-height:1.5; flex:1;">
+                <div class="proposal-rationale">
                   <b>理由依据:</b> ${p.rationale}
                 </div>
-                <div class="metrics-row" style="display:flex; justify-content:space-between; font-size:11px; color:#64748b; margin-bottom:8px;">
-                  <span>文献: <b style="color:#0052cc;">${p.metrics.literature}</b></span>
-                  <span>新意: <b style="color:#0284c7;">${p.metrics.innovation}</b></span>
-                  <span>风险: <b style="color:#e11d48;">${p.metrics.risk}</b></span>
+                <div class="metrics-row">
+                  <div class="metric-tag"><span class="metric-label">文献</span><span class="metric-value">${p.metrics.literature}</span></div>
+                  <div class="metric-tag"><span class="metric-label">新意</span><span class="metric-value">${p.metrics.innovation}</span></div>
+                  <div class="metric-tag"><span class="metric-label">风险</span><span class="metric-value" style="color:var(--p3r-crimson);">${p.metrics.risk}</span></div>
                 </div>
-                <button class="${btnClass}" data-id="${p.id}" ${isContractLocked || userHasVoted ? 'disabled' : ''} style="width:100%; margin-top:8px; padding:10px; background:linear-gradient(135deg, #0052cc, #00d2ff); color:white; font-weight:800; border:none; border-radius:6px; cursor:pointer; box-shadow:0 4px 12px rgba(0,210,255,0.3);">${btnText}</button>
+                <button class="${btnClass}" data-id="${p.id}" ${isContractLocked || userHasVoted ? 'disabled' : ''}><span>${btnText}</span></button>
               </div>
             `;
           }).join('')}
         </div>
       </div>
 
-      <!-- P3R/P5R 蓝白学术合作合约公约卡片 -->
-      <div class="contract-card" style="margin-top:20px; border:1px solid #cbd5e1; border-top:4px solid #0052cc; border-radius:14px; background:#ffffff; padding:24px; box-shadow:0 10px 30px rgba(0,82,204,0.08); width:100%; box-sizing:border-box;">
+      <!-- P3R 蓝青学术合作合约公约卡片 -->
+      <div class="p3r-card">
         
-        <div style="text-align:center; margin-bottom:20px; border-bottom:2px solid #e2e8f0; padding-bottom:16px;">
-          <div style="font-size:20px; font-weight:900; color:#001e4d; letter-spacing:0.5px;">
+        <div style="text-align:center; margin-bottom:20px; border-bottom:1px solid var(--p3r-border-cyan); padding-bottom:16px;">
+          <div style="font-size:20px; font-weight:900; color:#fff; letter-spacing:1px; font-family:'Outfit', sans-serif;">
             📜 团队协同合作学术公约与规范合约
           </div>
-          <div style="font-size:13px; color:#475569; margin-top:4px; font-weight:600;">
-            ${isContractLocked ? `<span style="color:#059669; font-weight:800;">🔒 全员 ${confirmedCount}/${totalMembersCount} 人完成签署 · 归档生效中</span>` : '依据团队竞拍与讨论实时提取生成 · 全员按键确认签署后生效'}
+          <div style="font-size:13px; color:var(--p3r-cyan); margin-top:4px; font-weight:600; font-family:var(--p3r-font-mono);">
+            ${isContractLocked ? `<span style="color:var(--p3r-emerald); font-weight:800;">🔒 全员 ${confirmedCount}/${totalMembersCount} 人完成签署 · 归档生效中</span>` : '依据团队竞拍与讨论实时提取生成 · 全员按键确认签署后生效'}
           </div>
         </div>
 
-        <div style="display:flex; flex-direction:column; gap:8px; width:100%; margin-bottom:20px; background:#f8fafc; padding:16px; border-radius:10px; border:1px solid #cbd5e1; box-sizing:border-box;">
-          <label style="font-size:14px; font-weight:900; color:#0052cc;">📌 确认融合论文研究主题:</label>
-          <input type="text" id="contract-topic-input" class="large-contract-input" value="${s1.mergedTitle}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''} style="width:100%; box-sizing:border-box; background:#ffffff; color:#001e4d; border:1px solid #cbd5e1; border-radius:8px; padding:12px 14px; font-size:14px; font-weight:700;">
+        <div style="display:flex; flex-direction:column; gap:8px; width:100%; margin-bottom:20px; background:rgba(3,12,28,0.7); padding:16px; border:1px solid var(--p3r-border-cyan);">
+          <label style="font-size:14px; font-weight:900; color:var(--p3r-cyan);">📌 确认融合论文研究主题:</label>
+          <input type="text" id="contract-topic-input" class="duty-input" value="${s1.mergedTitle}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''} style="font-size:14px; padding:10px 14px; font-weight:700;">
         </div>
 
         <div style="display:flex; flex-direction:column; gap:20px; width:100%;">
-          <div style="background:#f8fafc; padding:16px; border-radius:10px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;">
-            <div style="font-weight:900; color:#0052cc; margin-bottom:10px; font-size:14px;">⏱️ 从聊天提取的 150分钟时间预算 (单位: 分钟):</div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:10px; font-size:13px; color:#334155;">
-              <label style="display:flex; align-items:center; gap:6px;">背景: <input type="number" class="contract-time-input large" data-key="background" value="${s1.contract.timeAllocations.background}" ${isContractLocked ? 'disabled readonly' : ''} style="background:#ffffff; color:#001e4d; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; font-weight:700; width:60px;"></label>
-              <label style="display:flex; align-items:center; gap:6px;">问题: <input type="number" class="contract-time-input large" data-key="questions" value="${s1.contract.timeAllocations.questions}" ${isContractLocked ? 'disabled readonly' : ''} style="background:#ffffff; color:#001e4d; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; font-weight:700; width:60px;"></label>
-              <label style="display:flex; align-items:center; gap:6px;">文献: <input type="number" class="contract-time-input large" data-key="literature" value="${s1.contract.timeAllocations.literature}" ${isContractLocked ? 'disabled readonly' : ''} style="background:#ffffff; color:#001e4d; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; font-weight:700; width:60px;"></label>
-              <label style="display:flex; align-items:center; gap:6px;">方法: <input type="number" class="contract-time-input large" data-key="method" value="${s1.contract.timeAllocations.method}" ${isContractLocked ? 'disabled readonly' : ''} style="background:#ffffff; color:#001e4d; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; font-weight:700; width:60px;"></label>
-              <label style="display:flex; align-items:center; gap:6px;">反思: <input type="number" class="contract-time-input large" data-key="reflection" value="${s1.contract.timeAllocations.reflection}" ${isContractLocked ? 'disabled readonly' : ''} style="background:#ffffff; color:#001e4d; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; font-weight:700; width:60px;"></label>
-              <label style="display:flex; align-items:center; gap:6px;">文献表: <input type="number" class="contract-time-input large" data-key="references" value="${s1.contract.timeAllocations.references}" ${isContractLocked ? 'disabled readonly' : ''} style="background:#ffffff; color:#001e4d; border:1px solid #cbd5e1; padding:4px 8px; border-radius:4px; font-weight:700; width:60px;"></label>
+          <div style="background:rgba(3,12,28,0.7); padding:16px; border:1px solid var(--p3r-border-cyan);">
+            <div style="font-weight:900; color:var(--p3r-cyan); margin-bottom:10px; font-size:14px; font-family:var(--p3r-font-mono);">⏱️ 150分钟时间预算 allocation (单位: 分钟):</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:10px; font-size:13px; color:#fff;">
+              <label style="display:flex; align-items:center; gap:6px;">背景: <input type="number" class="duty-input contract-time-input" data-key="background" value="${s1.contract.timeAllocations.background}" ${isContractLocked ? 'disabled readonly' : ''} style="width:60px; text-align:center;"></label>
+              <label style="display:flex; align-items:center; gap:6px;">问题: <input type="number" class="duty-input contract-time-input" data-key="questions" value="${s1.contract.timeAllocations.questions}" ${isContractLocked ? 'disabled readonly' : ''} style="width:60px; text-align:center;"></label>
+              <label style="display:flex; align-items:center; gap:6px;">文献: <input type="number" class="duty-input contract-time-input" data-key="literature" value="${s1.contract.timeAllocations.literature}" ${isContractLocked ? 'disabled readonly' : ''} style="width:60px; text-align:center;"></label>
+              <label style="display:flex; align-items:center; gap:6px;">方法: <input type="number" class="duty-input contract-time-input" data-key="method" value="${s1.contract.timeAllocations.method}" ${isContractLocked ? 'disabled readonly' : ''} style="width:60px; text-align:center;"></label>
+              <label style="display:flex; align-items:center; gap:6px;">反思: <input type="number" class="duty-input contract-time-input" data-key="reflection" value="${s1.contract.timeAllocations.reflection}" ${isContractLocked ? 'disabled readonly' : ''} style="width:60px; text-align:center;"></label>
+              <label style="display:flex; align-items:center; gap:6px;">文献表: <input type="number" class="duty-input contract-time-input" data-key="references" value="${s1.contract.timeAllocations.references}" ${isContractLocked ? 'disabled readonly' : ''} style="width:60px; text-align:center;"></label>
             </div>
           </div>
 
-          <div style="background:#f8fafc; padding:16px; border-radius:10px; border:1px solid #cbd5e1; width:100%; box-sizing:border-box;">
-            <div style="font-weight:900; color:#0052cc; margin-bottom:12px; font-size:14px; display:flex; justify-content:space-between; align-items:center;">
-              <span>👥 本组小组成员分工:</span>
+          <div style="background:rgba(3,12,28,0.7); padding:16px; border:1px solid var(--p3r-border-cyan);">
+            <div style="font-weight:900; color:var(--p3r-cyan); margin-bottom:12px; font-size:14px; font-family:var(--p3r-font-mono);">
+              👥 本组小组成员分工:
             </div>
             <div style="display:flex; flex-direction:column; gap:12px; width:100%;">
               ${membersList.map(m => {
                 const defaultTask = m.id === 'A' ? '一、研究背景与意义；二、研究问题与假设' : m.id === 'B' ? '三、文献综述与 SSRL 共享调节框架' : '四、研究设计与方法；五、不足与反思；六、参考文献';
                 const taskVal = (s1.contract.taskAssignments && s1.contract.taskAssignments[m.id] !== undefined) ? s1.contract.taskAssignments[m.id] : defaultTask;
                 return `
-                  <div style="display:flex; flex-direction:column; gap:6px; width:100%; background:#ffffff; padding:12px 14px; border-radius:8px; border:1px solid #cbd5e1; box-sizing:border-box;">
-                    <span style="font-weight:800; color:${m.color || '#0052cc'}; font-size:13px;">${m.avatar || '👤'} ${m.name} (${m.roleTitle || '组员'}):</span>
-                    <input type="text" class="large-contract-input task-assignment-input" data-mid="${m.id}" value="${taskVal}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''} style="width:100%; box-sizing:border-box; background:#ffffff; color:#001e4d; border:1px solid #cbd5e1; border-radius:6px; padding:10px 14px; font-size:13px;" placeholder="分配具体负责的写作章节与任务">
+                  <div class="member-duty-item">
+                    <span class="member-name-tag">${m.avatar || '👤'} ${m.name} (${m.roleTitle || '组员'}):</span>
+                    <input type="text" class="duty-input task-assignment-input" data-mid="${m.id}" value="${taskVal}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''} style="margin-top:6px;" placeholder="分配具体负责的写作章节与任务">
                   </div>
                 `;
               }).join('')}
@@ -2321,22 +2328,23 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           </div>
         </div>
 
-        <div style="margin-top:20px; background:#f8fafc; border:1px solid #cbd5e1; border-radius:10px; padding:14px 18px; width:100%; box-sizing:border-box;">
-          <div style="font-size:13px; font-weight:800; color:#334155; margin-bottom:10px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;">
-            <span>📌 本组全员确认签署状态矩阵 (规则：需 ${totalMembersCount}/${totalMembersCount} 人全部点击确认):</span>
-            <span style="color:${confirmedCount === totalMembersCount ? '#059669' : '#d97706'}; font-weight:900;">签署进度: ${confirmedCount}/${totalMembersCount} 人已完成 ${confirmedCount === totalMembersCount ? '🎉 (合约已生效)' : ''}</span>
+        <div style="margin-top:20px; background:rgba(3,12,28,0.7); border:1px solid var(--p3r-border-cyan); padding:14px 18px;">
+          <div style="font-size:13px; font-weight:800; color:var(--p3r-cyan); font-family:var(--p3r-font-mono); margin-bottom:10px; display:flex; justify-content:space-between; flex-wrap:wrap; gap:10px;">
+            <span>📌 全员签署矩阵 (${confirmedCount}/${totalMembersCount} 人):</span>
+            <span style="color:${confirmedCount === totalMembersCount ? 'var(--p3r-emerald)' : 'var(--p3r-gold)'}; font-weight:900;">${confirmedCount === totalMembersCount ? '🎉 (合约生效)' : '⏳ 签署中'}</span>
           </div>
           <div style="display:flex; flex-wrap:wrap; gap:10px; font-size:13px;">
             ${membersList.map(m => {
               const isConf = confirmedMembers[m.id];
               return `
-                <span style="color:${isConf ? '#047857' : '#64748b'}; border:1px solid ${isConf ? '#6ee7b7' : '#cbd5e1'}; background:${isConf ? '#ecfdf5' : '#ffffff'}; padding:6px 12px; border-radius:6px; font-weight:700;">
-                  ${m.avatar || '👤'} ${m.name}: <b>${isConf ? '✅ 已确认签署' : '⏳ 未确认'}</b>
+                <span style="color:${isConf ? 'var(--p3r-emerald)' : 'var(--p3r-text-muted)'}; border:1px solid ${isConf ? 'var(--p3r-emerald)' : 'rgba(255,255,255,0.2)'}; background:${isConf ? 'rgba(0,230,118,0.1)' : 'rgba(1,6,16,0.6)'}; padding:6px 12px; font-weight:700; transform:skewX(-6deg);">
+                  ${m.avatar || '👤'} ${m.name}: <b>${isConf ? '✅ 已签署' : '⏳ 未签署'}</b>
                 </span>
               `;
             }).join('')}
           </div>
         </div>
+
 
         <div style="margin-top:20px; text-align:center;">
           <button id="btn-confirm-contract" ${isContractLocked ? 'disabled' : ''} style="background:${isContractLocked ? '#e2e8f0' : userHasConfirmed ? '#d1fae5' : 'linear-gradient(135deg, #0052cc, #00d2ff)'}; border:1px solid ${isContractLocked || userHasConfirmed ? '#10b981' : 'transparent'}; color:${isContractLocked ? '#94a3b8' : userHasConfirmed ? '#047857' : 'white'}; padding:14px 32px; border-radius:8px; font-weight:900; cursor:${isContractLocked ? 'not-allowed' : 'pointer'}; font-size:15px; box-shadow:0 4px 16px rgba(0,210,255,0.3);">
@@ -2514,9 +2522,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             </div>
           ` : ''}
 
-          <!-- Word 真实 A4 页面纸张排版工作台容器 -->
-          <div style="flex:1; overflow-y:auto; background:#e2e8f0; padding:20px; border-bottom-left-radius:8px; border-bottom-right-radius:8px; border:1px solid #cbd5e1;">
-            <div class="editor-textarea unified-large-editor-full" id="main-unified-editor" contenteditable="${!isEditorReadonly}" style="background:#ffffff; color:#0f172a; padding:40px 50px; border:1px solid #cbd5e1; box-shadow:0 10px 30px rgba(0,0,0,0.1); border-radius:4px; font-size:14px; line-height:1.7; min-height:480px; max-width:860px; margin:0 auto; outline:none; font-family:SimSun, 'Times New Roman', serif; ${isEditorReadonly ? 'opacity:0.9; background:#f8fafc;' : ''}">${s2.unifiedContent}</div>
+          <!-- P3R Glass Canvas Editor Container -->
+          <div style="flex:1; overflow-y:auto; background:rgba(2,9,22,0.8); padding:20px; border:1px solid var(--p3r-border-cyan);">
+            <div class="editor-textarea unified-large-editor-full" id="main-unified-editor" contenteditable="${!isEditorReadonly}" style="background:rgba(4,18,42,0.95); color:#d0f8ff; padding:36px 44px; border:1px solid var(--p3r-border-cyan); box-shadow:var(--p3r-cyan-glow); min-height:480px; max-width:860px; margin:0 auto; outline:none; font-family:var(--p3r-font); font-size:14px; line-height:1.8; ${isEditorReadonly ? 'opacity:0.9;' : ''}">${s2.unifiedContent}</div>
           </div>
         </div>
 
@@ -2773,51 +2781,51 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           </div>
         ` : ''}
 
-        <div style="display:flex; justify-content:space-between; align-items:center; background:#ffffff; border:1px solid #cbd5e1; border-radius:10px; padding:8px 12px; flex-shrink:0; box-shadow:0 4px 12px rgba(0,82,204,0.05);">
+        <div style="display:flex; justify-content:space-between; align-items:center; background:rgba(4,16,38,0.9); border:1px solid var(--p3r-border-cyan); padding:10px 16px; flex-shrink:0; transform:skewX(-4deg);">
           <div style="display:flex; gap:10px;">
-            <button id="tab-btn-defense" style="background:${activeTab === 'defense' ? 'linear-gradient(135deg, #0052cc, #00d2ff)' : '#f1f5f9'}; border:1px solid ${activeTab === 'defense' ? 'transparent' : '#cbd5e1'}; color:${activeTab === 'defense' ? 'white' : '#334155'}; padding:8px 16px; border-radius:6px; font-weight:800; font-size:13px; cursor:pointer;">
-              🎓 答辩委员会质询与中间委员引导面板
+            <button id="tab-btn-defense" class="stage-tab ${activeTab === 'defense' ? 'active' : ''}">
+              <span>🎓 答辩委员会质询与裁决</span>
             </button>
-            <button id="tab-btn-editor" style="background:${activeTab === 'editor' ? 'linear-gradient(135deg, #0052cc, #00d2ff)' : '#f1f5f9'}; border:1px solid ${activeTab === 'editor' ? 'transparent' : '#cbd5e1'}; color:${activeTab === 'editor' ? 'white' : '#334155'}; padding:8px 16px; border-radius:6px; font-weight:800; font-size:13px; cursor:pointer;">
-              📝 返回协作写作大正文 (依据意见修改终稿)
+            <button id="tab-btn-editor" class="stage-tab ${activeTab === 'editor' ? 'active' : ''}">
+              <span>📝 返回论文大正文修改</span>
             </button>
           </div>
-          <button id="btn-final-submit" ${isFinalSubmitted ? 'disabled' : ''} style="background:${isFinalSubmitted ? '#e2e8f0' : 'linear-gradient(135deg, #059669, #10b981)'}; border:${isFinalSubmitted ? '1px solid #cbd5e1' : 'none'}; color:${isFinalSubmitted ? '#94a3b8' : 'white'}; padding:8px 18px; border-radius:6px; font-weight:900; cursor:${isFinalSubmitted ? 'not-allowed' : 'pointer'}; font-size:13px; box-shadow:0 4px 12px rgba(16,185,129,0.3);">
-            ${isFinalSubmitted ? '🔒 论文终稿已成功提交 (归档只读)' : '🚀 提交期末论文终稿'}
+          <button id="btn-final-submit" ${isFinalSubmitted ? 'disabled' : ''} class="vote-btn" style="width:auto; padding:8px 24px;">
+            <span>${isFinalSubmitted ? '🔒 论文终稿已提交 (归档)' : '🚀 提交期末论文终稿'}</span>
           </button>
         </div>
 
         ${activeTab === 'defense' ? `
-          <div class="card" style="flex:1; overflow-y:auto; padding:22px; background:#ffffff; border:1px solid #cbd5e1; border-top:4px solid #0052cc; border-radius:12px; box-shadow:0 10px 30px rgba(0,82,204,0.08);">
-            <div class="card-title" style="margin-bottom:14px; color:#001e4d; font-weight:900;">
-              <span>🎓 答辩委员会改进意见与组内裁决矩阵 ${isFinalSubmitted ? '<span style="font-size:11px; color:#059669; margin-left:6px;">(🔒 已提交归档)</span>' : ''}</span>
-              <span style="font-size:12px; color:#0284c7; font-weight:700;">正反方提意见 ➔ 中间委员逐条引导 ➔ 学生研讨裁决</span>
+          <div class="p3r-card" style="flex:1; overflow-y:auto;">
+            <div class="p3r-card-header">
+              <span class="p3r-card-title">🎓 答辩委员会改进意见与组内裁决矩阵 ${isFinalSubmitted ? '<span style="font-size:11px; color:var(--p3r-emerald); margin-left:6px;">(🔒 已归档)</span>' : ''}</span>
+              <span style="font-size:12px; color:var(--p3r-cyan); font-family:var(--p3r-font-mono);">正反方提意见 ➔ 委员引导 ➔ 学生裁决</span>
             </div>
             <div style="display:flex; flex-direction:column; gap:16px;">
               ${s3.feedbackItems.map((item, idx) => `
-                <div style="background:#ffffff; padding:16px; border-radius:10px; border:1px solid ${item.role === 'opponent' ? '#fca5a5' : '#86efac'}; border-left:5px solid ${item.role === 'opponent' ? '#ef4444' : '#10b981'}; box-shadow:0 4px 14px rgba(0,0,0,0.04);">
+                <div style="background:rgba(3,12,28,0.85); padding:16px; border:1px solid ${item.role === 'opponent' ? 'var(--p3r-crimson)' : 'var(--p3r-emerald)'}; border-left:5px solid ${item.role === 'opponent' ? 'var(--p3r-crimson)' : 'var(--p3r-emerald)'};">
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <div style="display:flex; align-items:center; gap:8px;">
                       <span style="font-size:18px;">${item.role === 'opponent' ? '🔴' : '🟢'}</span>
-                      <span style="font-weight:900; font-size:15px; color:${item.role === 'opponent' ? '#b91c1c' : '#047857'};">质询点 ${idx + 1}: ${item.speaker || (item.role === 'opponent' ? '反方委员 Agent' : '正方委员 Agent')} - ${item.title}</span>
+                      <span style="font-weight:900; font-size:15px; color:${item.role === 'opponent' ? 'var(--p3r-crimson)' : 'var(--p3r-emerald)'};">质询点 ${idx + 1}: ${item.speaker || (item.role === 'opponent' ? '反方委员 Agent' : '正方委员 Agent')} - ${item.title}</span>
                     </div>
-                    <span style="font-size:11px; padding:4px 12px; border-radius:6px; font-weight:800; background:${item.status === 'adopted' ? '#d1fae5' : '#fef3c7'}; color:${item.status === 'adopted' ? '#047857' : '#b45309'}; border:1px solid ${item.status === 'adopted' ? '#6ee7b7' : '#fde68a'};">
-                      ${item.status === 'adopted' ? '✅ 已研讨并归档' : '⏳ 待组内研讨裁决'}
+                    <span style="font-size:11px; padding:4px 12px; font-weight:800; font-family:var(--p3r-font-mono); background:${item.status === 'adopted' ? 'rgba(0,230,118,0.15)' : 'rgba(255,204,0,0.15)'}; color:${item.status === 'adopted' ? 'var(--p3r-emerald)' : 'var(--p3r-gold)'}; border:1px solid ${item.status === 'adopted' ? 'var(--p3r-emerald)' : 'var(--p3r-gold)'};">
+                      ${item.status === 'adopted' ? '✅ 已研讨归档' : '⏳ 待研讨裁决'}
                     </span>
                   </div>
-                  <div style="font-size:13px; color:#0f172a; background:#f8fafc; border:1px solid #e2e8f0; padding:10px 14px; border-radius:8px; margin-bottom:10px; line-height:1.6;">
+                  <div style="font-size:13px; color:#fff; background:rgba(1,6,16,0.6); border:1px solid var(--p3r-border-cyan); padding:10px 14px; margin-bottom:10px; line-height:1.6;">
                     <b>${item.speaker}意见原文:</b> ${item.content}
                   </div>
-                  <div style="font-size:13px; color:#92400e; background:#fffbeb; border:1px solid #fde68a; padding:10px 14px; border-radius:8px; margin-bottom:12px; line-height:1.6; font-weight:600;">
+                  <div style="font-size:13px; color:var(--p3r-gold); background:rgba(255,204,0,0.08); border:1px solid rgba(255,204,0,0.3); padding:10px 14px; margin-bottom:12px; line-height:1.6;">
                     <b>🟡 中间委员 Agent 针对性引导思考:</b><br>${item.neutralGuidance}
                   </div>
                   ${item.response ? `
-                    <div style="font-size:13px; color:#1e40af; background:#eff6ff; border-left:4px solid #0052cc; padding:10px 14px; border-radius:6px; font-weight:700;">
+                    <div style="font-size:13px; color:var(--p3r-cyan); background:rgba(0,240,255,0.08); border-left:4px solid var(--p3r-cyan); padding:10px 14px; font-weight:700;">
                       <b>👥 组内研讨统一裁决结论:</b> ${item.response}
                     </div>
                   ` : `
-                    <button class="discuss-item-btn" data-id="${item.id}" ${isFinalSubmitted ? 'disabled' : ''} style="background:${isFinalSubmitted ? '#e2e8f0' : 'linear-gradient(135deg, #0052cc, #00d2ff)'}; border:none; color:${isFinalSubmitted ? '#94a3b8' : 'white'}; padding:8px 18px; border-radius:6px; font-size:13px; font-weight:900; cursor:${isFinalSubmitted ? 'not-allowed' : 'pointer'}; box-shadow:0 4px 12px rgba(0,210,255,0.3);">
-                      ${isFinalSubmitted ? '🔒 已提交只读' : '💬 组内针对此条开展研讨与裁决'}
+                    <button class="discuss-item-btn vote-btn" data-id="${item.id}" ${isFinalSubmitted ? 'disabled' : ''} style="width:auto; padding:8px 20px;">
+                      <span>${isFinalSubmitted ? '🔒 已提交只读' : '💬 组内开展研讨与裁决'}</span>
                     </button>
                   `}
                 </div>
@@ -2825,10 +2833,10 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             </div>
           </div>
         ` : `
-          <div class="card" style="flex:1; display:flex; flex-direction:column; padding:20px; overflow:hidden; background:#ffffff; border:1px solid #cbd5e1; border-top:4px solid #0052cc; border-radius:12px; box-shadow:0 10px 30px rgba(0,82,204,0.08);">
-            <div class="card-title" style="margin-bottom:10px; color:#001e4d; font-weight:900;">
-              <span>📝 论文全篇大正文 ${isFinalSubmitted ? '<span style="font-size:11px; color:#059669; margin-left:6px;">(🔒 终稿已提交 · 归档只读查阅)</span>' : '(依据答辩意见修改终稿)'}</span>
-              <span style="font-size:12px; color:#0284c7; font-weight:800;">实时字数: <b style="font-size:14px; color:#0052cc;">${state.stage2.unifiedContent.length}</b> 字</span>
+          <div class="p3r-card" style="flex:1; display:flex; flex-direction:column; padding:20px; overflow:hidden;">
+            <div class="p3r-card-header">
+              <span class="p3r-card-title">📝 论文全篇大正文 ${isFinalSubmitted ? '<span style="font-size:11px; color:var(--p3r-emerald); margin-left:6px;">(🔒 归档只读)</span>' : '(依据答辩意见修改终稿)'}</span>
+              <span style="font-size:12px; color:var(--p3r-cyan); font-family:var(--p3r-font-mono);">字数: <b>${state.stage2.unifiedContent.length}</b> 字</span>
             </div>
 
             <!-- 阶段三同样搭载类 Word 学术论文全功能格式工具栏 -->
@@ -2960,15 +2968,15 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     // ⚡ 跨阶段连续时间轴：合并阶段一、阶段二、阶段三的所有聊天记录
     const allLogs = [];
     if (state.chatLogs.stage1 && state.chatLogs.stage1.length > 0) {
-      allLogs.push({ isDivider: true, title: '阶段一：学术拍卖会 (头脑风暴与合约签署)' });
+      allLogs.push({ isDivider: true, title: 'STAGE 1 // 学术拍卖会 (头脑风暴与合约签署)' });
       allLogs.push(...state.chatLogs.stage1);
     }
     if (state.chatLogs.stage2 && state.chatLogs.stage2.length > 0) {
-      allLogs.push({ isDivider: true, title: '阶段二：学术编辑部 (协同写作与半程修正)' });
+      allLogs.push({ isDivider: true, title: 'STAGE 2 // 学术编辑部 (协同写作与半程修正)' });
       allLogs.push(...state.chatLogs.stage2);
     }
     if (state.chatLogs.stage3 && state.chatLogs.stage3.length > 0) {
-      allLogs.push({ isDivider: true, title: '阶段三：答辩与反思 (质询裁决与归档)' });
+      allLogs.push({ isDivider: true, title: 'STAGE 3 // 答辩与反思 (质询裁决与归档)' });
       allLogs.push(...state.chatLogs.stage3);
     }
 
@@ -2977,8 +2985,8 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     stream.innerHTML = allLogs.map(msg => {
       if (msg.isDivider) {
         return `
-          <div style="text-align:center; margin:16px 0 10px 0; font-size:11px; color:#a5b4fc; font-weight:700;">
-            <span style="background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.3); padding:4px 12px; border-radius:12px; display:inline-block;">
+          <div style="text-align:center; margin:16px 0 10px 0; font-size:11px; font-family:var(--p3r-font-mono); color:var(--p3r-cyan); font-weight:800;">
+            <span style="background:rgba(0,240,255,0.12); border:1px solid var(--p3r-cyan); padding:4px 14px; transform:skewX(-10deg); display:inline-block; box-shadow:0 0 10px rgba(0,240,255,0.2);">
               📍 ${msg.title}
             </span>
           </div>
@@ -2987,24 +2995,29 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
       const isMe = msg.sender === currentUser;
       const isAgent = AgentProfiles[msg.sender] !== undefined;
-      const profile = isAgent ? AgentProfiles[msg.sender] : state.members[msg.sender];
+      const profile = isAgent ? AgentProfiles[msg.sender] : (state.members ? state.members[msg.sender] : null);
       const avatar = profile ? profile.avatar : '👤';
       const name = profile ? (profile.name || profile.roleTitle) : msg.sender;
-      const color = profile ? profile.color : '#94a3b8';
+      const color = profile ? profile.color : '#00f0ff';
+
+      let agentClass = '';
+      if (msg.sender === 'auctioneer') agentClass = 'auctioneer';
+      else if (msg.sender === 'managingEditor') agentClass = 'editor';
+      else if (msg.sender === 'reviewingEditor') agentClass = 'reviewer';
+      else if (msg.sender === 'neutral') agentClass = 'committee';
 
       let formattedText = msg.text || '';
       formattedText = formattedText.replace(/(@[^\s@]+)/g, '<span class="mention-tag">$1</span>');
 
       return `
-        <div class="chat-message ${isMe ? 'me' : 'other'}">
-          <div class="msg-avatar" style="background:${color}22; border:1px solid ${color}; color:${color};">${avatar}</div>
-          <div class="msg-body">
-            <div class="msg-meta">
-              <span class="msg-sender" style="color:${color};">${name} ${isMe ? '(我)' : ''}</span>
-              <span style="font-size:10px; color:#64748b; margin-left:6px;">${msg.timestamp || ''}</span>
-            </div>
-            <div class="msg-bubble">${formattedText}</div>
+        <div class="chat-msg ${isMe ? 'user' : 'agent'} ${agentClass}">
+          <div class="msg-meta">
+            <div class="msg-avatar-ring" style="border-color:${color}; box-shadow:0 0 10px ${color}88;">${avatar}</div>
+            <span class="msg-author" style="color:${color};">${name} ${isMe ? '(我)' : ''}</span>
+            ${isAgent ? `<div class="eq-indicator"><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div></div>` : ''}
+            <span class="msg-time">${msg.timestamp || ''}</span>
           </div>
+          <div class="msg-bubble">${formattedText}</div>
         </div>
       `;
     }).join('');
@@ -4036,8 +4049,102 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     }
   }
 
+  // P3R Deep Sea Water Mesh & Particle Background Canvas Engine
+  function initP3RCanvasEngine() {
+    const canvas = document.getElementById('p3r-bg-canvas');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    let width, height;
+    let particles = [];
+    let waveTime = 0;
+
+    function resize() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+    }
+    window.addEventListener('resize', resize);
+    resize();
+
+    for (let i = 0; i < 45; i++) {
+      particles.push({
+        x: Math.random() * width,
+        y: Math.random() * height,
+        size: Math.random() * 5 + 2,
+        speedX: (Math.random() - 0.5) * 0.4,
+        speedY: -Math.random() * 0.5 - 0.2,
+        opacity: Math.random() * 0.7 + 0.2,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 0.02
+      });
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, width, height);
+      
+      const grad1 = ctx.createRadialGradient(width * 0.3, height * 0.2, 50, width * 0.3, height * 0.2, width * 0.8);
+      grad1.addColorStop(0, 'rgba(0, 119, 255, 0.28)');
+      grad1.addColorStop(0.5, 'rgba(4, 16, 38, 0.7)');
+      grad1.addColorStop(1, 'rgba(1, 6, 16, 0.96)');
+      ctx.fillStyle = grad1;
+      ctx.fillRect(0, 0, width, height);
+
+      const grad2 = ctx.createRadialGradient(width * 0.85, height * 0.75, 20, width * 0.85, height * 0.75, width * 0.55);
+      grad2.addColorStop(0, 'rgba(0, 240, 255, 0.2)');
+      grad2.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = grad2;
+      ctx.fillRect(0, 0, width, height);
+
+      waveTime += 0.015;
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.09)';
+      ctx.lineWidth = 1.5;
+      for (let j = 0; j < 4; j++) {
+        ctx.beginPath();
+        for (let x = 0; x <= width; x += 30) {
+          const y = Math.sin(x * 0.003 + waveTime + j * 0.8) * 35 + height * (0.28 + j * 0.18);
+          if (x === 0) ctx.moveTo(x, y);
+          else ctx.lineTo(x, y);
+        }
+        ctx.stroke();
+      }
+      ctx.restore();
+
+      particles.forEach(p => {
+        p.x += p.speedX;
+        p.y += p.speedY;
+        p.rotation += p.rotSpeed;
+
+        if (p.y < -20) { p.y = height + 20; p.x = Math.random() * width; }
+        if (p.x < -20) p.x = width + 20;
+        if (p.x > width + 20) p.x = -20;
+
+        ctx.save();
+        ctx.translate(p.x, p.y);
+        ctx.rotate(p.rotation);
+        ctx.fillStyle = `rgba(0, 240, 255, ${p.opacity})`;
+        ctx.shadowColor = 'rgba(0, 240, 255, 0.8)';
+        ctx.shadowBlur = p.size * 2;
+        
+        ctx.beginPath();
+        ctx.moveTo(0, -p.size * 1.4);
+        ctx.lineTo(p.size, 0);
+        ctx.lineTo(0, p.size * 1.4);
+        ctx.lineTo(-p.size, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+      });
+
+      requestAnimationFrame(draw);
+    }
+
+    draw();
+  }
+
   // Global Launch
   window.addEventListener('DOMContentLoaded', () => {
+    initP3RCanvasEngine();
     window.app = new App();
   });
 })();
+
