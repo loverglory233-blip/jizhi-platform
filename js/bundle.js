@@ -851,17 +851,26 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         try { this.ws.send(JSON.stringify({ snapshot })); } catch (e) {}
       }
 
-      if (!this.isPushing) {
-        this.isPushing = true;
-        try {
-          await fetch(this.syncUrl || `sync.php?groupId=${groupId}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(snapshot)
-          });
-        } catch (e) {
-        } finally {
-          this.isPushing = false;
+      if (this.isPushing) {
+        this.hasPendingPush = true;
+        return;
+      }
+
+      this.isPushing = true;
+      this.hasPendingPush = false;
+
+      try {
+        await fetch(this.syncUrl || `sync.php?groupId=${groupId}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(snapshot)
+        });
+      } catch (e) {
+      } finally {
+        this.isPushing = false;
+        if (this.hasPendingPush) {
+          this.hasPendingPush = false;
+          this.pushSnapshot();
         }
       }
     }
@@ -917,8 +926,17 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           this.app.state.stage2 = remoteData.stage2;
           updated = true;
           const editor = document.getElementById('main-unified-editor') || document.getElementById('stage3-unified-editor');
-          if (editor && document.activeElement !== editor && remoteData.stage2.unifiedContent !== undefined) {
-            editor.value = remoteData.stage2.unifiedContent;
+          if (editor && remoteData.stage2.unifiedContent !== undefined) {
+            const newContent = remoteData.stage2.unifiedContent;
+            if (editor.isContentEditable) {
+              if (editor.innerHTML !== newContent && document.activeElement !== editor) {
+                editor.innerHTML = newContent;
+              }
+            } else {
+              if (editor.value !== newContent) {
+                editor.value = newContent;
+              }
+            }
           }
         }
       }
@@ -2334,22 +2352,31 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             <span>整篇实时字数: <b style="color:#38bdf8; font-size:14px;">${wordCount}</b> 字 ${isEditorReadonly ? '(🔒 终稿只读)' : ''}</span>
           </div>
 
-          <!-- 类 Word 富文本格式排版工具栏 -->
+          <!-- 类 Word 专业学术写作富文本格式排版工具栏 -->
           ${!isEditorReadonly ? `
             <div class="editor-rt-toolbar" style="display:flex; flex-wrap:wrap; gap:6px; background:rgba(30,41,59,0.95); padding:8px 12px; border-top-left-radius:8px; border-top-right-radius:8px; border:1px solid rgba(255,255,255,0.15); border-bottom:none;">
               <button class="rt-btn" data-cmd="bold" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;" title="加粗"><b>B</b></button>
               <button class="rt-btn" data-cmd="italic" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-style:italic; cursor:pointer;" title="斜体"><i>I</i></button>
               <button class="rt-btn" data-cmd="underline" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; text-decoration:underline; cursor:pointer;" title="下划线"><u>U</u></button>
+              <button class="rt-btn" data-cmd="strikeThrough" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; text-decoration:line-through; cursor:pointer;" title="删除线"><s>S</s></button>
               <span style="color:rgba(255,255,255,0.2);">|</span>
               <button class="rt-btn" data-cmd="formatBlock" data-val="h1" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;">H1 标题</button>
               <button class="rt-btn" data-cmd="formatBlock" data-val="h2" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;">H2 标题</button>
               <button class="rt-btn" data-cmd="formatBlock" data-val="h3" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;">H3 标题</button>
+              <button class="rt-btn" data-cmd="formatBlock" data-val="p" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">¶ 正文</button>
+              <span style="color:rgba(255,255,255,0.2);">|</span>
+              <button class="rt-btn" data-cmd="justifyLeft" style="background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="左对齐">⬅️ 左对齐</button>
+              <button class="rt-btn" data-cmd="justifyCenter" style="background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="居中">↔️ 居中</button>
+              <button class="rt-btn" data-cmd="justifyRight" style="background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="右对齐">➡️ 右对齐</button>
               <span style="color:rgba(255,255,255,0.2);">|</span>
               <button class="rt-btn" data-cmd="insertUnorderedList" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">• 项目符号</button>
               <button class="rt-btn" data-cmd="insertOrderedList" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">1. 有序列表</button>
-              <button class="rt-btn" data-cmd="formatBlock" data-val="blockquote" style="background:#1e293b; color:#a78bfa; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">“ 引文块</button>
+              <button class="rt-btn" data-cmd="formatBlock" data-val="blockquote" style="background:#1e293b; color:#a78bfa; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">“ 学术引文</button>
               <span style="color:rgba(255,255,255,0.2);">|</span>
+              <button id="btn-insert-formula" style="background:rgba(99,102,241,0.25); color:#a5b4fc; border:1px solid #6366f1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;" title="插入学术公式/Latex">📐 插入公式</button>
+              <button id="btn-insert-citation" style="background:rgba(245,158,11,0.25); color:#fcd34d; border:1px solid #f59e0b; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;" title="插入文献引用脚标">📌 引用[1]</button>
               <button id="btn-insert-image" style="background:linear-gradient(135deg, #a855f7, #6366f1); color:white; font-weight:700; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer;" title="插入本地/网络图片">📷 插入图片</button>
+              <button class="rt-btn" data-cmd="removeFormat" style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="清除格式">🧹 清除格式</button>
             </div>
           ` : ''}
 
@@ -2406,6 +2433,30 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           const imgUrl = prompt('请输入要插入的图片 URL (或选择样例示意图链接)：', 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800');
           if (imgUrl) {
             document.execCommand('insertHTML', false, `<div style="text-align:center; margin:14px 0;"><img src="${imgUrl}" style="max-width:90%; border-radius:10px; border:2px solid rgba(99,102,241,0.5); box-shadow:0 6px 20px rgba(0,0,0,0.4);" /><div style="font-size:12px; color:#94a3b8; margin-top:4px;">图：研究框架与实验逻辑示意图</div></div><p></p>`);
+            handlers.onUnifiedContentChange(editorEl.innerHTML);
+          }
+        });
+      }
+
+      const btnFormula = canvas.querySelector('#btn-insert-formula');
+      if (btnFormula) {
+        btnFormula.addEventListener('click', (e) => {
+          e.preventDefault();
+          const formula = prompt('请输入学术公式内容 (如 LaTeX 表达式)：', 'SSRL = \\sum_{i=1}^{n} (Engagement_i \\times Perception_i)');
+          if (formula) {
+            document.execCommand('insertHTML', false, `<span style="background:rgba(99,102,241,0.2); color:#a5b4fc; padding:2px 8px; border-radius:4px; font-family:monospace; border:1px solid rgba(99,102,241,0.4); font-size:13px;">📐 $$ ${formula} $$ </span>&nbsp;`);
+            handlers.onUnifiedContentChange(editorEl.innerHTML);
+          }
+        });
+      }
+
+      const btnCite = canvas.querySelector('#btn-insert-citation');
+      if (btnCite) {
+        btnCite.addEventListener('click', (e) => {
+          e.preventDefault();
+          const citeNum = prompt('请输入引用序号：', '1');
+          if (citeNum) {
+            document.execCommand('insertHTML', false, `<sup style="color:#fbbf24; font-weight:700; cursor:pointer;" title="参考文献引用">[${citeNum}]</sup>&nbsp;`);
             handlers.onUnifiedContentChange(editorEl.innerHTML);
           }
         });
@@ -2528,10 +2579,35 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
   function renderChat(state) {
     const stream = document.getElementById('chat-stream');
     if (!stream) return;
-    const logs = state.chatLogs[state.currentStage] || [];
+
+    // ⚡ 跨阶段连续时间轴：合并阶段一、阶段二、阶段三的所有聊天记录
+    const allLogs = [];
+    if (state.chatLogs.stage1 && state.chatLogs.stage1.length > 0) {
+      allLogs.push({ isDivider: true, title: '阶段一：学术拍卖会 (头脑风暴与合约签署)' });
+      allLogs.push(...state.chatLogs.stage1);
+    }
+    if (state.chatLogs.stage2 && state.chatLogs.stage2.length > 0) {
+      allLogs.push({ isDivider: true, title: '阶段二：学术编辑部 (协同写作与半程修正)' });
+      allLogs.push(...state.chatLogs.stage2);
+    }
+    if (state.chatLogs.stage3 && state.chatLogs.stage3.length > 0) {
+      allLogs.push({ isDivider: true, title: '阶段三：答辩与反思 (质询裁决与归档)' });
+      allLogs.push(...state.chatLogs.stage3);
+    }
+
     const currentUser = state.currentUser;
 
-    stream.innerHTML = logs.map(msg => {
+    stream.innerHTML = allLogs.map(msg => {
+      if (msg.isDivider) {
+        return `
+          <div style="text-align:center; margin:16px 0 10px 0; font-size:11px; color:#a5b4fc; font-weight:700;">
+            <span style="background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.3); padding:4px 12px; border-radius:12px; display:inline-block;">
+              📍 ${msg.title}
+            </span>
+          </div>
+        `;
+      }
+
       const isMe = msg.sender === currentUser;
       const isAgent = AgentProfiles[msg.sender] !== undefined;
       const profile = isAgent ? AgentProfiles[msg.sender] : state.members[msg.sender];
