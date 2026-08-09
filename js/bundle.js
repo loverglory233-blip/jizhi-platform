@@ -2245,7 +2245,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         </div>
 
         <div style="display:flex; flex-direction:column; gap:8px; width:100%; margin-bottom:20px; background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border:1px solid rgba(56,189,248,0.3); box-sizing:border-box;">
-          <label style="font-size:14px; font-weight:800; color:#38bdf8;">📌 确认融合论文研究主题 (全宽展现显示):</label>
+          <label style="font-size:14px; font-weight:800; color:#38bdf8;">📌 确认融合论文研究主题:</label>
           <input type="text" id="contract-topic-input" class="large-contract-input" value="${s1.mergedTitle}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''} style="width:100%; box-sizing:border-box; background:#0f172a; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:12px 14px; font-size:14px; font-weight:700; font-family:sans-serif;">
         </div>
 
@@ -2264,7 +2264,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
           <div style="background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); width:100%; box-sizing:border-box;">
             <div style="font-weight:700; color:#a78bfa; margin-bottom:12px; font-size:14px; display:flex; justify-content:space-between; align-items:center;">
-              <span>👥 本组小组成员分工 (共 ${totalMembersCount} 人 · 自动适配全宽展现):</span>
+              <span>👥 本组小组成员分工:</span>
             </div>
             <div style="display:flex; flex-direction:column; gap:12px; width:100%;">
               ${membersList.map(m => {
@@ -2461,7 +2461,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
         <div style="margin-top:14px; background:rgba(15,23,42,0.7); padding:14px; border-radius:10px; border:1px solid var(--border-glass); flex-shrink:0;">
           <div style="font-size:12px; font-weight:600; margin-bottom:8px; color:#cbd5e1; display:flex; justify-content:space-between;">
-            <span>📊 本组 SSRL 成员贡献度动态分析 (${membersList.length} 人自动适配)</span>
+            <span>📊 本组 SSRL 成员贡献度动态分析</span>
             <span>整篇总字数: ${wordCount} 字</span>
           </div>
           <div class="contribution-bar-container">
@@ -2695,7 +2695,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         ` : `
           <div class="card" style="flex:1; display:flex; flex-direction:column; padding:20px; overflow:hidden;">
             <div class="card-title" style="margin-bottom:10px;">
-              <span>📝 论文全篇大正文 ${isFinalSubmitted ? '<span style="font-size:11px; color:#34d399; margin-left:6px;">(🔒 终稿已提交 · 归档只读查阅)</span>' : '(依据答辩意见实时修改终稿 · 双向实时同步中)'}</span>
+              <span>📝 论文全篇大正文 ${isFinalSubmitted ? '<span style="font-size:11px; color:#34d399; margin-left:6px;">(🔒 终稿已提交 · 归档只读查阅)</span>' : '(依据答辩意见修改终稿)'}</span>
               <span style="font-size:12px; color:#38bdf8;">实时字数: <b style="font-size:14px;">${state.stage2.unifiedContent.length}</b> 字</span>
             </div>
 
