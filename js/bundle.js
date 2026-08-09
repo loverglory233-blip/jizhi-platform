@@ -2439,80 +2439,88 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             <span>整篇实时字数: <b style="color:#38bdf8; font-size:14px;">${wordCount}</b> 字 ${isEditorReadonly ? '(🔒 终稿只读)' : ''}</span>
           </div>
 
-          <!-- 类 Word 专业学术论文全功能格式工具栏 -->
+          <!-- Nordic INS 极简双层 Ribbon Word 工具栏 -->
           ${!isEditorReadonly ? `
-            <div class="editor-rt-toolbar" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; background:#f8fafc; padding:8px 12px; border-top-left-radius:8px; border-top-right-radius:8px; border:1px solid #cbd5e1; border-bottom:none; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
-              <!-- Word 格式刷 -->
-              <button id="btn-format-painter" style="background:#2563eb; color:#ffffff; font-weight:700; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.3);" title="格式刷：选中文本点击复制格式，再选中目标文本赋予格式">🖌️ 格式刷</button>
-              <button class="rt-btn" data-cmd="removeFormat" style="background:#ffffff; color:#ef4444; border:1px solid #fca5a5; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="清除所选文本的格式">🧹 清除格式</button>
-              <span style="color:#cbd5e1;">|</span>
-              <!-- Word 顶级标准工具栏 -->
-              <button id="btn-format-painter" style="background:#2563eb; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.3);" title="格式刷：选中文本复制样式，再选择目标文本应用">🖌️ 格式刷</button>
-              <span style="color:#cbd5e1;">|</span>
-              <!-- 学术字体选择 -->
-              <select id="select-font-family" class="select-font-family" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;" title="学术论文标准字体">
-                <option value="SimSun, 'Times New Roman', serif">宋体 / Times New Roman (国标学术正文)</option>
-                <option value="FangSong, serif">仿宋 (公文/学术标准)</option>
-                <option value="KaiTi, serif">楷体 (摘要/引文)</option>
-                <option value="SimHei, 'Arial', sans-serif">黑体 (各级标题)</option>
-                <option value="'Microsoft YaHei', sans-serif">微软雅黑</option>
-                <option value="Arial, sans-serif">Arial (英文期刊)</option>
-                <option value="Calibri, sans-serif">Calibri (英文APA)</option>
-              </select>
-              <!-- 学术字号选择 -->
-              <select id="select-font-size" class="select-font-size" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;" title="学术论文标准字号">
-                <option value="3">小四 (12pt · 正文标准)</option>
-                <option value="4">四号 (14pt · 二级标题)</option>
-                <option value="5">三号 (16pt · 一级标题)</option>
-                <option value="6">二号 (22pt · 论文大标题)</option>
-                <option value="7">一号 (26pt · 封面大标题)</option>
-                <option value="2">五号 (10.5pt · 图表说明)</option>
-                <option value="1">小五 (9pt · 脚标注释)</option>
-              </select>
-              <!-- 行距选择 -->
-              <select id="select-line-height" class="select-line-height" style="background:#ffffff; color:#2563eb; border:1px solid #cbd5e1; padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;" title="学术论文行距">
-                <option value="1.5">行距: 1.5 倍 (国标推荐)</option>
-                <option value="1.0">行距: 1.0 倍 (单倍)</option>
-                <option value="1.15">行距: 1.15 倍 (常规)</option>
-                <option value="1.25">行距: 1.25 倍 (紧凑)</option>
-                <option value="1.75">行距: 1.75 倍</option>
-                <option value="2.0">行距: 2.0 倍 (APA双倍)</option>
-              </select>
-              <span style="color:#cbd5e1;">|</span>
-              <!-- 字体调色盘与高亮调色盘 -->
-              <label style="font-size:12px; font-weight:700; color:#0f172a; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="文字颜色">🎨字色<input type="color" id="word-color-picker" value="#0f172a" style="width:22px; height:22px; border:none; background:none; cursor:pointer;"></label>
-              <label style="font-size:12px; font-weight:700; color:#0f172a; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="突出显示高亮">🖍️高亮<input type="color" id="word-bg-picker" value="#ffff00" style="width:22px; height:22px; border:none; background:none; cursor:pointer;"></label>
-              <span style="color:#cbd5e1;">|</span>
-              <!-- 首行缩进与段落控制 -->
-              <button id="btn-indent-2em" style="background:#e0f2fe; color:#0284c7; border:1px solid #38bdf8; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;" title="学术论文首行缩进 2 字符">⇥ 首缩进(2字)</button>
-              <button id="btn-cancel-indent" style="background:#ffffff; color:#475569; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="顶格对齐">⇤ 顶格</button>
-              <span style="color:#cbd5e1;">|</span>
-              <!-- 样式控制 -->
-              <button class="rt-btn" data-cmd="bold" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;" title="加粗"><b>B</b></button>
-              <button class="rt-btn" data-cmd="italic" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; font-style:italic; cursor:pointer;" title="斜体"><i>I</i></button>
-              <button class="rt-btn" data-cmd="underline" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; text-decoration:underline; cursor:pointer;" title="下划线"><u>U</u></button>
-              <button class="rt-btn" data-cmd="strikeThrough" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; text-decoration:line-through; cursor:pointer;" title="删除线"><s>S</s></button>
-              <span style="color:#cbd5e1;">|</span>
-              <!-- 对齐方式 -->
-              <button class="rt-btn" data-cmd="justifyLeft" style="background:#ffffff; color:#475569; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="左对齐">⬅️ 左对齐</button>
-              <button class="rt-btn" data-cmd="justifyCenter" style="background:#ffffff; color:#475569; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="居中">↔️ 居中</button>
-              <button class="rt-btn" data-cmd="justifyRight" style="background:#ffffff; color:#475569; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="右对齐">➡️ 右对齐</button>
-              <button class="rt-btn" data-cmd="justifyFull" style="background:#e0f2fe; color:#0284c7; border:1px solid #38bdf8; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;" title="两端对齐 (学术标准)">↔️ 两端对齐</button>
-              <span style="color:#cbd5e1;">|</span>
-              <!-- 列表与元素 -->
-              <button class="rt-btn" data-cmd="insertUnorderedList" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">• 项目符号</button>
-              <button class="rt-btn" data-cmd="insertOrderedList" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">1. 有序列表</button>
-              <button class="rt-btn" data-cmd="formatBlock" data-val="blockquote" style="background:#ffffff; color:#7c3aed; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">“ 学术引文</button>
-              <span style="color:#cbd5e1;">|</span>
-              <button id="btn-insert-formula" style="background:#eff6ff; color:#2563eb; border:1px solid #93c5fd; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;" title="插入学术公式/Latex">📐 插入公式</button>
-              <button id="btn-insert-citation" style="background:#fffbeb; color:#d97706; border:1px solid #fde68a; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;" title="插入文献引用脚标">📌 引用[1]</button>
-              <button id="btn-insert-image" style="background:linear-gradient(135deg, #0284c7, #2563eb); color:white; font-weight:700; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer;" title="插入本地/网络图片">📷 插入图片</button>
+            <div class="word-nordic-ribbon" style="background:#ffffff; padding:10px 16px; border:1px solid #e2e8f0; border-bottom:none; border-top-left-radius:12px; border-top-right-radius:12px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; box-shadow:0 2px 10px rgba(15,23,42,0.03);">
+              <!-- 常用样式组 -->
+              <div style="display:flex; gap:4px; align-items:center;">
+                <button id="btn-format-painter" style="background:#0f172a; color:#ffffff; font-weight:700; border:none; padding:6px 14px; border-radius:20px; font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(15,23,42,0.15);" title="格式刷：选中文本点击复制格式，再选中目标文本赋予格式">🖌️ 格式刷</button>
+                <button class="rt-btn" data-cmd="removeFormat" style="background:#f1f5f9; color:#ef4444; border:1px solid #fecaca; padding:5px 10px; border-radius:20px; font-size:12px; cursor:pointer;" title="清除格式">🧹 清除格式</button>
+              </div>
+
+              <div style="width:1px; height:20px; background:#e2e8f0; margin:0 4px;"></div>
+
+              <!-- 字体与字号组 -->
+              <div style="display:flex; gap:6px; align-items:center;">
+                <select id="select-font-family" style="background:#f8fafc; color:#1e293b; border:1px solid #e2e8f0; padding:6px 10px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; outline:none;" title="学术论文标准字体">
+                  <option value="SimSun, 'Times New Roman', serif">宋体 / Times New Roman (国标正文)</option>
+                  <option value="FangSong, serif">仿宋 (公文/学术)</option>
+                  <option value="KaiTi, serif">楷体 (摘要/引文)</option>
+                  <option value="SimHei, 'Arial', sans-serif">黑体 (各级标题)</option>
+                  <option value="'Microsoft YaHei', sans-serif">微软雅黑</option>
+                  <option value="Arial, sans-serif">Arial (英文期刊)</option>
+                </select>
+                <select id="select-font-size" style="background:#f8fafc; color:#1e293b; border:1px solid #e2e8f0; padding:6px 10px; border-radius:8px; font-size:12.5px; font-weight:600; cursor:pointer; outline:none;" title="学术论文标准字号">
+                  <option value="3">小四 (12pt · 正文标准)</option>
+                  <option value="4">四号 (14pt · 二级标题)</option>
+                  <option value="5">三号 (16pt · 一级标题)</option>
+                  <option value="6">二号 (22pt · 论文大标题)</option>
+                  <option value="7">一号 (26pt · 封面大标题)</option>
+                  <option value="2">五号 (10.5pt · 图表说明)</option>
+                  <option value="1">小五 (9pt · 脚标注释)</option>
+                </select>
+                <select id="select-line-height" style="background:#f8fafc; color:#0284c7; border:1px solid #e2e8f0; padding:6px 10px; border-radius:8px; font-size:12.5px; font-weight:700; cursor:pointer; outline:none;" title="学术论文行距">
+                  <option value="1.5">行距: 1.5 倍 (国标)</option>
+                  <option value="1.0">行距: 1.0 倍 (单倍)</option>
+                  <option value="1.15">行距: 1.15 倍 (常规)</option>
+                  <option value="1.25">行距: 1.25 倍 (紧凑)</option>
+                  <option value="2.0">行距: 2.0 倍 (APA双倍)</option>
+                </select>
+              </div>
+
+              <div style="width:1px; height:20px; background:#e2e8f0; margin:0 4px;"></div>
+
+              <!-- 调色盘组 -->
+              <div style="display:flex; gap:8px; align-items:center;">
+                <label style="font-size:12px; font-weight:700; color:#334155; display:inline-flex; align-items:center; gap:4px; background:#f8fafc; border:1px solid #e2e8f0; padding:4px 8px; border-radius:6px; cursor:pointer;" title="文字颜色">🎨字色<input type="color" id="word-color-picker" value="#1e293b" style="width:20px; height:20px; border:none; background:none; cursor:pointer;"></label>
+                <label style="font-size:12px; font-weight:700; color:#334155; display:inline-flex; align-items:center; gap:4px; background:#f8fafc; border:1px solid #e2e8f0; padding:4px 8px; border-radius:6px; cursor:pointer;" title="突出高亮背景">🖍️高亮<input type="color" id="word-bg-picker" value="#ffff00" style="width:20px; height:20px; border:none; background:none; cursor:pointer;"></label>
+              </div>
+
+              <div style="width:1px; height:20px; background:#e2e8f0; margin:0 4px;"></div>
+
+              <!-- 格式按钮组 -->
+              <div style="display:flex; gap:4px; align-items:center;">
+                <button class="rt-btn" data-cmd="bold" style="background:#f8fafc; color:#0f172a; border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px; font-size:13px; font-weight:800; cursor:pointer;" title="加粗"><b>B</b></button>
+                <button class="rt-btn" data-cmd="italic" style="background:#f8fafc; color:#0f172a; border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px; font-size:13px; font-style:italic; cursor:pointer;" title="斜体"><i>I</i></button>
+                <button class="rt-btn" data-cmd="underline" style="background:#f8fafc; color:#0f172a; border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px; font-size:13px; text-decoration:underline; cursor:pointer;" title="下划线"><u>U</u></button>
+                <button class="rt-btn" data-cmd="strikeThrough" style="background:#f8fafc; color:#0f172a; border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px; font-size:13px; text-decoration:line-through; cursor:pointer;" title="删除线"><s>S</s></button>
+              </div>
+
+              <div style="width:1px; height:20px; background:#e2e8f0; margin:0 4px;"></div>
+
+              <!-- 对齐方式组 -->
+              <div style="display:flex; gap:4px; align-items:center;">
+                <button class="rt-btn" data-cmd="justifyLeft" style="background:#f8fafc; color:#334155; border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer;" title="左对齐">⬅️ 左对齐</button>
+                <button class="rt-btn" data-cmd="justifyCenter" style="background:#f8fafc; color:#334155; border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer;" title="居中">↔️ 居中</button>
+                <button class="rt-btn" data-cmd="justifyRight" style="background:#f8fafc; color:#334155; border:1px solid #e2e8f0; padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer;" title="右对齐">➡️ 右对齐</button>
+                <button class="rt-btn" data-cmd="justifyFull" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; padding:5px 10px; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;" title="两端对齐">↔️ 两端对齐</button>
+              </div>
+
+              <div style="width:1px; height:20px; background:#e2e8f0; margin:0 4px;"></div>
+
+              <!-- 扩展插入工具 -->
+              <div style="display:flex; gap:4px; align-items:center;">
+                <button id="btn-indent-2em" style="background:#e0f2fe; color:#0284c7; border:1px solid #bae6fd; padding:5px 10px; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer;" title="首行缩进 2 字符">⇥ 首缩进</button>
+                <button id="btn-insert-formula" style="background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:700;" title="插入学术公式">📐 公式</button>
+                <button id="btn-insert-citation" style="background:#fffbeb; color:#d97706; border:1px solid #fde68a; padding:5px 10px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:700;" title="插入文献引用">📌 引用</button>
+                <button id="btn-insert-image" style="background:#0f172a; color:white; font-weight:700; border:none; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer;" title="插入图片">📷 图片</button>
+              </div>
             </div>
           ` : ''}
 
-          <!-- Word 真实 A4 页面纸张排版工作台容器 -->
-          <div style="flex:1; overflow-y:auto; background:#e2e8f0; padding:20px; border-bottom-left-radius:8px; border-bottom-right-radius:8px; border:1px solid #cbd5e1;">
-            <div class="editor-textarea unified-large-editor-full" id="main-unified-editor" contenteditable="${!isEditorReadonly}" style="background:#ffffff; color:#0f172a; padding:40px 50px; border:1px solid #cbd5e1; box-shadow:0 10px 30px rgba(0,0,0,0.1); border-radius:4px; font-size:14px; line-height:1.7; min-height:480px; max-width:860px; margin:0 auto; outline:none; font-family:SimSun, 'Times New Roman', serif; ${isEditorReadonly ? 'opacity:0.9; background:#f8fafc;' : ''}">${s2.unifiedContent}</div>
+          <!-- Nordic 宽广大视野 A4 页面排版工作台 -->
+          <div class="word-nordic-workspace" style="flex:1; overflow-y:auto; background:#f1f5f9; padding:24px; border-bottom-left-radius:12px; border-bottom-right-radius:12px; border:1px solid #e2e8f0; display:flex; flex-direction:column; min-height:600px;">
+            <div class="editor-textarea unified-large-editor-full" id="main-unified-editor" contenteditable="${!isEditorReadonly}" style="background:#ffffff; color:#1e293b; padding:50px 60px; border:1px solid #e2e8f0; box-shadow:0 8px 30px rgba(15,23,42,0.05); border-radius:8px; font-size:15px; line-height:1.8; min-height:560px; width:100%; flex:1; outline:none; font-family:SimSun, 'Times New Roman', serif; ${isEditorReadonly ? 'opacity:0.9; background:#f8fafc;' : ''}">${s2.unifiedContent}</div>
           </div>
         </div>
 
