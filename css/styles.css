@@ -1,7 +1,18 @@
-/* ==========================================================================
-   JIZHI (集智) Multi-Agent Collaborative Writing Platform
-   NORDIC INS MINIMALIST DESIGN SYSTEM (北欧 INS 极简高颜风)
-   ========================================================================== */
+/* Global Scrollbars */
+::-webkit-scrollbar {
+  width: 8px !important;
+  height: 8px !important;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9 !important;
+}
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1 !important;
+  border-radius: 4px !important;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8 !important;
+}
 
 :root {
 }
@@ -1061,11 +1072,35 @@ body {
   color: white;
 }
 
+/* ==========================================================================
+   3. MAIN LAYOUT (CANVAS + 360PX RIGHT CHAT PANEL)
+   ========================================================================== */
+.main-content {
+  flex: 1 !important;
+  display: flex !important;
+  flex-direction: row !important;
+  height: calc(100vh - 60px) !important;
+  width: 100vw !important;
+  overflow: hidden !important;
+}
+
+.canvas-panel {
+  flex: 1 !important;
+  width: calc(100% - 360px) !important;
+  height: 100% !important;
+  overflow-y: auto !important;
+  padding: 20px 24px !important;
+  background: #f8fafc !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 16px !important;
+}
+
 /* Restore Classic Original Chat Panel Styling */
 .chat-panel {
-  width: 380px !important;
-  min-width: 380px !important;
-  max-width: 380px !important;
+  width: 360px !important;
+  min-width: 360px !important;
+  max-width: 360px !important;
   height: 100% !important;
   background: #ffffff !important;
   border-left: 1px solid #e2e8f0 !important;
