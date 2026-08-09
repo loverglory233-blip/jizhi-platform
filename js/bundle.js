@@ -671,19 +671,27 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       if (groupUsers.length > 0) {
         groupUsers.forEach((u, idx) => {
           const letterCode = (u.studentCode && u.studentCode.length === 1) ? u.studentCode.toUpperCase() : String.fromCharCode(65 + idx);
-          membersObj[letterCode] = {
-            id: letterCode,
-            name: u.name,
-            roleTitle: (u.studentCode === 'A' || idx === 0) ? '组长 · 论文结构' : `组员 · 合作撰写`,
+          const cleanName = (u.name || '').replace(/\s*\([^)]*\)/g, '');
+          const mInfo = {
+            id: u.id || u.username || letterCode,
+            name: cleanName || (letterCode === 'A' ? '李明' : letterCode === 'B' ? '王芳' : '陈强'),
+            roleTitle: (u.studentCode === 'A' || letterCode === 'A' || idx === 0) ? '组长 · 论文结构与概览' : `组员 · 核心章节撰写`,
             avatar: u.avatar || avatars[idx % avatars.length],
             color: colors[idx % colors.length],
             studentCode: letterCode
           };
+          membersObj[letterCode] = mInfo;
+          membersObj[letterCode.toLowerCase()] = mInfo;
+          if (u.id) membersObj[u.id] = mInfo;
+          if (u.username) membersObj[u.username] = mInfo;
         });
       } else {
-        membersObj['A'] = { id: 'A', name: '李明 (学生A)', roleTitle: '组长 · 论文结构', avatar: '👨‍🎓', color: '#818cf8', studentCode: 'A' };
-        membersObj['B'] = { id: 'B', name: '王芳 (学生B)', roleTitle: '组员 · 文献综述', avatar: '👩‍🎓', color: '#22d3ee', studentCode: 'B' };
-        membersObj['C'] = { id: 'C', name: '陈强 (学生C)', roleTitle: '组员 · 研究设计', avatar: '🧑‍🎓', color: '#fbbf24', studentCode: 'C' };
+        const mA = { id: 'liming', name: '李明', roleTitle: '组长 · 论文结构', avatar: '👨‍🎓', color: '#0284c7', studentCode: 'A' };
+        const mB = { id: 'wangfang', name: '王芳', roleTitle: '组员 · 文献综述', avatar: '👩‍🎓', color: '#059669', studentCode: 'B' };
+        const mC = { id: 'chenqiang', name: '陈强', roleTitle: '组员 · 研究设计', avatar: '🧑‍🎓', color: '#7c3aed', studentCode: 'C' };
+        membersObj['A'] = mA; membersObj['liming'] = mA;
+        membersObj['B'] = mB; membersObj['wangfang'] = mB;
+        membersObj['C'] = mC; membersObj['chenqiang'] = mC;
       }
       return membersObj;
     }
@@ -2320,14 +2328,33 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     const canvas = document.getElementById('canvas-panel');
     if (!canvas) return;
 
-    // ⚡ 将主 Canvas 设置为 flex 列布局，顶部可滚动，底部 100% 物理死死绝对固定
+    // ⚡ 设置主 Canvas 物理列框架：顶部 100% 独立可滚动文档区，底部 100% 物理绝对死固定贡献栏
     canvas.style.cssText = 'display:flex; flex-direction:column; height:100%; overflow:hidden; padding:0 !important; background:#f8fafc;';
 
+    // 如果还没有布局结构，创建 HTML 骨架
+    if (!canvas.querySelector('#canvas-scrollable-body')) {
+      canvas.innerHTML = `
+        <div class="canvas-scrollable-body" id="canvas-scrollable-body" style="flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:16px;"></div>
+        <div class="fixed-canvas-footer" id="fixed-canvas-footer" style="flex-shrink:0; background:#ffffff; border-top:2px solid #0284c7; box-shadow:0 -4px 20px rgba(15,23,42,0.06); padding:10px 24px; z-index:99;"></div>
+      `;
+    }
+
+    const scrollBody = canvas.querySelector('#canvas-scrollable-body');
+    const footerEl = canvas.querySelector('#fixed-canvas-footer');
+
+    // 在临时 DOM 节点中构建 Stage 内容并绑定所有真实 DOM 事件
     const tempContainer = document.createElement('div');
     if (state.currentStage === 'stage1') renderStage1Canvas(tempContainer, state, handlers);
     else if (state.currentStage === 'stage2') renderStage2Canvas(tempContainer, state, handlers);
     else if (state.currentStage === 'stage3') renderStage3Canvas(tempContainer, state, handlers);
 
+    // 使用 appendChild 移植 DOM 节点，100% 保持所有绑定的 input/keyup/click/presence 事件监听器存活！
+    scrollBody.innerHTML = '';
+    while (tempContainer.firstChild) {
+      scrollBody.appendChild(tempContainer.firstChild);
+    }
+
+    // 动态渲染死死绝对固定在最底部的 SSRL 贡献度分析栏
     const membersList = Object.values(state.members || {});
     const defaultGroupMembers = [
       { id: 'liming', studentCode: 'A', name: '李明', color: '#0284c7', avatar: '👨‍🎓' },
@@ -2355,9 +2382,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       return { ...item, pct, words };
     });
 
-    const footerHTML = `
+    footerEl.innerHTML = `
       <div style="font-size:12.5px; font-weight:700; margin-bottom:6px; color:#0f172a; display:flex; justify-content:space-between; align-items:center;">
-        <span>📊 本组 SSRL 成员贡献度动态分析 (100% 物理固定最底部)</span>
+        <span>📊 本组 SSRL 成员贡献度动态分析 (100% 物理死固定最底部)</span>
         <span style="font-size:11.5px; color:#64748b;">整篇总字数: <b id="live-word-count-footer" style="color:#0284c7;">${wordCount}</b> 字</span>
       </div>
       <div class="contribution-bar-container" id="live-contrib-container">
@@ -2374,15 +2401,6 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             </span>
           `).join('')}
         </div>
-      </div>
-    `;
-
-    canvas.innerHTML = `
-      <div class="canvas-scrollable-body" id="canvas-scrollable-body" style="flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:16px;">
-        ${tempContainer.innerHTML}
-      </div>
-      <div class="fixed-canvas-footer" id="fixed-canvas-footer" style="flex-shrink:0; background:#ffffff; border-top:2px solid #0284c7; box-shadow:0 -4px 20px rgba(15,23,42,0.06); padding:10px 24px; z-index:99;">
-        ${footerHTML}
       </div>
     `;
   }
