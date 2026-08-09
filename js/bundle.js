@@ -2415,9 +2415,13 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
           <!-- 类 Word 专业学术论文全功能格式工具栏 -->
           ${!isEditorReadonly ? `
-            <div class="editor-rt-toolbar" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; background:rgba(30,41,59,0.95); padding:8px 12px; border-top-left-radius:8px; border-top-right-radius:8px; border:1px solid rgba(255,255,255,0.15); border-bottom:none;">
+            <div class="editor-rt-toolbar" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; background:#f8fafc; padding:8px 12px; border-top-left-radius:8px; border-top-right-radius:8px; border:1px solid #cbd5e1; border-bottom:none; box-shadow:0 2px 6px rgba(0,0,0,0.03);">
+              <!-- Word 格式刷 -->
+              <button id="btn-format-painter" style="background:#2563eb; color:#ffffff; font-weight:700; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.3);" title="格式刷：选中文本点击复制格式，再选中目标文本赋予格式">🖌️ 格式刷</button>
+              <button class="rt-btn" data-cmd="removeFormat" style="background:#ffffff; color:#ef4444; border:1px solid #fca5a5; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="清除所选文本的格式">🧹 清除格式</button>
+              <span style="color:#cbd5e1;">|</span>
               <!-- 学术字体选择 -->
-              <select class="select-font-family" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer;" title="学术论文标准字体">
+              <select class="select-font-family" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;" title="学术论文标准字体">
                 <option value="SimSun, 'Times New Roman', serif">宋体 / Times New Roman (国标学术正文)</option>
                 <option value="FangSong, serif">仿宋 (公文/学术标准)</option>
                 <option value="KaiTi, serif">楷体 (摘要/引文)</option>
@@ -2427,7 +2431,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                 <option value="Calibri, sans-serif">Calibri (英文APA)</option>
               </select>
               <!-- 学术字号选择 -->
-              <select class="select-font-size" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer;" title="学术论文标准字号">
+              <select class="select-font-size" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;" title="学术论文标准字号">
                 <option value="3">小四 (12pt · 正文标准)</option>
                 <option value="4">四号 (14pt · 二级标题)</option>
                 <option value="5">三号 (16pt · 一级标题)</option>
@@ -2436,9 +2440,8 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                 <option value="2">五号 (10.5pt · 图表说明)</option>
                 <option value="1">小五 (9pt · 脚标注释)</option>
               </select>
-              <span style="color:rgba(255,255,255,0.2);">|</span>
               <!-- 学术行距选择 -->
-              <select class="select-line-height" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;" title="学术论文行距">
+              <select class="select-line-height" style="background:#ffffff; color:#2563eb; border:1px solid #cbd5e1; padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;" title="学术论文行距">
                 <option value="1.5">行距: 1.5 倍 (国标推荐)</option>
                 <option value="1.0">行距: 1.0 倍 (单倍)</option>
                 <option value="1.15">行距: 1.15 倍 (常规)</option>
@@ -2447,37 +2450,55 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                 <option value="2.0">行距: 2.0 倍 (APA双倍)</option>
                 <option value="2.5">行距: 2.5 倍</option>
               </select>
-              <span style="color:rgba(255,255,255,0.2);">|</span>
+              <span style="color:#cbd5e1;">|</span>
+              <!-- 字体颜色与高亮 -->
+              <select class="select-font-color" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;" title="字体颜色">
+                <option value="#0f172a">🎨 字体颜色: 默认黑灰</option>
+                <option value="#2563eb">蓝色</option>
+                <option value="#dc2626">红色</option>
+                <option value="#16a34a">绿色</option>
+                <option value="#d97706">橙色</option>
+                <option value="#7c3aed">紫色</option>
+              </select>
+              <select class="select-bg-color" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;" title="文本突出高亮">
+                <option value="transparent">🖍️ 突出高亮: 无背景</option>
+                <option value="#fef08a">黄色高亮</option>
+                <option value="#bae6fd">浅蓝高亮</option>
+                <option value="#bbf7d0">浅绿高亮</option>
+                <option value="#fbcfe8">粉红高亮</option>
+              </select>
+              <span style="color:#cbd5e1;">|</span>
               <!-- 首行缩进与段落控制 -->
-              <button class="btn-indent-2em" style="background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;" title="学术论文首行缩进 2 字符">⇥ 首缩进(2字)</button>
-              <button class="btn-cancel-indent" style="background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="顶格对齐">⇤ 顶格</button>
-              <span style="color:rgba(255,255,255,0.2);">|</span>
+              <button id="btn-indent-2em" style="background:#e0f2fe; color:#0284c7; border:1px solid #38bdf8; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;" title="学术论文首行缩进 2 字符">⇥ 首缩进(2字)</button>
+              <button id="btn-cancel-indent" style="background:#ffffff; color:#475569; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="顶格对齐">⇤ 顶格</button>
+              <span style="color:#cbd5e1;">|</span>
               <!-- 样式控制 -->
-              <button class="rt-btn" data-cmd="bold" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;" title="加粗"><b>B</b></button>
-              <button class="rt-btn" data-cmd="italic" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-style:italic; cursor:pointer;" title="斜体"><i>I</i></button>
-              <button class="rt-btn" data-cmd="underline" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; text-decoration:underline; cursor:pointer;" title="下划线"><u>U</u></button>
-              <button class="rt-btn" data-cmd="strikeThrough" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; text-decoration:line-through; cursor:pointer;" title="删除线"><s>S</s></button>
-              <span style="color:rgba(255,255,255,0.2);">|</span>
+              <button class="rt-btn" data-cmd="bold" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:800; cursor:pointer;" title="加粗"><b>B</b></button>
+              <button class="rt-btn" data-cmd="italic" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; font-style:italic; cursor:pointer;" title="斜体"><i>I</i></button>
+              <button class="rt-btn" data-cmd="underline" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; text-decoration:underline; cursor:pointer;" title="下划线"><u>U</u></button>
+              <button class="rt-btn" data-cmd="strikeThrough" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; text-decoration:line-through; cursor:pointer;" title="删除线"><s>S</s></button>
+              <span style="color:#cbd5e1;">|</span>
               <!-- 对齐方式 -->
-              <button class="rt-btn" data-cmd="justifyLeft" style="background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="左对齐">⬅️ 左对齐</button>
-              <button class="rt-btn" data-cmd="justifyCenter" style="background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="居中">↔️ 居中</button>
-              <button class="rt-btn" data-cmd="justifyRight" style="background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="右对齐">➡️ 右对齐</button>
-              <button class="rt-btn" data-cmd="justifyFull" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="两端对齐 (学术标准)">↔️ 两端对齐</button>
-              <span style="color:rgba(255,255,255,0.2);">|</span>
+              <button class="rt-btn" data-cmd="justifyLeft" style="background:#ffffff; color:#475569; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="左对齐">⬅️ 左对齐</button>
+              <button class="rt-btn" data-cmd="justifyCenter" style="background:#ffffff; color:#475569; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="居中">↔️ 居中</button>
+              <button class="rt-btn" data-cmd="justifyRight" style="background:#ffffff; color:#475569; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="右对齐">➡️ 右对齐</button>
+              <button class="rt-btn" data-cmd="justifyFull" style="background:#e0f2fe; color:#0284c7; border:1px solid #38bdf8; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;" title="两端对齐 (学术标准)">↔️ 两端对齐</button>
+              <span style="color:#cbd5e1;">|</span>
               <!-- 列表与元素 -->
-              <button class="rt-btn" data-cmd="insertUnorderedList" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">• 项目符号</button>
-              <button class="rt-btn" data-cmd="insertOrderedList" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">1. 有序列表</button>
-              <button class="rt-btn" data-cmd="formatBlock" data-val="blockquote" style="background:#1e293b; color:#a78bfa; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">“ 学术引文</button>
-              <span style="color:rgba(255,255,255,0.2);">|</span>
-              <button class="btn-insert-formula" style="background:rgba(99,102,241,0.25); color:#a5b4fc; border:1px solid #6366f1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;" title="插入学术公式/Latex">📐 插入公式</button>
-              <button class="btn-insert-citation" style="background:rgba(245,158,11,0.25); color:#fcd34d; border:1px solid #f59e0b; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;" title="插入文献引用脚标">📌 引用[1]</button>
-              <button class="btn-insert-image" style="background:linear-gradient(135deg, #a855f7, #6366f1); color:white; font-weight:700; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer;" title="插入本地/网络图片">📷 插入图片</button>
-              <button class="rt-btn" data-cmd="removeFormat" style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="清除格式">🧹 清除格式</button>
+              <button class="rt-btn" data-cmd="insertUnorderedList" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">• 项目符号</button>
+              <button class="rt-btn" data-cmd="insertOrderedList" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">1. 有序列表</button>
+              <button class="rt-btn" data-cmd="formatBlock" data-val="blockquote" style="background:#ffffff; color:#7c3aed; border:1px solid #cbd5e1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">“ 学术引文</button>
+              <span style="color:#cbd5e1;">|</span>
+              <button id="btn-insert-formula" style="background:#eff6ff; color:#2563eb; border:1px solid #93c5fd; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;" title="插入学术公式/Latex">📐 插入公式</button>
+              <button id="btn-insert-citation" style="background:#fffbeb; color:#d97706; border:1px solid #fde68a; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;" title="插入文献引用脚标">📌 引用[1]</button>
+              <button id="btn-insert-image" style="background:linear-gradient(135deg, #0284c7, #2563eb); color:white; font-weight:700; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer;" title="插入本地/网络图片">📷 插入图片</button>
             </div>
           ` : ''}
 
-          <!-- 富文本正文编辑器容器 -->
-          <div class="editor-textarea unified-large-editor-full" id="main-unified-editor" contenteditable="${!isEditorReadonly}" style="flex:1; overflow-y:auto; background:#0f172a; color:#f8fafc; padding:16px; border:1px solid rgba(255,255,255,0.2); border-bottom-left-radius:8px; border-bottom-right-radius:8px; font-size:14px; line-height:1.7; min-height:220px; outline:none; font-family:sans-serif; ${isEditorReadonly ? 'opacity:0.85; background:rgba(15,23,42,0.9);' : ''}">${s2.unifiedContent}</div>
+          <!-- Word 真实 A4 页面纸张排版工作台容器 -->
+          <div style="flex:1; overflow-y:auto; background:#e2e8f0; padding:20px; border-bottom-left-radius:8px; border-bottom-right-radius:8px; border:1px solid #cbd5e1;">
+            <div class="editor-textarea unified-large-editor-full" id="main-unified-editor" contenteditable="${!isEditorReadonly}" style="background:#ffffff; color:#0f172a; padding:40px 50px; border:1px solid #cbd5e1; box-shadow:0 10px 30px rgba(0,0,0,0.1); border-radius:4px; font-size:14px; line-height:1.7; min-height:480px; max-width:860px; margin:0 auto; outline:none; font-family:SimSun, 'Times New Roman', serif; ${isEditorReadonly ? 'opacity:0.9; background:#f8fafc;' : ''}">${s2.unifiedContent}</div>
+          </div>
         </div>
 
         <div style="margin-top:14px; background:rgba(15,23,42,0.7); padding:14px; border-radius:10px; border:1px solid var(--border-glass); flex-shrink:0;">
@@ -2530,7 +2551,71 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         }
       });
 
-      // 字体/字号/行距/缩进等学术控制绑定
+      // 字体/字号/行距/颜色/格式刷等学术控制绑定
+      let formatPainterStyle = null;
+      const btnFP = canvas.querySelector('#btn-format-painter');
+      if (btnFP) {
+        btnFP.addEventListener('click', (e) => {
+          e.preventDefault();
+          const sel = window.getSelection();
+          if (sel && sel.rangeCount > 0) {
+            const range = sel.getRangeAt(0);
+            const parent = range.commonAncestorContainer.nodeType === 3 ? range.commonAncestorContainer.parentNode : range.commonAncestorContainer;
+            const comp = window.getComputedStyle(parent);
+            formatPainterStyle = {
+              fontFamily: comp.fontFamily,
+              fontSize: comp.fontSize,
+              fontWeight: comp.fontWeight,
+              fontStyle: comp.fontStyle,
+              color: comp.color,
+              backgroundColor: comp.backgroundColor
+            };
+            btnFP.style.background = '#10b981';
+            btnFP.innerText = '🖌️ 已复制格式';
+          }
+        });
+      }
+
+      editorEl.addEventListener('mouseup', () => {
+        if (formatPainterStyle) {
+          const sel = window.getSelection();
+          if (sel && !sel.isCollapsed) {
+            const span = document.createElement('span');
+            span.style.fontFamily = formatPainterStyle.fontFamily;
+            span.style.fontSize = formatPainterStyle.fontSize;
+            span.style.fontWeight = formatPainterStyle.fontWeight;
+            span.style.fontStyle = formatPainterStyle.fontStyle;
+            span.style.color = formatPainterStyle.color;
+            if (formatPainterStyle.backgroundColor && formatPainterStyle.backgroundColor !== 'rgba(0, 0, 0, 0)') {
+              span.style.backgroundColor = formatPainterStyle.backgroundColor;
+            }
+            const range = sel.getRangeAt(0);
+            try { range.surroundContents(span); } catch(err) {}
+            formatPainterStyle = null;
+            if (btnFP) {
+              btnFP.style.background = '#2563eb';
+              btnFP.innerText = '🖌️ 格式刷';
+            }
+            handlers.onUnifiedContentChange(editorEl.innerHTML);
+          }
+        }
+      });
+
+      const fontColorSel = canvas.querySelector('.select-font-color');
+      if (fontColorSel) {
+        fontColorSel.addEventListener('change', (e) => {
+          document.execCommand('foreColor', false, e.target.value);
+          handlers.onUnifiedContentChange(editorEl.innerHTML);
+        });
+      }
+
+      const bgColorSel = canvas.querySelector('.select-bg-color');
+      if (bgColorSel) {
+        bgColorSel.addEventListener('change', (e) => {
+          document.execCommand('hiliteColor', false, e.target.value);
+          handlers.onUnifiedContentChange(editorEl.innerHTML);
+        });
+      }
       const fontSel = canvas.querySelector('#select-font-family');
       if (fontSel) {
         fontSel.addEventListener('change', (e) => {
