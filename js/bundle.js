@@ -373,7 +373,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         return (uName === query || uEmail === query || uCode === query || ('student' + uCode) === query) && u.password === password;
       });
       if (user) {
-        // 🔒 账号互斥登录锁：防止两人同时登录同一个测试账号冲突
+        // 🔒 账号单人互斥登录锁：防止两人同时登录同一个账号冲突
         if (window.app && window.app.state) {
           if (!window.app.state.activeSessions) window.app.state.activeSessions = {};
           const active = window.app.state.activeSessions[user.id];
@@ -382,10 +382,10 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             currentToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
             sessionStorage.setItem('jizhi_session_token', currentToken);
           }
-          if (active && active.token !== currentToken && (Date.now() - active.lastActive) < 180000) {
+          if (active && active.token && active.token !== currentToken && (Date.now() - (active.lastActive || 0)) < 180000) {
             return {
               success: false,
-              message: `⚠️ 账号 [${user.name}] 此时正在其他设备/浏览器上登录使用中！\n为避免多人同时操作同一个账号产生冲突，请使用您个人的独立学生账号登录 (例如：李明 / 王芳 / 陈强)。`
+              message: `⚠️ 账号 [${user.name}] 此时正在其他设备/浏览器上登录使用中！\n为避免多人同时操作同一个账号产生冲突，请使用您个人的独立学生账号登录 (如：王芳 / 陈强)。`
             };
           }
           window.app.state.activeSessions[user.id] = { token: currentToken, lastActive: Date.now(), userName: user.name };
@@ -398,8 +398,14 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       return { success: false, message: '账号或密码错误 (默认密码统一定为 123)' };
     }
     logout() {
+      const user = this.getCurrentUser();
+      if (user && window.app && window.app.state && window.app.state.activeSessions) {
+        delete window.app.state.activeSessions[user.id];
+        if (window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
+      }
       sessionStorage.removeItem(STORAGE_KEY_USER);
       localStorage.removeItem(STORAGE_KEY_USER);
+      sessionStorage.removeItem('jizhi_session_token');
     }
 
     createClass(className, classCode = null) {
@@ -2197,7 +2203,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
       <div class="card">
         <div class="card-title">
-          <span>💡 竞拍提案面板 (观点+理由) ${isContractLocked ? '<span style="font-size:11px; color:#34d399;">(🔒 已锁定)</span>' : ''}</span>
+          <span>💡 竞拍提案面板 ${isContractLocked ? '<span style="font-size:11px; color:#34d399;">(🔒 已锁定)</span>' : ''}</span>
           <div style="font-size:12px; color:#38bdf8;">
             📊 投票进度: <b>${totalVotesCast}/${totalMembersCount} 人已投票</b> ${userHasVoted ? '<span style="color:#4ade80; margin-left:6px;">(投票已锁定)</span>' : ''}
           </div>
