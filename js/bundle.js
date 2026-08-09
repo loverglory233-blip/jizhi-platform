@@ -2507,6 +2507,13 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     if (!isEditorReadonly) {
       const editorEl = canvas.querySelector('#main-unified-editor');
       editorEl.addEventListener('input', () => handlers.onUnifiedContentChange(editorEl.innerHTML));
+      editorEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;');
+          handlers.onUnifiedContentChange(editorEl.innerHTML);
+        }
+      });
 
       // 字体/字号/行距/缩进等学术控制绑定
       const fontSel = canvas.querySelector('#select-font-family');
@@ -2759,6 +2766,13 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     const editorEl = canvas.querySelector('#stage3-unified-editor');
     if (editorEl && !isFinalSubmitted) {
       editorEl.addEventListener('input', () => handlers.onUnifiedContentChange(editorEl.innerHTML));
+      editorEl.addEventListener('keydown', (e) => {
+        if (e.key === 'Tab') {
+          e.preventDefault();
+          document.execCommand('insertHTML', false, '&nbsp;&nbsp;&nbsp;&nbsp;');
+          handlers.onUnifiedContentChange(editorEl.innerHTML);
+        }
+      });
 
       canvas.querySelectorAll('.rt-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
