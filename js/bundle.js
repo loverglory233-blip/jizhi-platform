@@ -847,13 +847,19 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     }
 
     handlePresenceUpdate(presence) {
+      this.updatePresenceUI(presence);
+    }
+
+    updatePresenceUI(presence) {
       if (!presence || !presence.userId) return;
       if (!this.app.state.activePresences) this.app.state.activePresences = {};
       this.app.state.activePresences[presence.userId] = presence;
+
+      // 1. 刷新顶部状态 Pill 栏
       const bar = document.getElementById('co-writer-presence-bar') || document.getElementById('co-writer-presence-bar-s3');
       if (bar) {
         const now = Date.now();
-        const activeList = Object.values(this.app.state.activePresences).filter(p => (now - (p.lastSeen || 0)) < 15000);
+        const activeList = Object.values(this.app.state.activePresences).filter(p => (now - (p.lastSeen || 0)) < 18000);
         let html = `<span style="font-weight:700; color:#475569; display:inline-flex; align-items:center; gap:6px;">
           <span style="width:8px; height:8px; border-radius:50%; background:#10b981; display:inline-block; animation:presencePulse 1.5s infinite;"></span>
           👥 组内协同编辑光标感知:
@@ -869,6 +875,52 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           `).join('');
         }
         bar.innerHTML = html;
+      }
+
+      // 2. 动态在 Word 稿纸编辑区对应段落插入带学生名字的 [ 👤 李明 正在编辑此段 ] 悬浮光标角标
+      const editor = document.getElementById('main-unified-editor') || document.getElementById('stage3-unified-editor');
+      if (editor) {
+        // 清理该用户旧的光标角标
+        editor.querySelectorAll(`.inline-presence-tag[data-uid="${presence.userId}"]`).forEach(el => el.remove());
+
+        // 如果是本地用户自己，不在自己编辑器中画干扰角标，避免打字光标跳动
+        const currentUser = this.app.authManager.getCurrentUser();
+        const myId = currentUser ? (currentUser.id || currentUser.studentCode) : 'liming';
+        if (presence.userId === myId) return;
+
+        // 查找对应的段落节点
+        const paragraphs = Array.from(editor.querySelectorAll('p, div, h1, h2, h3, li'));
+        const targetP = paragraphs[presence.paragraphIdx] || editor.firstElementChild || editor;
+
+        const caretBadge = document.createElement('span');
+        caretBadge.className = 'inline-presence-tag';
+        caretBadge.dataset.uid = presence.userId;
+        caretBadge.contentEditable = 'false';
+        caretBadge.style.cssText = `
+          display: inline-flex;
+          align-items: center;
+          gap: 4px;
+          background: ${presence.bg || '#e0f2fe'};
+          color: ${presence.color || '#0284c7'};
+          border: 1px solid ${presence.border || '#bae6fd'};
+          border-left: 3px solid ${presence.color || '#0284c7'};
+          padding: 2px 8px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 700;
+          margin: 0 4px;
+          vertical-align: middle;
+          user-select: none;
+          pointer-events: none;
+          box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+        `;
+        caretBadge.innerHTML = `<span style="width:6px; height:6px; border-radius:50%; background:${presence.color || '#0284c7'}; display:inline-block;"></span> 👤 ${presence.userName} 正在编辑此段`;
+
+        if (targetP && targetP !== editor) {
+          targetP.appendChild(caretBadge);
+        } else {
+          editor.appendChild(caretBadge);
+        }
       }
     }
 
@@ -2266,9 +2318,73 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
   function renderCanvas(state, handlers) {
     const canvas = document.getElementById('canvas-panel');
-    if (state.currentStage === 'stage1') renderStage1Canvas(canvas, state, handlers);
-    else if (state.currentStage === 'stage2') renderStage2Canvas(canvas, state, handlers);
-    else if (state.currentStage === 'stage3') renderStage3Canvas(canvas, state, handlers);
+    if (!canvas) return;
+
+    // ⚡ 将主 Canvas 设置为 flex 列布局，顶部可滚动，底部 100% 物理死死绝对固定
+    canvas.style.cssText = 'display:flex; flex-direction:column; height:100%; overflow:hidden; padding:0 !important; background:#f8fafc;';
+
+    const tempContainer = document.createElement('div');
+    if (state.currentStage === 'stage1') renderStage1Canvas(tempContainer, state, handlers);
+    else if (state.currentStage === 'stage2') renderStage2Canvas(tempContainer, state, handlers);
+    else if (state.currentStage === 'stage3') renderStage3Canvas(tempContainer, state, handlers);
+
+    const membersList = Object.values(state.members || {});
+    const defaultGroupMembers = [
+      { id: 'liming', studentCode: 'A', name: '李明', color: '#0284c7', avatar: '👨‍🎓' },
+      { id: 'wangfang', studentCode: 'B', name: '王芳', color: '#059669', avatar: '👩‍🎓' },
+      { id: 'chenqiang', studentCode: 'C', name: '陈强', color: '#7c3aed', avatar: '👨‍🎓' }
+    ];
+    const fullMembersList = (membersList && membersList.length >= 3) ? membersList : defaultGroupMembers;
+    const s2Content = (state.stage2 && state.stage2.unifiedContent) ? state.stage2.unifiedContent : '';
+    const wordCount = s2Content.replace(/<[^>]*>/g, '').replace(/\s+/g, '').length;
+
+    const totalChatMsgs = ((state.chatLogs.stage1 || []).length + (state.chatLogs.stage2 || []).length + (state.chatLogs.stage3 || []).length) || 1;
+    const memberStats = fullMembersList.map(m => {
+      const mMsgs = (state.chatLogs.stage1 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
+                  + (state.chatLogs.stage2 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
+                  + (state.chatLogs.stage3 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length;
+      const typed = (state.memberTypedCounts && state.memberTypedCounts[m.id || m.studentCode]) || 0;
+      return { member: m, raw: 10 + (mMsgs * 3) + (typed * 2) };
+    });
+    const sumRaw = memberStats.reduce((acc, curr) => acc + curr.raw, 0) || 1;
+    let accumulatedPct = 0;
+    const processedStats = memberStats.map((item, i) => {
+      let pct = (i === memberStats.length - 1) ? (100 - accumulatedPct) : Math.round((item.raw / sumRaw) * 100);
+      accumulatedPct += pct;
+      const words = Math.round((wordCount * pct) / 100);
+      return { ...item, pct, words };
+    });
+
+    const footerHTML = `
+      <div style="font-size:12.5px; font-weight:700; margin-bottom:6px; color:#0f172a; display:flex; justify-content:space-between; align-items:center;">
+        <span>📊 本组 SSRL 成员贡献度动态分析 (100% 物理固定最底部)</span>
+        <span style="font-size:11.5px; color:#64748b;">整篇总字数: <b id="live-word-count-footer" style="color:#0284c7;">${wordCount}</b> 字</span>
+      </div>
+      <div class="contribution-bar-container" id="live-contrib-container">
+        <div class="contrib-bars" id="live-contrib-bars" style="height:12px; border-radius:6px; display:flex; overflow:hidden; background:#f1f5f9; border:1px solid #e2e8f0;">
+          ${processedStats.map(s => `
+            <div class="contrib-segment" style="width:${s.pct}%; background:${s.member.color || '#0284c7'}; transition:width 0.5s ease-in-out;" title="${s.member.name}: ${s.pct}% (${s.words}字)"></div>
+          `).join('')}
+        </div>
+        <div id="live-contrib-legend" style="display:flex; justify-content:space-between; font-size:12px; font-weight:600; color:#334155; margin-top:6px; flex-wrap:wrap; gap:12px;">
+          ${processedStats.map(s => `
+            <span style="display:inline-flex; align-items:center; gap:4px;">
+              <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${s.member.color || '#0284c7'};"></span>
+              ${s.member.name}: <b>${s.pct}%</b> (${s.words}字)
+            </span>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    canvas.innerHTML = `
+      <div class="canvas-scrollable-body" id="canvas-scrollable-body" style="flex:1; overflow-y:auto; padding:20px 24px; display:flex; flex-direction:column; gap:16px;">
+        ${tempContainer.innerHTML}
+      </div>
+      <div class="fixed-canvas-footer" id="fixed-canvas-footer" style="flex-shrink:0; background:#ffffff; border-top:2px solid #0284c7; box-shadow:0 -4px 20px rgba(15,23,42,0.06); padding:10px 24px; z-index:99;">
+        ${footerHTML}
+      </div>
+    `;
   }
 
   function renderStage1Canvas(canvas, state, handlers) {
@@ -2661,11 +2777,16 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       const sendPresence = () => {
         const sel = window.getSelection();
         let snippet = '正文段落';
+        let paragraphIdx = 0;
         if (sel && sel.anchorNode) {
-          let t = sel.anchorNode.textContent || '';
+          let node = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode;
+          let t = node.textContent || '';
           if (t.trim()) snippet = t.trim().substring(0, 16);
+          const paragraphs = Array.from(editorEl.querySelectorAll('p, div, h1, h2, h3, li'));
+          const foundIdx = paragraphs.findIndex(p => p.contains(node) || p === node);
+          if (foundIdx !== -1) paragraphIdx = foundIdx;
         }
-        if (handlers.onUpdatePresence) handlers.onUpdatePresence(snippet);
+        if (handlers.onUpdatePresence) handlers.onUpdatePresence({ snippet, paragraphIdx });
       };
       editorEl.addEventListener('keyup', sendPresence);
       editorEl.addEventListener('click', sendPresence);
@@ -3078,11 +3199,16 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       const sendPresenceS3 = () => {
         const sel = window.getSelection();
         let snippet = '正文段落';
+        let paragraphIdx = 0;
         if (sel && sel.anchorNode) {
-          let t = sel.anchorNode.textContent || '';
+          let node = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode;
+          let t = node.textContent || '';
           if (t.trim()) snippet = t.trim().substring(0, 16);
+          const paragraphs = Array.from(editorEl.querySelectorAll('p, div, h1, h2, h3, li'));
+          const foundIdx = paragraphs.findIndex(p => p.contains(node) || p === node);
+          if (foundIdx !== -1) paragraphIdx = foundIdx;
         }
-        if (handlers.onUpdatePresence) handlers.onUpdatePresence(snippet);
+        if (handlers.onUpdatePresence) handlers.onUpdatePresence({ snippet, paragraphIdx });
       };
       editorEl.addEventListener('keyup', sendPresenceS3);
       editorEl.addEventListener('click', sendPresenceS3);
@@ -3664,7 +3790,8 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         // 🤖 阶段一聊天自动提炼观点并更新提案卡片
         if (currentStage === 'stage1' && text.length >= 8) {
           const s1 = this.state.stage1;
-          let p = s1.proposals.find(item => item.author === studentCode || item.author === currentUser.id);
+          const myCode = currentUser ? (currentUser.studentCode || 'A') : 'A';
+          let p = s1.proposals.find(item => item.author === myCode || item.author === senderId);
           if (p && !p.isCustomEdited) {
             const shortTitle = text.length > 26 ? text.substring(0, 26) + '...' : text;
             p.title = `《${shortTitle.replace(/[《》]/g, '')}》`;
@@ -3824,7 +3951,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           }
           this.renderStudentWorkspace();
         },
-        onUpdatePresence: (snippet) => {
+        onUpdatePresence: (presenceData) => {
           const currentUser = this.authManager.getCurrentUser();
           if (!currentUser) return;
           if (!this.state.activePresences) this.state.activePresences = {};
@@ -3838,11 +3965,15 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           const c = colorMap[currentUser.id] || { color: '#0284c7', bg: '#f0f9ff', border: '#bae6fd' };
           
           const groupId = currentUser.groupId || 'group_1';
+          const snippet = (typeof presenceData === 'object') ? presenceData.snippet : presenceData;
+          const paragraphIdx = (typeof presenceData === 'object') ? presenceData.paragraphIdx : 0;
+
           const payload = {
             groupId: groupId,
             userId: currentUser.id || currentUser.studentCode || 'A',
             userName: currentUser.name || '组员',
             snippet: snippet || '正文段落',
+            paragraphIdx: paragraphIdx || 0,
             color: c.color,
             bg: c.bg,
             border: c.border,
@@ -3850,6 +3981,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           };
 
           this.state.activePresences[payload.userId] = payload;
+          if (this.cloudSyncEngine) this.cloudSyncEngine.updatePresenceUI(payload);
 
           // ⚡ 1. 0ms 同机 BroadcastChannel 镜像
           if (this.cloudSyncEngine && this.cloudSyncEngine.bc) {
