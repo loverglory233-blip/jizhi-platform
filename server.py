@@ -124,7 +124,9 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                 elif clean_path.endswith('.json'):
                     self.send_header('Content-Type', 'application/json; charset=utf-8')
 
-                self.send_header('Cache-Control', 'no-cache')
+                self.send_header('Cache-Control', 'no-store, no-cache, must-revalidate, max-age=0')
+                self.send_header('Pragma', 'no-cache')
+                self.send_header('Expires', '0')
 
                 if use_gzip:
                     compressed_content = gzip.compress(content)
