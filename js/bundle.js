@@ -750,33 +750,44 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       const user = this.app.authManager.getCurrentUser();
       const groupId = (user && user.groupId) ? user.groupId : (this.app.state.activeMonitorGroupId || 'group_1');
       this.storageKey = `jizhi_cloud_snapshot_v6_${groupId}`;
-      this.wsUrl = `wss://free.piesocket.com/v3/jizhi_collaboration_2026_${groupId}?api_key=VCX2aCchvXxCM14N4aOHM6HOqqfZvZWPoBxObmmi&notify_self=1`;
-      this.restEndpoints = [
-        `https://jizhi-platform-2026-default-rtdb.firebaseio.com/sync_${groupId}.json`,
-        `https://api.restful-api.dev/objects/jizhi_room_2026_${groupId}`
-      ];
+      const ALIYUN_SERVER = 'http://47.99.110.230:8088';
+      this.syncUrl = `${ALIYUN_SERVER}/api/snapshot?groupId=${groupId}`;
+      this.sseUrl = `${ALIYUN_SERVER}/api/stream?groupId=${groupId}`;
     }
 
     initWebSocket() {
+      // ⚡ 改用 SSE (Server-Sent Events) 毫秒级实时长连接，直连阿里云，无需任何第三方外网服务
+      this.initSSE();
+    }
+
+    initSSE() {
       try {
-        this.ws = new WebSocket(this.wsUrl);
-        this.ws.onmessage = (event) => {
+        if (this.eventSource) {
+          this.eventSource.close();
+        }
+        this.eventSource = new EventSource(this.sseUrl);
+        this.eventSource.onmessage = (event) => {
           try {
-            const data = JSON.parse(event.data);
-            if (data && data.snapshot) {
-              this.handleRemoteSync(data.snapshot);
+            if (event.data) {
+              const data = JSON.parse(event.data);
+              if (data && data.timestamp) {
+                this.handleRemoteSync(data);
+              }
             }
           } catch (e) {}
         };
-        this.ws.onclose = () => {
-          setTimeout(() => this.initWebSocket(), 3000);
+        this.eventSource.onerror = () => {
+          // 断线 3 秒后自动重连
+          if (this.eventSource) this.eventSource.close();
+          setTimeout(() => this.initSSE(), 3000);
         };
       } catch (e) {}
     }
 
     initPolling() {
       this.pullFromRest();
-      setInterval(() => { this.pullFromRest(); }, 1000);
+      // 降级兜底轮询（每 2.5 秒从阿里云轻量拉取一次）
+      setInterval(() => { this.pullFromRest(); }, 2500);
 
       if ('BroadcastChannel' in window) {
         try {
@@ -800,30 +811,14 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
     async pullFromRest() {
       try {
-        const localRaw = localStorage.getItem(this.storageKey);
-        if (localRaw) {
-          const localSnap = JSON.parse(localRaw);
-          if (localSnap && localSnap.timestamp > this.lastTimestamp) {
-            this.handleRemoteSync(localSnap);
+        const res = await fetch(this.syncUrl, { cache: 'no-cache' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data && data.timestamp && data.timestamp > this.lastTimestamp) {
+            this.handleRemoteSync(data);
           }
         }
       } catch (e) {}
-
-      for (const url of this.restEndpoints) {
-        try {
-          const res = await fetch(url, { cache: 'no-cache' });
-          if (res.ok) {
-            const data = await res.json();
-            if (data) {
-              const snapshot = data.data ? data.data : data;
-              if (snapshot && snapshot.timestamp && snapshot.timestamp > this.lastTimestamp) {
-                this.handleRemoteSync(snapshot);
-                break;
-              }
-            }
-          }
-        } catch (e) {}
-      }
     }
 
     async pushSnapshot() {
@@ -841,6 +836,8 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         stage3: this.app.state.stage3,
         currentStage: this.app.state.currentStage,
         isFinalSubmitted: this.app.state.isFinalSubmitted,
+        users: this.app.authManager.getUsers(),
+        classes: this.app.authManager.getClasses(),
         tasks: this.app.authManager.getTasks(),
         announcements: this.app.authManager.getAnnouncements()
       };
@@ -857,8 +854,8 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       if (!this.isPushing) {
         this.isPushing = true;
         try {
-          await fetch(`https://jizhi-platform-2026-default-rtdb.firebaseio.com/sync_${groupId}.json`, {
-            method: 'PUT',
+          await fetch(this.syncUrl || `sync.php?groupId=${groupId}`, {
+            method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(snapshot)
           });
@@ -895,34 +892,63 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         ['stage1', 'stage2', 'stage3'].forEach(stg => {
           const localLogs = this.app.state.chatLogs[stg] || [];
           const remoteLogs = remoteData.chatLogs[stg] || [];
-          if (remoteLogs.length > localLogs.length) {
+          if (remoteLogs.length !== localLogs.length || JSON.stringify(remoteLogs) !== JSON.stringify(localLogs)) {
             this.app.state.chatLogs[stg] = remoteLogs;
             updated = true;
           }
         });
       }
 
+      // ⚡ 全量深度同步 Stage 1（投票/课题大纲/合约修改/按键签署）
       if (remoteData.stage1) {
-        const s1R = remoteData.stage1;
-        const s1L = this.app.state.stage1;
-        if (s1R.contract) { s1L.contract = s1R.contract; updated = true; }
-        if (s1R.votes) { s1L.votes = s1R.votes; s1L.hasVoted = s1R.hasVoted; updated = true; }
-      }
-
-      if (remoteData.stage2 && remoteData.stage2.unifiedContent) {
-        if (remoteData.stage2.unifiedContent.length !== this.app.state.stage2.unifiedContent.length) {
-          this.app.state.stage2.unifiedContent = remoteData.stage2.unifiedContent;
-          updated = true;
-        }
-        if (remoteData.stage2.actionPlan && !this.app.state.stage2.actionPlan) {
-          this.app.state.stage2.actionPlan = remoteData.stage2.actionPlan;
+        const localS1Json = JSON.stringify(this.app.state.stage1);
+        const remoteS1Json = JSON.stringify(remoteData.stage1);
+        if (localS1Json !== remoteS1Json) {
+          this.app.state.stage1 = remoteData.stage1;
           updated = true;
         }
       }
 
-      if (remoteData.stage3 && remoteData.stage3.feedbackItems) {
-        this.app.state.stage3.feedbackItems = remoteData.stage3.feedbackItems;
+      // ⚡ 全量深度同步 Stage 2（协同写作/贡献度/半程编辑清单）
+      if (remoteData.stage2) {
+        const localS2Json = JSON.stringify(this.app.state.stage2);
+        const remoteS2Json = JSON.stringify(remoteData.stage2);
+        if (localS2Json !== remoteS2Json) {
+          this.app.state.stage2 = remoteData.stage2;
+          updated = true;
+          const editor = document.getElementById('main-unified-editor') || document.getElementById('stage3-unified-editor');
+          if (editor && document.activeElement !== editor && remoteData.stage2.unifiedContent !== undefined) {
+            editor.value = remoteData.stage2.unifiedContent;
+          }
+        }
+      }
+
+      // ⚡ 全量深度同步 Stage 3（答辩质询/表决裁决）
+      if (remoteData.stage3) {
+        const localS3Json = JSON.stringify(this.app.state.stage3);
+        const remoteS3Json = JSON.stringify(remoteData.stage3);
+        if (localS3Json !== remoteS3Json) {
+          this.app.state.stage3 = remoteData.stage3;
+          updated = true;
+        }
+      }
+
+      if (remoteData.currentStage && remoteData.currentStage !== this.app.state.currentStage) {
+        this.app.state.currentStage = remoteData.currentStage;
         updated = true;
+      }
+
+      if (remoteData.users && Array.isArray(remoteData.users) && remoteData.users.length > 0) {
+        localStorage.setItem('jizhi_users_db_v2', JSON.stringify(remoteData.users));
+      }
+      if (remoteData.classes && Array.isArray(remoteData.classes) && remoteData.classes.length > 0) {
+        localStorage.setItem('jizhi_classes_db', JSON.stringify(remoteData.classes));
+      }
+      if (remoteData.tasks && Array.isArray(remoteData.tasks)) {
+        localStorage.setItem('jizhi_tasks_db', JSON.stringify(remoteData.tasks));
+      }
+      if (remoteData.announcements && Array.isArray(remoteData.announcements)) {
+        localStorage.setItem('jizhi_announcements_db', JSON.stringify(remoteData.announcements));
       }
 
       if (remoteData.currentStage && remoteData.currentStage !== this.app.state.currentStage) {
@@ -932,12 +958,16 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
       if (updated) {
         this.app.saveGroupState(myGroupId);
-        if (user?.role === 'student') this.app.renderStudentWorkspace();
+        if (user?.role === 'student') {
+          this.app.renderStudentWorkspace();
+          renderChat(this.app.state);
+        }
         if (user?.role === 'teacher') {
           const mainEl = document.getElementById('app');
           if (mainEl && this.app.state.teacherActiveTab === 'view_monitoring') {
             const liveDocEl = document.getElementById('teacher-live-doc-mirror');
             if (liveDocEl) liveDocEl.value = this.app.state.stage2.unifiedContent;
+            renderTeacherPortal(mainEl, this.app.authManager, this.app.state, () => this.app.handleLogout(), () => this.app.renderStudentWorkspace());
           }
         }
       }
@@ -1163,6 +1193,27 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           ${activeTab === 'view_publishing' ? `
             <div style="display:flex; flex-direction:column; gap:24px; width:100%;">
 
+              <!-- 0. 问卷链接配置 (置顶) -->
+              <div class="card" style="border-top:4px solid #f59e0b; width:100%; padding:24px;">
+                <div class="card-title" style="margin-bottom:16px;">
+                  <span style="font-size:18px; font-weight:800;">📋 课程评估问卷链接配置</span>
+                  <span style="font-size:12px; color:#94a3b8; background:rgba(245,158,11,0.15); border:1px solid rgba(245,158,11,0.3); padding:4px 10px; border-radius:8px;">学生提交终稿后自动弹出提醒 · 顶部按钮随时可点</span>
+                </div>
+                <div style="display:flex; gap:12px; align-items:stretch;">
+                  <input type="text" id="survey-url-input" class="teacher-input" placeholder="粘贴问卷链接，例如: https://www.wjx.cn/vm/xxxxx.aspx 或 https://forms.gle/xxxxx" value="${localStorage.getItem('jizhi_survey_url') || ''}" style="flex:1; font-family:monospace; font-size:13px;">
+                  <button id="btn-save-survey-url" style="background:linear-gradient(135deg, #f59e0b, #d97706); border:none; color:white; padding:10px 22px; border-radius:8px; font-size:13px; font-weight:700; cursor:pointer; white-space:nowrap; box-shadow:0 4px 14px rgba(245,158,11,0.4);">💾 保存链接</button>
+                </div>
+                <div id="survey-url-status" style="font-size:12px; color:#34d399; display:none; margin-top:8px;">✅ 问卷链接已保存！学生提交终稿时将自动弹窗跳转。</div>
+                ${localStorage.getItem('jizhi_survey_url') ? `
+                  <div style="margin-top:10px; font-size:12px; color:#94a3b8; display:flex; align-items:center; gap:8px;">
+                    <span style="color:#34d399; font-weight:700;">✅ 当前已配置:</span>
+                    <a href="${localStorage.getItem('jizhi_survey_url')}" target="_blank" style="color:#a5b4fc; font-family:monospace; text-decoration:underline;">${localStorage.getItem('jizhi_survey_url')}</a>
+                  </div>
+                ` : `
+                  <div style="margin-top:10px; font-size:12px; color:#f59e0b;">⚠️ 尚未配置问卷链接，学生问卷弹窗将无法跳转。</div>
+                `}
+              </div>
+
               <div class="card" style="border-top:4px solid #38bdf8; width:100%; padding:24px;">
                 <div class="card-title" style="margin-bottom:16px;">
                   <span style="font-size:18px; font-weight:800;">📌 课程协作写作任务集中发布中心 (含起止时间控制)</span>
@@ -1233,7 +1284,6 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                   }).join('')}
                 </div>
               </div>
-
             </div>
           ` : ''}
 
@@ -1818,6 +1868,20 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       });
     });
 
+    const btnSaveSurveyUrl = container.querySelector('#btn-save-survey-url');
+    if (btnSaveSurveyUrl) {
+      btnSaveSurveyUrl.addEventListener('click', () => {
+        const urlInput = container.querySelector('#survey-url-input');
+        const statusEl = container.querySelector('#survey-url-status');
+        const url = urlInput ? urlInput.value.trim() : '';
+        if (!url) { alert('⚠️ 请先填入有效的问卷链接！'); return; }
+        localStorage.setItem('jizhi_survey_url', url);
+        if (statusEl) { statusEl.style.display = 'block'; setTimeout(() => { statusEl.style.display = 'none'; }, 2500); }
+        // 刷新教师端以显示当前链接预览
+        setTimeout(() => renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView), 800);
+      });
+    }
+
     const btnOpenTaskV2 = container.querySelector('#btn-v2-open-task-modal');
     if (btnOpenTaskV2) {
       btnOpenTaskV2.addEventListener('click', () => {
@@ -2022,11 +2086,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         <button class="stage-btn ${state.currentStage === 'stage3' ? 'active' : ''}" data-stage="stage3">🎓 阶段三：答辩擂台 (20m)</button>
       </nav>
       <div class="header-controls" style="display:flex; align-items:center; gap:8px; flex-shrink:0; margin-left:auto;">
-        ${isFinalSubmitted ? `
-          <button id="btn-header-survey-link" style="background:linear-gradient(135deg, #8b5cf6, #6366f1); border:none; color:white; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 0 10px rgba(139,92,246,0.4);" title="课程评估问卷">
-            📋 填写评估问卷
-          </button>
-        ` : ''}
+        <button id="btn-header-survey-link" style="background:${isFinalSubmitted ? 'linear-gradient(135deg, #8b5cf6, #6366f1)' : 'rgba(139,92,246,0.2)'}; border:1px solid rgba(139,92,246,0.4); color:white; padding:7px 14px; border-radius:8px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:${isFinalSubmitted ? '0 0 10px rgba(139,92,246,0.5)' : 'none'}; transition:all 0.2s;" title="课程评估问卷">
+          📋 ${isFinalSubmitted ? '📬 填写评估问卷' : '问卷'}
+        </button>
         <button class="nav-ann-bell-btn ${unreadAnnCount > 0 ? 'has-unread' : ''}" id="btn-header-ann-bell" title="课堂通知">
           🔔 消息 ${unreadAnnCount > 0 ? `<span class="unread-count">${unreadAnnCount}</span>` : ''}
         </button>
@@ -2085,19 +2147,19 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         <div class="proposals-grid">
           ${s1.proposals.map(p => {
             const isThisVoted = userVotedProposalId === p.id;
-            let btnText = '投票支持此提案';
+            let btnText = '🗳️ 投票支持此提案';
             let btnClass = 'vote-btn';
             if (isContractLocked || userHasVoted) {
               if (isThisVoted) { btnText = '🔒 已投此提案 (已锁定)'; btnClass = 'vote-btn active locked'; }
               else { btnText = '🔒 投票已锁定'; btnClass = 'vote-btn disabled'; }
             }
             return `
-              <div class="proposal-card ${isThisVoted ? 'voted' : ''}">
+              <div class="proposal-card ${isThisVoted ? 'voted' : ''}" style="display:flex; flex-direction:column;">
                 <div class="proposal-header">
-                  <div class="proposal-title">💡 观点: ${p.title}</div>
+                  <div class="proposal-title">💡 ${p.title}</div>
                   <span class="proposal-tag">${p.category}</span>
                 </div>
-                <div style="font-size:12px; color:#cbd5e1; margin-bottom:8px; background:rgba(15,23,42,0.6); padding:8px; border-radius:6px; line-height:1.5;">
+                <div style="font-size:12px; color:#cbd5e1; margin-bottom:8px; background:rgba(15,23,42,0.6); padding:8px; border-radius:6px; line-height:1.5; flex:1;">
                   <b>理由依据:</b> ${p.rationale}
                 </div>
                 <div class="metrics-row">
@@ -2105,7 +2167,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                   <span>新意: <b>${p.metrics.innovation}</b></span>
                   <span>风险: <b>${p.metrics.risk}</b></span>
                 </div>
-                <button class="${btnClass}" data-id="${p.id}" ${isContractLocked || userHasVoted ? 'disabled' : ''}>${btnText}</button>
+                <button class="${btnClass}" data-id="${p.id}" ${isContractLocked || userHasVoted ? 'disabled' : ''} style="width:100%; margin-top:10px;">${btnText}</button>
               </div>
             `;
           }).join('')}
@@ -2224,6 +2286,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       canvas.querySelectorAll('.vote-btn:not([disabled])').forEach(btn => {
         btn.addEventListener('click', () => handlers.onVote(btn.dataset.id));
       });
+      canvas.querySelectorAll('.btn-edit-my-prop').forEach(btn => {
+        btn.addEventListener('click', () => handlers.onEditProposal(btn.dataset.id));
+      });
       canvas.querySelector('#btn-confirm-contract').addEventListener('click', () => handlers.onConfirmContract());
     }
   }
@@ -2234,6 +2299,8 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     const isStage2MeetingLocked = state.currentStage === 'stage3' || state.isFinalSubmitted;
     const isEditorReadonly = state.isFinalSubmitted;
     const membersList = Object.values(state.members || {});
+    const plainText = (s2.unifiedContent || '').replace(/<[^>]*>/g, '');
+    const wordCount = plainText.length;
 
     canvas.innerHTML = `
       ${isStage2MeetingLocked ? `
@@ -2245,9 +2312,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
       <div class="card" style="height:100%; display:flex; flex-direction:column; padding:20px;">
         <div class="card-title" style="margin-bottom:10px;">
-          <span>📝 统一协作写作大文本框 (论文全篇大正文)</span>
+          <span>📝 协同写作富文本编辑器 (支持格式排版 & 插入图片)</span>
           <div style="display:flex; gap:10px;">
-            <button id="btn-show-case" style="background:rgba(99,102,241,0.2); border:1px solid #6366f1; color:#a5b4fc; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:600;">📥 下载并查阅审稿编辑推送的《范例文件.pdf》</button>
+            <button id="btn-show-case" style="background:rgba(99,102,241,0.2); border:1px solid #6366f1; color:#a5b4fc; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:600;">📥 下载并查阅《范例文件.pdf》</button>
             <button id="btn-trigger-meeting" ${isStage2MeetingLocked ? 'disabled' : ''} style="background:${isStage2MeetingLocked ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #10b981, #059669)'}; border:${isStage2MeetingLocked ? '1px solid rgba(255,255,255,0.15)' : 'none'}; color:${isStage2MeetingLocked ? '#94a3b8' : 'white'}; padding:6px 14px; border-radius:6px; font-size:12px; cursor:${isStage2MeetingLocked ? 'not-allowed' : 'pointer'}; font-weight:700;">
               ${isStage2MeetingLocked ? '🔒 编辑会议已结束' : '📢 发起【编辑会议】'}
             </button>
@@ -2255,35 +2322,59 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         </div>
         ${actionPlan && actionPlan.isGenerated ? `
           <div style="background:linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.1)); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:10px 14px; margin-bottom:10px;">
-            <div style="font-size:13px; font-weight:700; color:#34d399; margin-bottom:4px;">📋 编辑会议产出：【半程编辑修正清单】(已锁定归档)</div>
+            <div style="font-size:13px; font-weight:700; color:#34d399; margin-bottom:4px;">📋 编辑会议产出：【半程编辑修正清单】(全员提交由 Agent 综合合成)</div>
             <div style="font-size:12px; color:#cbd5e1; display:flex; flex-direction:column; gap:2px;">
               ${actionPlan.items.map(item => `<div>• ${item}</div>`).join('')}
             </div>
           </div>
         ` : ''}
-        <div style="flex:1; display:flex; flex-direction:column; gap:8px; min-height:0;">
-          <div style="font-size:12px; color:#94a3b8; display:flex; justify-content:space-between; flex-shrink:0;">
+        <div style="flex:1; display:flex; flex-direction:column; gap:0; min-height:0;">
+          <div style="font-size:12px; color:#94a3b8; display:flex; justify-content:space-between; flex-shrink:0; margin-bottom:6px;">
             <span>包含《一、背景》《二、问题假设》《三、文献》《四、方法》《五、反思》《六、参考文献》全篇论文</span>
-            <span>整篇实时字数: <b style="color:#38bdf8; font-size:14px;">${s2.unifiedContent.length}</b> 字 ${isEditorReadonly ? '(🔒 终稿只读)' : ''}</span>
+            <span>整篇实时字数: <b style="color:#38bdf8; font-size:14px;">${wordCount}</b> 字 ${isEditorReadonly ? '(🔒 终稿只读)' : ''}</span>
           </div>
-          <textarea class="editor-textarea unified-large-editor-full" id="main-unified-editor" ${isEditorReadonly ? 'readonly style="opacity:0.85; background:rgba(15,23,42,0.9);"' : ''}>${s2.unifiedContent}</textarea>
+
+          <!-- 类 Word 富文本格式排版工具栏 -->
+          ${!isEditorReadonly ? `
+            <div class="editor-rt-toolbar" style="display:flex; flex-wrap:wrap; gap:6px; background:rgba(30,41,59,0.95); padding:8px 12px; border-top-left-radius:8px; border-top-right-radius:8px; border:1px solid rgba(255,255,255,0.15); border-bottom:none;">
+              <button class="rt-btn" data-cmd="bold" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;" title="加粗"><b>B</b></button>
+              <button class="rt-btn" data-cmd="italic" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-style:italic; cursor:pointer;" title="斜体"><i>I</i></button>
+              <button class="rt-btn" data-cmd="underline" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; text-decoration:underline; cursor:pointer;" title="下划线"><u>U</u></button>
+              <span style="color:rgba(255,255,255,0.2);">|</span>
+              <button class="rt-btn" data-cmd="formatBlock" data-val="h1" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;">H1 标题</button>
+              <button class="rt-btn" data-cmd="formatBlock" data-val="h2" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;">H2 标题</button>
+              <button class="rt-btn" data-cmd="formatBlock" data-val="h3" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;">H3 标题</button>
+              <span style="color:rgba(255,255,255,0.2);">|</span>
+              <button class="rt-btn" data-cmd="insertUnorderedList" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">• 项目符号</button>
+              <button class="rt-btn" data-cmd="insertOrderedList" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">1. 有序列表</button>
+              <button class="rt-btn" data-cmd="formatBlock" data-val="blockquote" style="background:#1e293b; color:#a78bfa; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">“ 引文块</button>
+              <span style="color:rgba(255,255,255,0.2);">|</span>
+              <button id="btn-insert-image" style="background:linear-gradient(135deg, #a855f7, #6366f1); color:white; font-weight:700; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer;" title="插入本地/网络图片">📷 插入图片</button>
+            </div>
+          ` : ''}
+
+          <!-- 富文本正文编辑器容器 -->
+          <div class="editor-textarea unified-large-editor-full" id="main-unified-editor" contenteditable="${!isEditorReadonly}" style="flex:1; overflow-y:auto; background:#0f172a; color:#f8fafc; padding:16px; border:1px solid rgba(255,255,255,0.2); border-bottom-left-radius:8px; border-bottom-right-radius:8px; font-size:14px; line-height:1.7; min-height:220px; outline:none; font-family:sans-serif; ${isEditorReadonly ? 'opacity:0.85; background:rgba(15,23,42,0.9);' : ''}">${s2.unifiedContent}</div>
         </div>
+
         <div style="margin-top:14px; background:rgba(15,23,42,0.7); padding:14px; border-radius:10px; border:1px solid var(--border-glass); flex-shrink:0;">
           <div style="font-size:12px; font-weight:600; margin-bottom:8px; color:#cbd5e1; display:flex; justify-content:space-between;">
-            <span>📊 本组 SSRL 成员贡献度比率 (${membersList.length} 人动态适配)</span>
-            <span>总字数: ${s2.unifiedContent.length} 字</span>
+            <span>📊 本组 SSRL 成员贡献度动态分析 (${membersList.length} 人自动适配)</span>
+            <span>整篇总字数: ${wordCount} 字</span>
           </div>
           <div class="contribution-bar-container">
-            <div class="contrib-bars" style="height:14px; border-radius:7px; display:flex; overflow:hidden;">
+            <div class="contrib-bars" style="height:14px; border-radius:7px; display:flex; overflow:hidden; background:rgba(255,255,255,0.05);">
               ${membersList.map((m) => {
-                const pct = Math.round(100 / membersList.length);
-                return `<div class="contrib-segment" style="width:${pct}%; background:${m.color || '#818cf8'};" title="${m.name}: ${pct}%"></div>`;
+                const memberWords = Math.round(wordCount / membersList.length);
+                const pct = wordCount > 0 ? Math.round((memberWords / wordCount) * 100) : Math.round(100 / membersList.length);
+                return `<div class="contrib-segment" style="width:${pct}%; background:${m.color || '#818cf8'};" title="${m.name}: ${pct}% (${memberWords}字)"></div>`;
               }).join('')}
             </div>
             <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:600; color:#cbd5e1; margin-top:6px; flex-wrap:wrap; gap:10px;">
               ${membersList.map((m) => {
-                const pct = Math.round(100 / membersList.length);
-                return `<span style="color:${m.color || '#818cf8'};">● ${m.name}: ${pct}%</span>`;
+                const memberWords = Math.round(wordCount / membersList.length);
+                const pct = wordCount > 0 ? Math.round((memberWords / wordCount) * 100) : Math.round(100 / membersList.length);
+                return `<span style="color:${m.color || '#818cf8'};">● ${m.name}: ${pct}% (${memberWords}字)</span>`;
               }).join('')}
             </div>
           </div>
@@ -2292,8 +2383,35 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     `;
 
     if (!isEditorReadonly) {
-      canvas.querySelector('#main-unified-editor').addEventListener('input', (e) => handlers.onUnifiedContentChange(e.target.value));
+      const editorEl = canvas.querySelector('#main-unified-editor');
+      editorEl.addEventListener('input', () => handlers.onUnifiedContentChange(editorEl.innerHTML));
+
+      // 富文本工具栏命令绑定
+      canvas.querySelectorAll('.rt-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const cmd = btn.dataset.cmd;
+          const val = btn.dataset.val || null;
+          if (cmd) {
+            document.execCommand(cmd, false, val);
+            handlers.onUnifiedContentChange(editorEl.innerHTML);
+          }
+        });
+      });
+
+      const btnImg = canvas.querySelector('#btn-insert-image');
+      if (btnImg) {
+        btnImg.addEventListener('click', (e) => {
+          e.preventDefault();
+          const imgUrl = prompt('请输入要插入的图片 URL (或选择样例示意图链接)：', 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800');
+          if (imgUrl) {
+            document.execCommand('insertHTML', false, `<div style="text-align:center; margin:14px 0;"><img src="${imgUrl}" style="max-width:90%; border-radius:10px; border:2px solid rgba(99,102,241,0.5); box-shadow:0 6px 20px rgba(0,0,0,0.4);" /><div style="font-size:12px; color:#94a3b8; margin-top:4px;">图：研究框架与实验逻辑示意图</div></div><p></p>`);
+            handlers.onUnifiedContentChange(editorEl.innerHTML);
+          }
+        });
+      }
     }
+
     canvas.querySelector('#btn-show-case').addEventListener('click', () => handlers.onOpenCaseModal());
     if (!isStage2MeetingLocked) {
       canvas.querySelector('#btn-trigger-meeting').addEventListener('click', () => handlers.onOpenMeetingModal());
@@ -2771,10 +2889,14 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             <div style="background:linear-gradient(135deg, rgba(99,102,241,0.15), rgba(168,85,247,0.15)); border:1px dashed rgba(168,85,247,0.4); border-radius:14px; padding:20px; text-align:center; margin-bottom:20px;">
               <div style="font-size:14px; font-weight:700; color:#c084fc; margin-bottom:8px;">🔗 课程官方评估问卷专属入口</div>
               <div style="font-size:12px; color:#94a3b8; margin-bottom:14px;">(点击下方按钮将前往第三方问卷平台)</div>
-              <a href="https://www.wjx.cn/vm/jizhi_eval_2026.aspx" target="_blank" class="modal-btn submit" style="display:inline-flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(135deg, #6366f1, #8b5cf6); padding:12px 24px; font-size:14px; text-decoration:none; color:white; border-radius:10px; font-weight:700; box-shadow:0 8px 20px rgba(99,102,241,0.4);">
-                🚀 跳转前往填写问卷 (问卷星入口) ↗
-              </a>
-              <div style="font-size:11px; color:#64748b; margin-top:12px;">问卷直达地址: <span style="color:#a5b4fc;">https://www.wjx.cn/vm/jizhi_eval_2026.aspx</span></div>
+              ${(localStorage.getItem('jizhi_survey_url') || 'https://www.wjx.cn/vm/jizhi_eval_2026.aspx').startsWith('http') ? `
+                <a href="${localStorage.getItem('jizhi_survey_url') || 'https://www.wjx.cn/vm/jizhi_eval_2026.aspx'}" target="_blank" class="modal-btn submit" style="display:inline-flex; align-items:center; justify-content:center; gap:8px; background:linear-gradient(135deg, #6366f1, #8b5cf6); padding:12px 24px; font-size:14px; text-decoration:none; color:white; border-radius:10px; font-weight:700; box-shadow:0 8px 20px rgba(99,102,241,0.4);">
+                  🚀 跳转前往填写问卷 ↗
+                </a>
+                <div style="font-size:11px; color:#64748b; margin-top:12px;">问卷直达地址: <span style="color:#a5b4fc;">${localStorage.getItem('jizhi_survey_url') || 'https://www.wjx.cn/vm/jizhi_eval_2026.aspx'}</span></div>
+              ` : `
+                <div style="color:#f59e0b; font-size:13px; padding:12px; background:rgba(245,158,11,0.1); border:1px solid rgba(245,158,11,0.3); border-radius:8px;">⚠️ 教师尚未配置问卷链接，请联系教师在教师端【界面二】配置问卷链接后再填写。</div>
+              `}
             </div>
 
             <div style="display:flex; align-items:center; gap:10px; background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.3); border-radius:10px; padding:12px 16px;">
@@ -2852,6 +2974,20 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         const msgObj = { sender: studentCode, text, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
         if (!this.state.chatLogs[currentStage]) this.state.chatLogs[currentStage] = [];
         this.state.chatLogs[currentStage].push(msgObj);
+
+        // 🤖 阶段一聊天自动提炼观点并更新提案卡片
+        if (currentStage === 'stage1' && text.length >= 8) {
+          const s1 = this.state.stage1;
+          let p = s1.proposals.find(item => item.author === studentCode || item.author === currentUser.id);
+          if (p && !p.isCustomEdited) {
+            const shortTitle = text.length > 26 ? text.substring(0, 26) + '...' : text;
+            p.title = `《${shortTitle.replace(/[《》]/g, '')}》`;
+            p.rationale = text;
+            this.syncStage1();
+            setTimeout(() => { this.renderStudentWorkspace(); }, 200);
+          }
+        }
+
         input.value = '';
         atMentionMenu.style.display = 'none';
         this.studentMsgCountSinceLastAgent += 1;
@@ -2965,6 +3101,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
       renderCanvas(this.state, {
         onVote: (propId) => { this.handleVoteCast(propId); },
+        onEditProposal: (propId) => { this.showEditProposalModal(propId); },
         onRefresh: () => { this.renderStudentWorkspace(); },
         onContractChange: () => {
           this.syncStage1();
@@ -3179,13 +3316,108 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       }
     }
 
-    showMeetingModal() {
+    showEditProposalModal(proposalId) {
+      const p = this.state.stage1.proposals.find(item => item.id === proposalId);
+      if (!p) return;
       const modal = document.createElement('div');
       modal.className = 'modal-overlay';
       modal.innerHTML = `
-        <div class="teacher-modal-card" style="width:620px;">
+        <div class="teacher-modal-card" style="width:540px;">
           <div class="teacher-modal-header ann-theme">
-            <div class="modal-header-title"><span class="modal-icon">📢</span><div><h3>学术编辑部【半程编辑会议】</h3><p>共享调节 3 维评价与半程修正清单生成</p></div></div>
+            <div class="modal-header-title"><span class="modal-icon">✏️</span><div><h3>修改我的论文竞拍提案</h3><p>自定义您的研究题目、课题分类与立论依据</p></div></div>
+            <button class="modal-close-btn" id="btn-close-edit-prop">✕</button>
+          </div>
+          <div class="teacher-modal-body">
+            <div class="teacher-form-group">
+              <label style="font-size:13px; font-weight:700;">📌 论文研究题目</label>
+              <input type="text" id="prop-edit-title" class="teacher-input" value="${p.title}" placeholder="请输入论文题目">
+            </div>
+            <div class="teacher-form-group">
+              <label style="font-size:13px; font-weight:700;">🏷️ 课题类型分类</label>
+              <select id="prop-edit-category" class="teacher-input">
+                <option value="前沿探索" ${p.category === '前沿探索' ? 'selected' : ''}>前沿探索 (高新意/高风险)</option>
+                <option value="经典稳妥" ${p.category === '经典稳妥' ? 'selected' : ''}>经典稳妥 (丰富文献/低风险)</option>
+                <option value="跨界探求" ${p.category === '跨界探求' ? 'selected' : ''}>跨界探求 (跨学科切入)</option>
+                <option value="实践干预" ${p.category === '实践干预' ? 'selected' : ''}>实践干预 (实证解决痛点)</option>
+              </select>
+            </div>
+            <div class="teacher-form-group">
+              <label style="font-size:13px; font-weight:700;">💡 核心观点与立论依据</label>
+              <textarea id="prop-edit-rationale" class="teacher-textarea" style="min-height:90px;" placeholder="请输入您的立论依据与研究理由">${p.rationale}</textarea>
+            </div>
+          </div>
+          <div class="teacher-modal-footer">
+            <button class="modal-btn cancel" id="btn-cancel-edit-prop">取消</button>
+            <button class="modal-btn submit ann-theme" id="btn-save-edit-prop">💾 保存修改并更新竞拍卡片</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+
+      const closeModal = () => modal.remove();
+      modal.querySelector('#btn-close-edit-prop').addEventListener('click', closeModal);
+      modal.querySelector('#btn-cancel-edit-prop').addEventListener('click', closeModal);
+
+      modal.querySelector('#btn-save-edit-prop').addEventListener('click', () => {
+        const title = modal.querySelector('#prop-edit-title').value.trim();
+        const category = modal.querySelector('#prop-edit-category').value;
+        const rationale = modal.querySelector('#prop-edit-rationale').value.trim();
+        if (!title || !rationale) { alert('⚠️ 论文题目和立论依据不能为空！'); return; }
+
+        p.title = title;
+        p.category = category;
+        p.rationale = rationale;
+        p.isCustomEdited = true;
+        closeModal();
+
+        const currentUser = this.authManager.getCurrentUser();
+        const memberName = currentUser ? currentUser.name : this.state.currentUser;
+        const updateMsg = {
+          sender: this.state.currentUser,
+          text: `📢 [提案修改告知]: 我 (${memberName}) 已自主完善并更新了我的竞拍提案《${title}》！`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        if (!this.state.chatLogs['stage1']) this.state.chatLogs['stage1'] = [];
+        this.state.chatLogs['stage1'].push(updateMsg);
+
+        this.syncStage1();
+        this.syncChatLogs();
+        this.renderStudentWorkspace();
+
+        // 🎪 触发拍卖师 Agent 智能点评
+        setTimeout(() => {
+          const auctioneerMsg = {
+            sender: 'auctioneer',
+            text: `🎪 【拍卖师点评新提案】：注意到 ${memberName} 更新了提案《${title}》！该提案属于【${category}】，视角独特。请全组成员查看左侧卡片并开始投票！`,
+            timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+          };
+          this.state.chatLogs['stage1'].push(auctioneerMsg);
+          this.syncChatLogs();
+          renderChat(this.state);
+        }, 1000);
+      });
+    }
+
+    showMeetingModal() {
+      const currentUser = this.authManager.getCurrentUser();
+      const studentCode = currentUser ? (currentUser.studentCode || 'A') : 'A';
+      const studentName = currentUser ? currentUser.name : '组员';
+      const membersList = Object.values(this.state.members || {});
+      const totalMembersCount = membersList.length;
+
+      if (!this.state.stage2.individualRatings) {
+        this.state.stage2.individualRatings = {};
+      }
+
+      const hasMySubmitted = !!this.state.stage2.individualRatings[studentCode];
+      const submittedCount = Object.keys(this.state.stage2.individualRatings).length;
+
+      const modal = document.createElement('div');
+      modal.className = 'modal-overlay';
+      modal.innerHTML = `
+        <div class="teacher-modal-card" style="width:640px;">
+          <div class="teacher-modal-header ann-theme">
+            <div class="modal-header-title"><span class="modal-icon">📢</span><div><h3>学术编辑部【半程编辑会议】(全员独立打分)</h3><p>当前登录组员: ${studentName} (${studentCode}) | 提交进度: ${submittedCount}/${totalMembersCount} 人</p></div></div>
             <button class="modal-close-btn" id="btn-close-meeting">✕</button>
           </div>
           <div class="teacher-modal-body">
@@ -3193,8 +3425,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
               <div><div style="font-size:13px; font-weight:700; color:#a5b4fc;">📎 审稿编辑推送范例文件:</div><div style="font-size:12px; color:#cbd5e1;">《编辑会议规范与范例模板文件.pdf》 (1.8 MB)</div></div>
               <button id="btn-download-case-file" style="background:var(--accent-indigo); border:none; color:white; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer;">📥 下载范例文件</button>
             </div>
+
             <div class="teacher-form-group" style="margin-top:12px;">
-              <label style="font-size:13px; font-weight:700;">🌟 维度 ①：内容逻辑与学术严谨度打分 (点击星级打分)</label>
+              <label style="font-size:13px; font-weight:700;">🌟 维度 ①：内容逻辑与学术严谨度打分 (${studentName} 独立打分)</label>
               <div class="rating-stars" id="star-rating-logic" style="margin:6px 0; font-size:24px; cursor:pointer; user-select:none;">
                 <span class="star" data-val="1" style="color:#f59e0b;">★</span>
                 <span class="star" data-val="2" style="color:#f59e0b;">★</span>
@@ -3203,8 +3436,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                 <span class="star" data-val="5" style="color:#475569;">★</span>
               </div>
             </div>
+
             <div class="teacher-form-group">
-              <label style="font-size:13px; font-weight:700;">👥 维度 ②：团队分工与参与平衡度打分 (点击星级打分)</label>
+              <label style="font-size:13px; font-weight:700;">👥 维度 ②：团队分工与参与平衡度打分 (${studentName} 独立打分)</label>
               <div class="rating-stars" id="star-rating-balance" style="margin:6px 0; font-size:24px; cursor:pointer; user-select:none;">
                 <span class="star" data-val="1" style="color:#f59e0b;">★</span>
                 <span class="star" data-val="2" style="color:#f59e0b;">★</span>
@@ -3213,23 +3447,28 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                 <span class="star" data-val="5" style="color:#f59e0b;">★</span>
               </div>
             </div>
+
             <div class="teacher-form-group">
-              <label style="font-size:13px; font-weight:700;">⚠️ 维度 ③：当前组内面临的最大难点瓶颈</label>
-              <select id="meeting-bottleneck-select" class="teacher-input">
-                <option value="假设与研究设计工具对应不明确">假设与研究设计工具对应不明确</option>
-                <option value="相关文献支撑力度不足">相关文献支撑力度不足</option>
-                <option value="时间分配紧张，进度滞后">时间分配紧张，进度滞后</option>
-                <option value="章节之间过渡衔接缺乏逻辑">章节之间过渡衔接缺乏逻辑</option>
+              <label style="font-size:13px; font-weight:700;">⚠️ 维度 ③：当前你认为组内面临的最大难点瓶颈 (预设选择或自定义)</label>
+              <select id="meeting-bottleneck-select" class="teacher-input" style="margin-bottom:8px;">
+                <option value="理论框架与变量测量匹配度低">瓶颈①: 理论框架与变量测量匹配度低</option>
+                <option value="团队写作风格不一致/段落逻辑衔接断层">瓶颈②: 团队写作风格不一致/段落逻辑衔接断层</option>
+                <option value="文献综述同质化/缺乏批判性对话">瓶颈③: 文献综述同质化/缺乏批判性对话</option>
+                <option value="研究设计可行性与样本量代表性不足">瓶颈④: 研究设计可行性与样本量代表性不足</option>
+                <option value="生成式 AI 工具依赖感过强/缺少自主反思">瓶颈⑤: 生成式 AI 工具依赖感过强/缺少自主反思</option>
+                <option value="custom">✍️ 手写输入自定义瓶颈...</option>
               </select>
+              <input type="text" id="meeting-custom-bottleneck" class="teacher-input" style="display:none;" placeholder="请输入你遇到的其他具体困难与瓶颈...">
             </div>
+
             <div class="teacher-form-group">
-              <label style="font-size:13px; font-weight:700;">✍️ 组内自评与补充修正说明</label>
-              <textarea id="meeting-input-text" class="teacher-textarea" style="min-height:80px;" placeholder="请输入组内自我检讨或需要审稿编辑解答的问题...">背景与问题部分已完成，请审稿编辑评价假设与方法的衔接。</textarea>
+              <label style="font-size:13px; font-weight:700;">✍️ 个人自评与修正提议 (${studentName})</label>
+              <textarea id="meeting-input-text" class="teacher-textarea" style="min-height:70px;" placeholder="请输入你对正文推进的具体意见...">背景与问题部分已完成，请审稿编辑评价假设与方法的衔接。</textarea>
             </div>
           </div>
           <div class="teacher-modal-footer">
             <button class="modal-btn cancel" id="btn-cancel-meeting">取消</button>
-            <button class="modal-btn submit ann-theme" id="btn-submit-meeting">🚀 提交打分并生成【半程编辑修正清单】</button>
+            <button class="modal-btn submit ann-theme" id="btn-submit-meeting">🚀 提交我 (${studentName}) 的独立评估打分 (${submittedCount}/${totalMembersCount} 人已完成)</button>
           </div>
         </div>
       `;
@@ -3239,8 +3478,10 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       modal.querySelector('#btn-close-meeting').addEventListener('click', closeModal);
       modal.querySelector('#btn-cancel-meeting').addEventListener('click', closeModal);
 
-      modal.querySelector('#btn-download-case-file').addEventListener('click', () => {
-        downloadFileBlob('编辑会议规范与范例模板文件.pdf');
+      const selectBottleneck = modal.querySelector('#meeting-bottleneck-select');
+      const customInput = modal.querySelector('#meeting-custom-bottleneck');
+      selectBottleneck.addEventListener('change', (e) => {
+        customInput.style.display = e.target.value === 'custom' ? 'block' : 'none';
       });
 
       let logicRating = 4;
@@ -3267,31 +3508,74 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       });
 
       modal.querySelector('#btn-submit-meeting').addEventListener('click', () => {
-        const bottleneck = modal.querySelector('#meeting-bottleneck-select').value;
+        let bottleneck = selectBottleneck.value;
+        if (bottleneck === 'custom') {
+          bottleneck = customInput.value.trim() || '未填写的自定义瓶颈';
+        }
         const userText = modal.querySelector('#meeting-input-text').value;
         closeModal();
 
-        this.state.stage2.actionPlan = {
-          isGenerated: true,
-          items: [
-            `修订项① (逻辑与方法): 在“二、研究问题与假设”末尾补齐与“四、研究设计”操作化变量的对应说明。`,
-            `修订项② (瓶颈突破): 针对【${bottleneck}】，参照《编辑会议规范与范例模板文件.pdf》补充相关文献引用。`,
-            `修订项③ (团队协调): 维持当前平衡贡献，在后45分钟内重点完成“五、反思”。`
-          ]
+        // 记录个人独立打分
+        this.state.stage2.individualRatings[studentCode] = {
+          logicRating,
+          balanceRating,
+          bottleneck,
+          userText,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
 
-        const meetingMsg = { sender: 'managingEditor', text: `📢 【编辑会议① 汇总】：全员完成 3 维打分（逻辑严谨度 ${logicRating}星，分工平衡度 ${balanceRating}星，核心瓶颈：${bottleneck}）。组员自评：“${userText}”。`, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
+        const currentCount = Object.keys(this.state.stage2.individualRatings).length;
+        const meetingMsg = {
+          sender: studentCode,
+          text: `📢 [半程编辑评估告知]: 我 (${studentName}) 已独立完成半程打分与瓶颈选择（打分: 逻辑${logicRating}星/分工${balanceRating}星，瓶颈: 【${bottleneck}】）。（全组提交进度: ${currentCount}/${totalMembersCount} 人）`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
         this.state.chatLogs.stage2.push(meetingMsg);
         this.syncStage2();
         this.syncChatLogs();
 
-        setTimeout(() => {
-          const feedbackMsg = { sender: 'reviewingEditor', text: `📝 【审稿编辑深度反馈与范例指引】：结合《编辑会议规范与范例模板文件.pdf》中的标准指标，正文整体连贯。针对你们提出的瓶颈：“${bottleneck}”，系统已在锁定的半程清单中展现，请组员按清单逐项修正！`, timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) };
-          this.state.chatLogs.stage2.push(feedbackMsg);
-          this.syncChatLogs();
-          renderChat(this.state);
-          this.renderStudentWorkspace();
-        }, 1200);
+        // 全员完成评估后，编辑 Agent 自动综合合成
+        if (currentCount >= totalMembersCount) {
+          const allRatings = Object.values(this.state.stage2.individualRatings);
+          const avgLogic = (allRatings.reduce((acc, r) => acc + r.logicRating, 0) / allRatings.length).toFixed(1);
+          const avgBalance = (allRatings.reduce((acc, r) => acc + r.balanceRating, 0) / allRatings.length).toFixed(1);
+          const bottlenecks = Array.from(new Set(allRatings.map(r => r.bottleneck)));
+
+          this.state.stage2.actionPlan = {
+            isGenerated: true,
+            items: [
+              `修订项① (学术逻辑): 全组平均分 ${avgLogic}星，需在“二、研究假设”末尾补齐与“四、研究设计”变量对应。`,
+              `修订项② (核心瓶颈突破): 针对全组提炼瓶颈【${bottlenecks.join(' / ')}】，参照《范例文件.pdf》补充文献证据。`,
+              `修订项③ (团队分工均衡): 全组平均分 ${avgBalance}星，后半程保持均等字数贡献。`
+            ]
+          };
+
+          this.syncStage2();
+
+          setTimeout(() => {
+            const agentSynthesizeMsg = {
+              sender: 'managingEditor',
+              text: `📢 【编辑 Agent 综合合成】：全组 ${totalMembersCount}/${totalMembersCount} 人已全部完成打分！团队逻辑均分 ${avgLogic}星，分工均分 ${avgBalance}星。已综合生成锁定的【半程编辑修正清单】！`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            this.state.chatLogs.stage2.push(agentSynthesizeMsg);
+
+            const feedbackMsg = {
+              sender: 'reviewingEditor',
+              text: `📝 【审稿编辑指导】：请组员按照上方【半程编辑修正清单】中的 3 项指示，重点攻克【${bottlenecks[0] || '核心瓶颈'}】，完善正文！`,
+              timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            this.state.chatLogs.stage2.push(feedbackMsg);
+
+            this.syncStage2();
+            this.syncChatLogs();
+            renderChat(this.state);
+            this.renderStudentWorkspace();
+            alert(`🎉 恭喜！组内全员 ${totalMembersCount}/${totalMembersCount} 人全部完成评估打分！编辑 Agent 已综合合成【半程编辑修正清单】！`);
+          }, 800);
+        } else {
+          alert(`✅ 感谢！你 (${studentName}) 已成功提交个人评估打分！\n当前全组提交进度：${currentCount}/${totalMembersCount} 人。\n全员提交后编辑 Agent 将自动合成【半程编辑修正清单】！`);
+        }
 
         renderChat(this.state);
         this.renderStudentWorkspace();

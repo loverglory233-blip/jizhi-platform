@@ -1,7 +1,7 @@
 /**
  * Jizhi (集智) Multi-Agent Collaborative Writing Platform
- * App Controller - Pure Client-Side Fail-Safe 200ms Storage Polling + BroadcastChannel Sync
- * 100% Guaranteed Instant Multi-Window & Multi-Tab Synchronization
+ * App Controller - Cross-Device Real-Time Sync via Aliyun Server + LocalStorage Fallback
+ * Supports: BroadcastChannel (same browser) + Server Polling (cross-device/remote)
  */
 
 import { InitialState } from './state.js';
@@ -16,13 +16,21 @@ const STORAGE_KEY_STAGE1 = 'jizhi_sync_s1_v3';
 const STORAGE_KEY_STAGE2 = 'jizhi_sync_s2_v3';
 const STORAGE_KEY_STAGE_CURRENT = 'jizhi_sync_current_stage_v3';
 
+// ✅ 阿里云服务器地址 - 跨设备/异地同步的核心
+const SERVER_URL = 'http://47.99.110.230:8088';
+const GROUP_ID = 'group_1'; // 同一组的学生使用相同的 groupId
+const SERVER_POLL_INTERVAL = 2000; // 每2秒从服务器拉取一次最新状态
+
 class App {
   constructor() {
     this.authManager = new AuthManager();
     this.state = JSON.parse(JSON.stringify(InitialState));
     this.studentMsgCountSinceLastAgent = 0; // Counter for intelligent agent triggers
+    this._lastServerTimestamp = 0; // 记录上次服务器数据时间戳，避免重复应用
+    this._serverAvailable = false; // 服务器是否可用
     this.initSyncStorage();
     this.initRealtimeSync();
+    this.initServerSync(); // ✅ 启动跨设备服务器同步
     this.initTimer();
     this.renderMain();
   }
@@ -161,6 +169,7 @@ class App {
     if (this.bc) {
       this.bc.postMessage({ type: 'CHAT_UPDATE', chatLogs: this.state.chatLogs });
     }
+    this.pushToServer(); // ✅ 同步推送到服务器，让其他设备可以拉取
   }
 
   syncStage1() {
@@ -168,6 +177,7 @@ class App {
     if (this.bc) {
       this.bc.postMessage({ type: 'STAGE1_UPDATE', stage1: this.state.stage1 });
     }
+    this.pushToServer(); // ✅ 同步推送到服务器
   }
 
   syncStage2() {
@@ -175,6 +185,7 @@ class App {
     if (this.bc) {
       this.bc.postMessage({ type: 'STAGE2_UPDATE', stage2: this.state.stage2 });
     }
+    this.pushToServer(); // ✅ 同步推送到服务器
   }
 
   syncStageChange(stage) {
@@ -182,6 +193,124 @@ class App {
     if (this.bc) {
       this.bc.postMessage({ type: 'STAGE_CHANGE', stage });
     }
+    this.pushToServer(); // ✅ 同步推送到服务器
+  }
+
+  /**
+   * ✅ 推送当前完整状态到阿里云服务器
+   * 其他设备通过 pollFromServer() 拉取此数据实现跨设备同步
+   */
+  async pushToServer() {
+    if (!this._serverAvailable) return;
+    const payload = {
+      timestamp: Date.now(),
+      chatLogs: this.state.chatLogs,
+      stage1: this.state.stage1,
+      stage2: this.state.stage2,
+      currentStage: this.state.currentStage
+    };
+    try {
+      await fetch(`${SERVER_URL}/api/snapshot?groupId=${GROUP_ID}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+    } catch (e) {
+      // 服务器不可达时静默失败，本地依然正常运行
+      this._serverAvailable = false;
+      console.warn('[Jizhi] 服务器推送失败，切换为本地模式:', e.message);
+    }
+  }
+
+  /**
+   * ✅ 从阿里云服务器拉取最新状态，应用到本地
+   * 是实现异地/跨设备同步的核心机制
+   */
+  async pollFromServer() {
+    try {
+      const res = await fetch(`${SERVER_URL}/api/snapshot?groupId=${GROUP_ID}`, {
+        signal: AbortSignal.timeout(3000)
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      this._serverAvailable = true;
+
+      // 只有服务器数据比本地更新时才应用，避免覆盖自己刚发送的数据
+      if (!data || !data.timestamp || data.timestamp <= this._lastServerTimestamp) return;
+      this._lastServerTimestamp = data.timestamp;
+
+      let changed = false;
+
+      if (data.chatLogs) {
+        const localJson = JSON.stringify(this.state.chatLogs);
+        const remoteJson = JSON.stringify(data.chatLogs);
+        if (localJson !== remoteJson) {
+          this.state.chatLogs = data.chatLogs;
+          localStorage.setItem(STORAGE_KEY_CHAT, remoteJson);
+          renderChat(this.state);
+        }
+      }
+
+      if (data.stage1) {
+        const localJson = JSON.stringify(this.state.stage1);
+        const remoteJson = JSON.stringify(data.stage1);
+        if (localJson !== remoteJson) {
+          this.state.stage1 = data.stage1;
+          localStorage.setItem(STORAGE_KEY_STAGE1, remoteJson);
+          changed = true;
+        }
+      }
+
+      if (data.stage2) {
+        const localJson = JSON.stringify(this.state.stage2);
+        const remoteJson = JSON.stringify(data.stage2);
+        if (localJson !== remoteJson) {
+          this.state.stage2 = data.stage2;
+          localStorage.setItem(STORAGE_KEY_STAGE2, remoteJson);
+          changed = true;
+        }
+      }
+
+      if (data.currentStage && data.currentStage !== this.state.currentStage) {
+        this.state.currentStage = data.currentStage;
+        localStorage.setItem(STORAGE_KEY_STAGE_CURRENT, data.currentStage);
+        changed = true;
+      }
+
+      if (changed) {
+        this.renderStudentWorkspace();
+      }
+    } catch (e) {
+      // 网络超时或服务器不可达，静默失败
+      if (this._serverAvailable) {
+        this._serverAvailable = false;
+        console.warn('[Jizhi] 服务器不可达，使用本地模式');
+      }
+    }
+  }
+
+  /**
+   * ✅ 初始化服务器同步：先检测连通性，再启动轮询
+   */
+  async initServerSync() {
+    // 先检测服务器是否可达
+    try {
+      const res = await fetch(`${SERVER_URL}/api/snapshot?groupId=${GROUP_ID}`, {
+        signal: AbortSignal.timeout(4000)
+      });
+      if (res.ok) {
+        this._serverAvailable = true;
+        console.log('[Jizhi] ✅ 服务器连接成功，已启用跨设备同步！');
+        // 首次连接后立即拉取最新状态
+        await this.pollFromServer();
+      }
+    } catch (e) {
+      this._serverAvailable = false;
+      console.warn('[Jizhi] ⚠️ 服务器不可达（', SERVER_URL, '），使用本地模式。检查服务器是否运行、端口8088是否开放。');
+    }
+
+    // 启动定时轮询（无论服务器是否可达都保持轮询，以便自动恢复）
+    setInterval(() => this.pollFromServer(), SERVER_POLL_INTERVAL);
   }
 
   initTimer() {
