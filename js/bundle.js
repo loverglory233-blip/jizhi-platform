@@ -373,38 +373,37 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         return (uName === query || uEmail === query || uCode === query || ('student' + uCode) === query) && u.password === password;
       });
       if (user) {
-        // 🔒 账号单人互斥登录锁：从服务器秒级同步最新 activeSessions，保证多设备 100% 互斥拦截
-        let serverActiveSessions = {};
+        // 🔒 账号单人物理级互斥锁：直接由 Python 后端内存强制校验，100% 跨设备/浏览器弹窗拦截
+        if (!window.__jizhi_tab_token) {
+          window.__jizhi_tab_token = 'tab_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        }
+        const currentToken = window.__jizhi_tab_token;
+
         try {
           const xhr = new XMLHttpRequest();
-          xhr.open('GET', '/api/snapshot?groupId=group_1', false);
-          xhr.send(null);
+          xhr.open('POST', '/api/session/login', false);
+          xhr.setRequestHeader('Content-Type', 'application/json');
+          xhr.send(JSON.stringify({
+            userId: user.id,
+            token: currentToken,
+            userName: user.name
+          }));
           if (xhr.status === 200) {
-            const remoteData = JSON.parse(xhr.responseText);
-            if (remoteData && remoteData.activeSessions) {
-              serverActiveSessions = remoteData.activeSessions;
-              if (window.app && window.app.state) window.app.state.activeSessions = remoteData.activeSessions;
+            const res = JSON.parse(xhr.responseText);
+            if (!res.success) {
+              return {
+                success: false,
+                message: res.message || `⚠️ 账号 [${user.name}] 此时正在其他设备/浏览器上登录使用中！`
+              };
             }
           }
-        } catch (e) {}
-
-        const active = serverActiveSessions[user.id] || (window.app && window.app.state && window.app.state.activeSessions ? window.app.state.activeSessions[user.id] : null);
-        let currentToken = sessionStorage.getItem('jizhi_session_token');
-        if (!currentToken) {
-          currentToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-          sessionStorage.setItem('jizhi_session_token', currentToken);
-        }
-        if (active && active.token && active.token !== currentToken && (Date.now() - (active.lastActive || 0)) < 180000) {
-          return {
-            success: false,
-            message: `⚠️ 账号 [${user.name}] 此时正在其他设备/浏览器上登录使用中！\n为避免两人同时操作同一个账号产生冲突，请使用您个人的独立账号登录 (如：王芳 / 陈强)。`
-          };
+        } catch (e) {
+          console.error('Session lock check failed:', e);
         }
 
         if (window.app && window.app.state) {
           if (!window.app.state.activeSessions) window.app.state.activeSessions = {};
           window.app.state.activeSessions[user.id] = { token: currentToken, lastActive: Date.now(), userName: user.name };
-          if (window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
         }
         sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
         localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
@@ -412,15 +411,38 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       }
       return { success: false, message: '账号或密码错误 (默认密码统一定为 123)' };
     }
+
     logout() {
       const user = this.getCurrentUser();
-      if (user && window.app && window.app.state && window.app.state.activeSessions) {
-        delete window.app.state.activeSessions[user.id];
-        if (window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
+      if (user) {
+        try {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', '/api/session/logout', true);
+          xhr.setRequestHeader('Content-Type', 'application/json');
+          xhr.send(JSON.stringify({ userId: user.id }));
+        } catch (e) {}
       }
       sessionStorage.removeItem(STORAGE_KEY_USER);
       localStorage.removeItem(STORAGE_KEY_USER);
-      sessionStorage.removeItem('jizhi_session_token');
+    }
+
+    refreshHeartbeat() {
+      const user = this.getCurrentUser();
+      if (user) {
+        if (!window.__jizhi_tab_token) {
+          window.__jizhi_tab_token = 'tab_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        }
+        try {
+          const xhr = new XMLHttpRequest();
+          xhr.open('POST', '/api/session/heartbeat', true);
+          xhr.setRequestHeader('Content-Type', 'application/json');
+          xhr.send(JSON.stringify({
+            userId: user.id,
+            token: window.__jizhi_tab_token,
+            userName: user.name
+          }));
+        } catch (e) {}
+      }
     }
 
     createClass(className, classCode = null) {
@@ -2420,8 +2442,11 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
               <button id="btn-format-painter" style="background:#2563eb; color:#ffffff; font-weight:700; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.3);" title="格式刷：选中文本点击复制格式，再选中目标文本赋予格式">🖌️ 格式刷</button>
               <button class="rt-btn" data-cmd="removeFormat" style="background:#ffffff; color:#ef4444; border:1px solid #fca5a5; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="清除所选文本的格式">🧹 清除格式</button>
               <span style="color:#cbd5e1;">|</span>
+              <!-- Word 顶级标准工具栏 -->
+              <button id="btn-format-painter" style="background:#2563eb; color:white; border:none; padding:4px 10px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 6px rgba(37,99,235,0.3);" title="格式刷：选中文本复制样式，再选择目标文本应用">🖌️ 格式刷</button>
+              <span style="color:#cbd5e1;">|</span>
               <!-- 学术字体选择 -->
-              <select class="select-font-family" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;" title="学术论文标准字体">
+              <select id="select-font-family" class="select-font-family" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;" title="学术论文标准字体">
                 <option value="SimSun, 'Times New Roman', serif">宋体 / Times New Roman (国标学术正文)</option>
                 <option value="FangSong, serif">仿宋 (公文/学术标准)</option>
                 <option value="KaiTi, serif">楷体 (摘要/引文)</option>
@@ -2431,7 +2456,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                 <option value="Calibri, sans-serif">Calibri (英文APA)</option>
               </select>
               <!-- 学术字号选择 -->
-              <select class="select-font-size" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;" title="学术论文标准字号">
+              <select id="select-font-size" class="select-font-size" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;" title="学术论文标准字号">
                 <option value="3">小四 (12pt · 正文标准)</option>
                 <option value="4">四号 (14pt · 二级标题)</option>
                 <option value="5">三号 (16pt · 一级标题)</option>
@@ -2440,33 +2465,19 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                 <option value="2">五号 (10.5pt · 图表说明)</option>
                 <option value="1">小五 (9pt · 脚标注释)</option>
               </select>
-              <!-- 学术行距选择 -->
-              <select class="select-line-height" style="background:#ffffff; color:#2563eb; border:1px solid #cbd5e1; padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;" title="学术论文行距">
+              <!-- 行距选择 -->
+              <select id="select-line-height" class="select-line-height" style="background:#ffffff; color:#2563eb; border:1px solid #cbd5e1; padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;" title="学术论文行距">
                 <option value="1.5">行距: 1.5 倍 (国标推荐)</option>
                 <option value="1.0">行距: 1.0 倍 (单倍)</option>
                 <option value="1.15">行距: 1.15 倍 (常规)</option>
                 <option value="1.25">行距: 1.25 倍 (紧凑)</option>
                 <option value="1.75">行距: 1.75 倍</option>
                 <option value="2.0">行距: 2.0 倍 (APA双倍)</option>
-                <option value="2.5">行距: 2.5 倍</option>
               </select>
               <span style="color:#cbd5e1;">|</span>
-              <!-- 字体颜色与高亮 -->
-              <select class="select-font-color" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;" title="字体颜色">
-                <option value="#0f172a">🎨 字体颜色: 默认黑灰</option>
-                <option value="#2563eb">蓝色</option>
-                <option value="#dc2626">红色</option>
-                <option value="#16a34a">绿色</option>
-                <option value="#d97706">橙色</option>
-                <option value="#7c3aed">紫色</option>
-              </select>
-              <select class="select-bg-color" style="background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;" title="文本突出高亮">
-                <option value="transparent">🖍️ 突出高亮: 无背景</option>
-                <option value="#fef08a">黄色高亮</option>
-                <option value="#bae6fd">浅蓝高亮</option>
-                <option value="#bbf7d0">浅绿高亮</option>
-                <option value="#fbcfe8">粉红高亮</option>
-              </select>
+              <!-- 字体调色盘与高亮调色盘 -->
+              <label style="font-size:12px; font-weight:700; color:#0f172a; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="文字颜色">🎨字色<input type="color" id="word-color-picker" value="#0f172a" style="width:22px; height:22px; border:none; background:none; cursor:pointer;"></label>
+              <label style="font-size:12px; font-weight:700; color:#0f172a; display:inline-flex; align-items:center; gap:3px; cursor:pointer;" title="突出显示高亮">🖍️高亮<input type="color" id="word-bg-picker" value="#ffff00" style="width:22px; height:22px; border:none; background:none; cursor:pointer;"></label>
               <span style="color:#cbd5e1;">|</span>
               <!-- 首行缩进与段落控制 -->
               <button id="btn-indent-2em" style="background:#e0f2fe; color:#0284c7; border:1px solid #38bdf8; padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;" title="学术论文首行缩进 2 字符">⇥ 首缩进(2字)</button>
@@ -2550,6 +2561,22 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           handlers.onUnifiedContentChange(editorEl.innerHTML);
         }
       });
+
+      // 绑定调色盘与其他格式控件
+      const colorPicker = canvas.querySelector('#word-color-picker');
+      if (colorPicker) {
+        colorPicker.addEventListener('change', (e) => {
+          document.execCommand('foreColor', false, e.target.value);
+          handlers.onUnifiedContentChange(editorEl.innerHTML);
+        });
+      }
+      const bgPicker = canvas.querySelector('#word-bg-picker');
+      if (bgPicker) {
+        bgPicker.addEventListener('change', (e) => {
+          document.execCommand('hiliteColor', false, e.target.value);
+          handlers.onUnifiedContentChange(editorEl.innerHTML);
+        });
+      }
 
       // 字体/字号/行距/颜色/格式刷等学术控制绑定
       let formatPainterStyle = null;
