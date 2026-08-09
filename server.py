@@ -59,7 +59,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
                     SSE_CLIENTS[groupId] = set()
                 SSE_CLIENTS[groupId].add(q)
 
-            import queue
             try:
                 # 建立连接心跳
                 self.wfile.write(b': ping\n\n')
@@ -67,18 +66,14 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
                 while True:
                     try:
-                        msg = q.get(timeout=20)
+                        msg = q.get(timeout=25)
                         self.wfile.write(f'data: {msg}\n\n'.encode('utf-8'))
                         self.wfile.flush()
-                    except queue.Empty:
-                        try:
-                            self.wfile.write(b': ping\n\n')
-                            self.wfile.flush()
-                        except Exception:
-                            break
-                    except (ConnectionResetError, BrokenPipeError, Exception):
-                        break
-            except Exception:
+                    except Exception:
+                        # 定时心跳保持长连接不中断
+                        self.wfile.write(b': ping\n\n')
+                        self.wfile.flush()
+            except (ConnectionResetError, BrokenPipeError, Exception):
                 pass
             finally:
                 with SSE_LOCK:
