@@ -373,21 +373,36 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         return (uName === query || uEmail === query || uCode === query || ('student' + uCode) === query) && u.password === password;
       });
       if (user) {
-        // 🔒 账号单人互斥登录锁：防止两人同时登录同一个账号冲突
+        // 🔒 账号单人互斥登录锁：从服务器秒级同步最新 activeSessions，保证多设备 100% 互斥拦截
+        let serverActiveSessions = {};
+        try {
+          const xhr = new XMLHttpRequest();
+          xhr.open('GET', '/api/snapshot?groupId=group_1', false);
+          xhr.send(null);
+          if (xhr.status === 200) {
+            const remoteData = JSON.parse(xhr.responseText);
+            if (remoteData && remoteData.activeSessions) {
+              serverActiveSessions = remoteData.activeSessions;
+              if (window.app && window.app.state) window.app.state.activeSessions = remoteData.activeSessions;
+            }
+          }
+        } catch (e) {}
+
+        const active = serverActiveSessions[user.id] || (window.app && window.app.state && window.app.state.activeSessions ? window.app.state.activeSessions[user.id] : null);
+        let currentToken = sessionStorage.getItem('jizhi_session_token');
+        if (!currentToken) {
+          currentToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+          sessionStorage.setItem('jizhi_session_token', currentToken);
+        }
+        if (active && active.token && active.token !== currentToken && (Date.now() - (active.lastActive || 0)) < 180000) {
+          return {
+            success: false,
+            message: `⚠️ 账号 [${user.name}] 此时正在其他设备/浏览器上登录使用中！\n为避免两人同时操作同一个账号产生冲突，请使用您个人的独立账号登录 (如：王芳 / 陈强)。`
+          };
+        }
+
         if (window.app && window.app.state) {
           if (!window.app.state.activeSessions) window.app.state.activeSessions = {};
-          const active = window.app.state.activeSessions[user.id];
-          let currentToken = sessionStorage.getItem('jizhi_session_token');
-          if (!currentToken) {
-            currentToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-            sessionStorage.setItem('jizhi_session_token', currentToken);
-          }
-          if (active && active.token && active.token !== currentToken && (Date.now() - (active.lastActive || 0)) < 180000) {
-            return {
-              success: false,
-              message: `⚠️ 账号 [${user.name}] 此时正在其他设备/浏览器上登录使用中！\n为避免多人同时操作同一个账号产生冲突，请使用您个人的独立学生账号登录 (如：王芳 / 陈强)。`
-            };
-          }
           window.app.state.activeSessions[user.id] = { token: currentToken, lastActive: Date.now(), userName: user.name };
           if (window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
         }
@@ -1029,12 +1044,12 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           </div>
           <form id="login-form" style="display:flex; flex-direction:column; gap:18px;">
             <div style="display:flex; flex-direction:column; gap:6px;">
-              <label style="font-size:13px; font-weight:600; color:#cbd5e1;">账号 (支持拼音用户名: teacher, liming, wangfang, chenqiang)</label>
-              <input type="text" id="login-account" class="teacher-input" placeholder="输入 teacher 或 liming / wangfang / chenqiang" value="teacher" required style="width:100%;">
+              <label style="font-size:13px; font-weight:600; color:#cbd5e1;">账号</label>
+              <input type="text" id="login-account" class="teacher-input" placeholder="请输入账号" value="teacher" required style="width:100%;">
             </div>
             <div style="display:flex; flex-direction:column; gap:6px;">
-              <label style="font-size:13px; font-weight:600; color:#cbd5e1;">密码 (默认 123)</label>
-              <input type="password" id="login-password" class="teacher-input" placeholder="输入密码 123" value="123" required style="width:100%;">
+              <label style="font-size:13px; font-weight:600; color:#cbd5e1;">密码</label>
+              <input type="password" id="login-password" class="teacher-input" placeholder="请输入密码" value="123" required style="width:100%;">
             </div>
             <div id="login-error-msg" style="display:none; font-size:12px; color:#f43f5e; background:rgba(244,63,94,0.1); border:1px solid rgba(244,63,94,0.3); padding:8px 12px; border-radius:8px;"></div>
             <button type="submit" class="modal-btn submit task-theme" style="width:100%; padding:14px; font-size:15px; border-radius:10px; margin-top:6px;">
@@ -2376,7 +2391,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
       <div class="card" style="height:100%; display:flex; flex-direction:column; padding:20px;">
         <div class="card-title" style="margin-bottom:10px;">
-          <span>📝 协同写作富文本编辑器 (支持格式排版 & 插入图片)</span>
+          <span>📝 协同写作富文本编辑器</span>
           <div style="display:flex; gap:10px;">
             <button id="btn-show-case" style="background:rgba(99,102,241,0.2); border:1px solid #6366f1; color:#a5b4fc; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer; font-weight:600;">📥 下载并查阅《范例文件.pdf》</button>
             <button id="btn-trigger-meeting" ${isStage2MeetingLocked ? 'disabled' : ''} style="background:${isStage2MeetingLocked ? 'rgba(255,255,255,0.08)' : 'linear-gradient(135deg, #10b981, #059669)'}; border:${isStage2MeetingLocked ? '1px solid rgba(255,255,255,0.15)' : 'none'}; color:${isStage2MeetingLocked ? '#94a3b8' : 'white'}; padding:6px 14px; border-radius:6px; font-size:12px; cursor:${isStage2MeetingLocked ? 'not-allowed' : 'pointer'}; font-weight:700;">
@@ -2386,7 +2401,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         </div>
         ${actionPlan && actionPlan.isGenerated ? `
           <div style="background:linear-gradient(135deg, rgba(16,185,129,0.15), rgba(6,182,212,0.1)); border:1px solid rgba(16,185,129,0.3); border-radius:8px; padding:10px 14px; margin-bottom:10px;">
-            <div style="font-size:13px; font-weight:700; color:#34d399; margin-bottom:4px;">📋 编辑会议产出：【半程编辑修正清单】(全员提交由 Agent 综合合成)</div>
+            <div style="font-size:13px; font-weight:700; color:#34d399; margin-bottom:4px;">📋 编辑会议产出：【半程编辑修正清单】</div>
             <div style="font-size:12px; color:#cbd5e1; display:flex; flex-direction:column; gap:2px;">
               ${actionPlan.items.map(item => `<div>• ${item}</div>`).join('')}
             </div>
@@ -3074,7 +3089,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             <main class="canvas-panel" id="canvas-panel"></main>
             <aside class="chat-panel">
               <div class="chat-header">
-                <div class="chat-title"><span>💬 多智能体协同对话管道 (全域云端实时同步 🟢)</span></div>
+                <div class="chat-title"><span>💬 多智能体协同对话管道</span></div>
                 <div class="active-agent-pills">
                   <span class="agent-pill" style="color:#a78bfa; border-color:#8b5cf6;">🎪 拍卖师</span>
                   <span class="agent-pill" style="color:#34d399; border-color:#10b981;">🤝 责任编辑</span>
@@ -3751,7 +3766,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       modal.innerHTML = `
         <div class="teacher-modal-card" style="width:640px;">
           <div class="teacher-modal-header ann-theme">
-            <div class="modal-header-title"><span class="modal-icon">📢</span><div><h3>学术编辑部【半程编辑会议】(全员独立打分)</h3><p>当前登录组员: ${studentName} (${studentCode}) | 提交进度: ${submittedCount}/${totalMembersCount} 人</p></div></div>
+            <div class="modal-header-title"><span class="modal-icon">📢</span><div><h3>学术编辑部【半程编辑会议】</h3><p>当前登录组员: ${studentName} (${studentCode}) | 提交进度: ${submittedCount}/${totalMembersCount} 人</p></div></div>
             <button class="modal-close-btn" id="btn-close-meeting">✕</button>
           </div>
           <div class="teacher-modal-body">
