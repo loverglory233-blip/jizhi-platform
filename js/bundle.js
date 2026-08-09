@@ -2466,7 +2466,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         <div style="flex:1; display:flex; flex-direction:column; gap:0; min-height:0;">
           <div style="font-size:12px; color:#94a3b8; display:flex; justify-content:space-between; flex-shrink:0; margin-bottom:6px;">
             <span>包含《一、背景》《二、问题假设》《三、文献》《四、方法》《五、反思》《六、参考文献》全篇论文</span>
-            <span>整篇实时字数: <b style="color:#38bdf8; font-size:14px;">${wordCount}</b> 字 ${isEditorReadonly ? '(🔒 终稿只读)' : ''}</span>
+            <span>整篇实时字数: <b id="live-word-count-val" style="color:#0284c7; font-size:14px;">${wordCount}</b> 字 ${isEditorReadonly ? '(🔒 终稿只读)' : ''}</span>
           </div>
 
           <!-- Nordic INS 极简 Ribbon Word 工具栏与 A4 纸张居中容器 -->
@@ -2579,17 +2579,18 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
         <div style="margin-top:16px; background:#ffffff; padding:14px 18px; border-radius:12px; border:1px solid #e2e8f0; box-shadow:0 2px 10px rgba(15,23,42,0.03); flex-shrink:0;">
           <div style="font-size:12.5px; font-weight:700; margin-bottom:10px; color:#0f172a; display:flex; justify-content:space-between; align-items:center;">
-            <span>📊 本组 SSRL 成员贡献度稳定分析 (实时平滑)</span>
-            <span style="font-size:11.5px; color:#64748b;">整篇总字数: <b style="color:#0284c7;">${wordCount}</b> 字</span>
+            <span>📊 本组 SSRL 成员贡献度动态分析 (实时平滑)</span>
+            <span style="font-size:11.5px; color:#64748b;">整篇总字数: <b id="live-word-count-footer" style="color:#0284c7;">${wordCount}</b> 字</span>
           </div>
-          <div class="contribution-bar-container">
+          <div class="contribution-bar-container" id="live-contrib-container">
             ${(() => {
               const totalChatMsgs = ((state.chatLogs.stage1 || []).length + (state.chatLogs.stage2 || []).length + (state.chatLogs.stage3 || []).length) || 1;
               const memberStats = membersList.map(m => {
                 const mMsgs = (state.chatLogs.stage1 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
                             + (state.chatLogs.stage2 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
                             + (state.chatLogs.stage3 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length;
-                return { member: m, raw: 10 + (mMsgs * 3) };
+                const typed = (state.memberTypedCounts && state.memberTypedCounts[m.id || m.studentCode]) || 0;
+                return { member: m, raw: 10 + (mMsgs * 3) + typed };
               });
               const sumRaw = memberStats.reduce((acc, curr) => acc + curr.raw, 0) || 1;
               let accumulatedPct = 0;
@@ -2601,12 +2602,12 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
               });
 
               return `
-                <div class="contrib-bars" style="height:12px; border-radius:6px; display:flex; overflow:hidden; background:#f1f5f9; border:1px solid #e2e8f0;">
+                <div class="contrib-bars" id="live-contrib-bars" style="height:12px; border-radius:6px; display:flex; overflow:hidden; background:#f1f5f9; border:1px solid #e2e8f0;">
                   ${processedStats.map(s => `
                     <div class="contrib-segment" style="width:${s.pct}%; background:${s.member.color || '#0284c7'}; transition:width 0.5s ease-in-out;" title="${s.member.name}: ${s.pct}% (${s.words}字)"></div>
                   `).join('')}
                 </div>
-                <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:600; color:#334155; margin-top:8px; flex-wrap:wrap; gap:12px;">
+                <div id="live-contrib-legend" style="display:flex; justify-content:space-between; font-size:12px; font-weight:600; color:#334155; margin-top:8px; flex-wrap:wrap; gap:12px;">
                   ${processedStats.map(s => `
                     <span style="display:inline-flex; align-items:center; gap:4px;">
                       <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${s.member.color || '#0284c7'};"></span>
@@ -3812,14 +3813,66 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           if (this.state.isFinalSubmitted) return;
           this.state.stage2.unifiedContent = newContent;
 
-          // ⚡ 1. 广播通知同设备 BroadcastChannel
+          // ⚡ 1. 实时更新 DOM 节点字数与贡献比
+          const plainText = newContent.replace(/<[^>]*>/g, '').replace(/\s+/g, '');
+          const liveCount = plainText.length;
+          const el1 = document.getElementById('live-word-count-val');
+          if (el1) el1.innerText = liveCount;
+          const el2 = document.getElementById('live-word-count-footer');
+          if (el2) el2.innerText = liveCount;
+
+          // ⚡ 2. 动态累加打字权重
+          const currentUser = this.authManager.getCurrentUser();
+          if (currentUser) {
+            if (!this.state.memberTypedCounts) this.state.memberTypedCounts = {};
+            const uid = currentUser.id || currentUser.studentCode || 'A';
+            this.state.memberTypedCounts[uid] = (this.state.memberTypedCounts[uid] || 0) + 1;
+          }
+
+          // ⚡ 3. 动态平滑更新贡献进度条 DOM
+          const membersList = Object.values(this.state.members || {});
+          if (membersList.length > 0) {
+            const memberStats = membersList.map(m => {
+              const mMsgs = (this.state.chatLogs.stage1 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
+                          + (this.state.chatLogs.stage2 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
+                          + (this.state.chatLogs.stage3 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length;
+              const typed = (this.state.memberTypedCounts && this.state.memberTypedCounts[m.id || m.studentCode]) || 0;
+              return { member: m, raw: 10 + (mMsgs * 3) + (typed * 2) };
+            });
+            const sumRaw = memberStats.reduce((acc, curr) => acc + curr.raw, 0) || 1;
+            let accumulatedPct = 0;
+            const processedStats = memberStats.map((item, i) => {
+              let pct = (i === memberStats.length - 1) ? (100 - accumulatedPct) : Math.round((item.raw / sumRaw) * 100);
+              accumulatedPct += pct;
+              const words = Math.round((liveCount * pct) / 100);
+              return { ...item, pct, words };
+            });
+
+            const barsEl = document.getElementById('live-contrib-bars');
+            if (barsEl) {
+              barsEl.innerHTML = processedStats.map(s => `
+                <div class="contrib-segment" style="width:${s.pct}%; background:${s.member.color || '#0284c7'}; transition:width 0.5s ease-in-out;" title="${s.member.name}: ${s.pct}% (${s.words}字)"></div>
+              `).join('');
+            }
+            const legendEl = document.getElementById('live-contrib-legend');
+            if (legendEl) {
+              legendEl.innerHTML = processedStats.map(s => `
+                <span style="display:inline-flex; align-items:center; gap:4px;">
+                  <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${s.member.color || '#0284c7'};"></span>
+                  ${s.member.name}: <b>${s.pct}%</b> (${s.words}字)
+                </span>
+              `).join('');
+            }
+          }
+
+          // ⚡ 4. 广播通知同设备 BroadcastChannel
           if (this.cloudSyncEngine && this.cloudSyncEngine.bc) {
             try {
               this.cloudSyncEngine.pushSnapshot();
             } catch (e) {}
           }
 
-          // ⚡ 2. 250ms 节流提交 Server API
+          // ⚡ 5. 250ms 节流提交 Server API
           clearTimeout(this._editorSyncDebounce);
           this._editorSyncDebounce = setTimeout(() => {
             this.syncStage2();
