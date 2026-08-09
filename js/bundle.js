@@ -2439,9 +2439,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             <span>整篇实时字数: <b style="color:#38bdf8; font-size:14px;">${wordCount}</b> 字 ${isEditorReadonly ? '(🔒 终稿只读)' : ''}</span>
           </div>
 
-          <!-- Nordic INS 极简双层 Ribbon Word 工具栏 -->
+          <!-- Nordic INS 极简 Ribbon Word 工具栏与 A4 纸张居中容器 -->
           ${!isEditorReadonly ? `
-            <div class="word-nordic-ribbon" style="background:#ffffff; padding:10px 16px; border:1px solid #e2e8f0; border-bottom:none; border-top-left-radius:12px; border-top-right-radius:12px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; box-shadow:0 2px 10px rgba(15,23,42,0.03);">
+            <div class="word-nordic-ribbon" style="max-width:900px; width:100%; margin:0 auto; background:#ffffff; padding:10px 16px; border:1px solid #e2e8f0; border-bottom:none; border-top-left-radius:12px; border-top-right-radius:12px; display:flex; flex-wrap:wrap; gap:8px; align-items:center; box-shadow:0 2px 10px rgba(15,23,42,0.03);">
               <!-- 常用样式组 -->
               <div style="display:flex; gap:4px; align-items:center;">
                 <button id="btn-format-painter" style="background:#0f172a; color:#ffffff; font-weight:700; border:none; padding:6px 14px; border-radius:20px; font-size:12px; cursor:pointer; box-shadow:0 2px 8px rgba(15,23,42,0.15);" title="格式刷：选中文本点击复制格式，再选中目标文本赋予格式">🖌️ 格式刷</button>
@@ -2519,8 +2519,8 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           ` : ''}
 
           <!-- Nordic 宽广大视野 A4 页面排版工作台 -->
-          <div class="word-nordic-workspace" style="flex:1; overflow-y:auto; background:#f1f5f9; padding:24px; border-bottom-left-radius:12px; border-bottom-right-radius:12px; border:1px solid #e2e8f0; display:flex; flex-direction:column; min-height:600px;">
-            <div class="editor-textarea unified-large-editor-full" id="main-unified-editor" contenteditable="${!isEditorReadonly}" style="background:#ffffff; color:#1e293b; padding:50px 60px; border:1px solid #e2e8f0; box-shadow:0 8px 30px rgba(15,23,42,0.05); border-radius:8px; font-size:15px; line-height:1.8; min-height:560px; width:100%; flex:1; outline:none; font-family:SimSun, 'Times New Roman', serif; ${isEditorReadonly ? 'opacity:0.9; background:#f8fafc;' : ''}">${s2.unifiedContent}</div>
+          <div class="word-nordic-workspace" style="flex:1; overflow-y:auto; background:#f1f5f9; padding:24px 16px; border-bottom-left-radius:12px; border-bottom-right-radius:12px; border:1px solid #e2e8f0; display:flex; flex-direction:column; align-items:center; min-height:600px;">
+            <div class="editor-textarea unified-large-editor-full" id="main-unified-editor" contenteditable="${!isEditorReadonly}" style="background:#ffffff; color:#1e293b; padding:50px 60px; border:1px solid #cbd5e1; box-shadow:0 8px 30px rgba(15,23,42,0.06); border-radius:8px; font-size:15px; line-height:1.8; min-height:640px; max-width:900px; width:100%; margin:0 auto; outline:none; font-family:SimSun, 'Times New Roman', serif; ${isEditorReadonly ? 'opacity:0.9; background:#f8fafc;' : ''}">${s2.unifiedContent}</div>
           </div>
         </div>
 
