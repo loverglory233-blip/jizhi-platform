@@ -2532,40 +2532,45 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           </div>
         </div>
 
-        <div style="margin-top:14px; background:rgba(15,23,42,0.7); padding:14px; border-radius:10px; border:1px solid var(--border-glass); flex-shrink:0;">
-          <div style="font-size:12px; font-weight:600; margin-bottom:8px; color:#cbd5e1; display:flex; justify-content:space-between;">
-            <span>📊 本组 SSRL 成员贡献度动态分析</span>
-            <span>整篇总字数: ${wordCount} 字</span>
+        <div style="margin-top:16px; background:#ffffff; padding:14px 18px; border-radius:12px; border:1px solid #e2e8f0; box-shadow:0 2px 10px rgba(15,23,42,0.03); flex-shrink:0;">
+          <div style="font-size:12.5px; font-weight:700; margin-bottom:10px; color:#0f172a; display:flex; justify-content:space-between; align-items:center;">
+            <span>📊 本组 SSRL 成员贡献度稳定分析 (实时平滑)</span>
+            <span style="font-size:11.5px; color:#64748b;">整篇总字数: <b style="color:#0284c7;">${wordCount}</b> 字</span>
           </div>
           <div class="contribution-bar-container">
-            <div class="contrib-bars" style="height:14px; border-radius:7px; display:flex; overflow:hidden; background:rgba(255,255,255,0.05);">
-              ${(() => {
-                const totalChatMsgs = (state.chatLogs.stage1 || []).length + (state.chatLogs.stage2 || []).length + (state.chatLogs.stage3 || []).length || 1;
-                return membersList.map((m, idx) => {
-                  const mMsgs = (state.chatLogs.stage1 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
-                              + (state.chatLogs.stage2 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
-                              + (state.chatLogs.stage3 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length;
-                  const weight = (1 / membersList.length) * 0.5 + (mMsgs / totalChatMsgs) * 0.5;
-                  const pct = Math.max(5, Math.min(90, Math.round(weight * 100)));
-                  const words = Math.round((wordCount * pct) / 100);
-                  return `<div class="contrib-segment" style="width:${pct}%; background:${m.color || '#818cf8'};" title="${m.name}: ${pct}% (${words}字)"></div>`;
-                }).join('');
-              })()}
-            </div>
-            <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:600; color:#cbd5e1; margin-top:6px; flex-wrap:wrap; gap:10px;">
-              ${(() => {
-                const totalChatMsgs = (state.chatLogs.stage1 || []).length + (state.chatLogs.stage2 || []).length + (state.chatLogs.stage3 || []).length || 1;
-                return membersList.map((m, idx) => {
-                  const mMsgs = (state.chatLogs.stage1 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
-                              + (state.chatLogs.stage2 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
-                              + (state.chatLogs.stage3 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length;
-                  const weight = (1 / membersList.length) * 0.5 + (mMsgs / totalChatMsgs) * 0.5;
-                  const pct = Math.max(5, Math.min(90, Math.round(weight * 100)));
-                  const words = Math.round((wordCount * pct) / 100);
-                  return `<span style="color:${m.color || '#818cf8'};">● ${m.name}: <b>${pct}%</b> (${words}字)</span>`;
-                }).join('');
-              })()}
-            </div>
+            ${(() => {
+              const totalChatMsgs = ((state.chatLogs.stage1 || []).length + (state.chatLogs.stage2 || []).length + (state.chatLogs.stage3 || []).length) || 1;
+              const memberStats = membersList.map(m => {
+                const mMsgs = (state.chatLogs.stage1 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
+                            + (state.chatLogs.stage2 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
+                            + (state.chatLogs.stage3 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length;
+                return { member: m, raw: 10 + (mMsgs * 3) };
+              });
+              const sumRaw = memberStats.reduce((acc, curr) => acc + curr.raw, 0) || 1;
+              let accumulatedPct = 0;
+              const processedStats = memberStats.map((item, i) => {
+                let pct = (i === memberStats.length - 1) ? (100 - accumulatedPct) : Math.round((item.raw / sumRaw) * 100);
+                accumulatedPct += pct;
+                const words = Math.round((wordCount * pct) / 100);
+                return { ...item, pct, words };
+              });
+
+              return `
+                <div class="contrib-bars" style="height:12px; border-radius:6px; display:flex; overflow:hidden; background:#f1f5f9; border:1px solid #e2e8f0;">
+                  ${processedStats.map(s => `
+                    <div class="contrib-segment" style="width:${s.pct}%; background:${s.member.color || '#0284c7'}; transition:width 0.5s ease-in-out;" title="${s.member.name}: ${s.pct}% (${s.words}字)"></div>
+                  `).join('')}
+                </div>
+                <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:600; color:#334155; margin-top:8px; flex-wrap:wrap; gap:12px;">
+                  ${processedStats.map(s => `
+                    <span style="display:inline-flex; align-items:center; gap:4px;">
+                      <span style="display:inline-block; width:8px; height:8px; border-radius:50%; background:${s.member.color || '#0284c7'};"></span>
+                      ${s.member.name}: <b>${s.pct}%</b> (${s.words}字)
+                    </span>
+                  `).join('')}
+                </div>
+              `;
+            })()}
           </div>
         </div>
       </div>

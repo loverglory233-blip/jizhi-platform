@@ -1164,13 +1164,22 @@ body {
 
 .modern-spacious-input {
   flex: 1 !important;
-  background: #f8fafc !important;
-  border: 1px solid #e2e8f0 !important;
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
   border-radius: 20px !important;
   padding: 10px 16px !important;
   font-size: 13.5px !important;
   color: #0f172a !important;
   outline: none !important;
+  transition: all 0.2s ease !important;
+  box-shadow: 0 2px 6px rgba(15, 23, 42, 0.03) !important;
+}
+
+.modern-spacious-input:focus {
+  border-color: #0284c7 !important;
+  background: #ffffff !important;
+  color: #0f172a !important;
+  box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.15) !important;
 }
 
 .modern-send-btn {
