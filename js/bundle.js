@@ -2352,23 +2352,48 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             <span>整篇实时字数: <b style="color:#38bdf8; font-size:14px;">${wordCount}</b> 字 ${isEditorReadonly ? '(🔒 终稿只读)' : ''}</span>
           </div>
 
-          <!-- 类 Word 专业学术写作富文本格式排版工具栏 -->
+          <!-- 类 Word 专业学术论文排版格式工具栏 -->
           ${!isEditorReadonly ? `
-            <div class="editor-rt-toolbar" style="display:flex; flex-wrap:wrap; gap:6px; background:rgba(30,41,59,0.95); padding:8px 12px; border-top-left-radius:8px; border-top-right-radius:8px; border:1px solid rgba(255,255,255,0.15); border-bottom:none;">
+            <div class="editor-rt-toolbar" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; background:rgba(30,41,59,0.95); padding:8px 12px; border-top-left-radius:8px; border-top-right-radius:8px; border:1px solid rgba(255,255,255,0.15); border-bottom:none;">
+              <!-- 字体与字号 -->
+              <select id="select-font-family" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer;" title="学术论文标准字体">
+                <option value="SimSun, 'Times New Roman', serif">宋体 / Times New Roman (国标学术)</option>
+                <option value="SimHei, 'Arial', sans-serif">黑体 (大标题)</option>
+                <option value="KaiTi, serif">楷体 (引文/强调)</option>
+                <option value="Arial, sans-serif">Arial (英文国际)</option>
+              </select>
+              <select id="select-font-size" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer;" title="学术论文标准字号">
+                <option value="3">小四 (12pt · 正文)</option>
+                <option value="4">四号 (14pt · 二级标题)</option>
+                <option value="5">三号 (16pt · 一级标题)</option>
+                <option value="2">五号 (10.5pt · 注脚/图表说明)</option>
+              </select>
+              <span style="color:rgba(255,255,255,0.2);">|</span>
+              <!-- 行距设置 -->
+              <select id="select-line-height" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;" title="学术论文行距">
+                <option value="1.5">行距: 1.5 倍 (学术推荐)</option>
+                <option value="1.0">行距: 1.0 倍 (单倍)</option>
+                <option value="1.25">行距: 1.25 倍</option>
+                <option value="2.0">行距: 2.0 倍 (双倍 APA)</option>
+              </select>
+              <span style="color:rgba(255,255,255,0.2);">|</span>
+              <!-- 首行缩进与段落控制 -->
+              <button id="btn-indent-2em" style="background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;" title="学术论文首行缩进 2 字符">⇥ 首缩进(2字)</button>
+              <button id="btn-cancel-indent" style="background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="取消缩进">⇤ 顶格</button>
+              <span style="color:rgba(255,255,255,0.2);">|</span>
+              <!-- 样式控制 -->
               <button class="rt-btn" data-cmd="bold" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;" title="加粗"><b>B</b></button>
               <button class="rt-btn" data-cmd="italic" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-style:italic; cursor:pointer;" title="斜体"><i>I</i></button>
               <button class="rt-btn" data-cmd="underline" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; text-decoration:underline; cursor:pointer;" title="下划线"><u>U</u></button>
               <button class="rt-btn" data-cmd="strikeThrough" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; text-decoration:line-through; cursor:pointer;" title="删除线"><s>S</s></button>
               <span style="color:rgba(255,255,255,0.2);">|</span>
-              <button class="rt-btn" data-cmd="formatBlock" data-val="h1" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;">H1 标题</button>
-              <button class="rt-btn" data-cmd="formatBlock" data-val="h2" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;">H2 标题</button>
-              <button class="rt-btn" data-cmd="formatBlock" data-val="h3" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;">H3 标题</button>
-              <button class="rt-btn" data-cmd="formatBlock" data-val="p" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">¶ 正文</button>
-              <span style="color:rgba(255,255,255,0.2);">|</span>
+              <!-- 对齐方式 -->
               <button class="rt-btn" data-cmd="justifyLeft" style="background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="左对齐">⬅️ 左对齐</button>
               <button class="rt-btn" data-cmd="justifyCenter" style="background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="居中">↔️ 居中</button>
               <button class="rt-btn" data-cmd="justifyRight" style="background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="右对齐">➡️ 右对齐</button>
+              <button class="rt-btn" data-cmd="justifyFull" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="两端对齐 (学术标准)">↔️ 两端对齐</button>
               <span style="color:rgba(255,255,255,0.2);">|</span>
+              <!-- 列表与元素 -->
               <button class="rt-btn" data-cmd="insertUnorderedList" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">• 项目符号</button>
               <button class="rt-btn" data-cmd="insertOrderedList" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">1. 有序列表</button>
               <button class="rt-btn" data-cmd="formatBlock" data-val="blockquote" style="background:#1e293b; color:#a78bfa; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">“ 学术引文</button>
@@ -2412,6 +2437,68 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     if (!isEditorReadonly) {
       const editorEl = canvas.querySelector('#main-unified-editor');
       editorEl.addEventListener('input', () => handlers.onUnifiedContentChange(editorEl.innerHTML));
+
+      // 字体/字号/行距/缩进等学术控制绑定
+      const fontSel = canvas.querySelector('#select-font-family');
+      if (fontSel) {
+        fontSel.addEventListener('change', (e) => {
+          document.execCommand('fontName', false, e.target.value);
+          handlers.onUnifiedContentChange(editorEl.innerHTML);
+        });
+      }
+
+      const sizeSel = canvas.querySelector('#select-font-size');
+      if (sizeSel) {
+        sizeSel.addEventListener('change', (e) => {
+          document.execCommand('fontSize', false, e.target.value);
+          handlers.onUnifiedContentChange(editorEl.innerHTML);
+        });
+      }
+
+      const lhSel = canvas.querySelector('#select-line-height');
+      if (lhSel) {
+        lhSel.addEventListener('change', (e) => {
+          editorEl.style.lineHeight = e.target.value;
+          handlers.onUnifiedContentChange(editorEl.innerHTML);
+        });
+      }
+
+      const btnIndent2 = canvas.querySelector('#btn-indent-2em');
+      if (btnIndent2) {
+        btnIndent2.addEventListener('click', (e) => {
+          e.preventDefault();
+          document.execCommand('formatBlock', false, 'p');
+          const sel = window.getSelection();
+          if (sel && sel.anchorNode) {
+            let p = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode;
+            while (p && p !== editorEl && p.tagName !== 'P' && p.tagName !== 'DIV') {
+              p = p.parentNode;
+            }
+            if (p && p !== editorEl) {
+              p.style.textIndent = '2em';
+            }
+          }
+          handlers.onUnifiedContentChange(editorEl.innerHTML);
+        });
+      }
+
+      const btnCancelIndent = canvas.querySelector('#btn-cancel-indent');
+      if (btnCancelIndent) {
+        btnCancelIndent.addEventListener('click', (e) => {
+          e.preventDefault();
+          const sel = window.getSelection();
+          if (sel && sel.anchorNode) {
+            let p = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode;
+            while (p && p !== editorEl && p.tagName !== 'P' && p.tagName !== 'DIV') {
+              p = p.parentNode;
+            }
+            if (p && p !== editorEl) {
+              p.style.textIndent = '0em';
+            }
+          }
+          handlers.onUnifiedContentChange(editorEl.innerHTML);
+        });
+      }
 
       // 富文本工具栏命令绑定
       canvas.querySelectorAll('.rt-btn').forEach(btn => {
