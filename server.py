@@ -27,7 +27,12 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         self.send_header('Access-Control-Allow-Origin', '*')
         self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
         self.send_header('Access-Control-Allow-Headers', 'Content-Type')
-        if self.path.endswith(('.js', '.css', '.png', '.jpg', '.ico', '.woff2')):
+        # ⚡ 禁用 JS/CSS 强缓存，确保每次 git push 部署后浏览器刷新 100% 获取最新代码
+        if self.path.endswith(('.js', '.css')):
+            self.send_header('Cache-Control', 'no-cache, no-store, must-revalidate')
+            self.send_header('Pragma', 'no-cache')
+            self.send_header('Expires', '0')
+        elif self.path.endswith(('.png', '.jpg', '.ico', '.woff2')):
             self.send_header('Cache-Control', 'public, max-age=86400')
         super().end_headers()
 
@@ -94,6 +99,24 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
+        # 🚀 直连 GitHub 原生 Webhook 自动部署接口 (8088 端口原生支持)
+        if '/api/webhook' in self.path or '/webhook' in self.path:
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/json')
+            self.end_headers()
+            self.wfile.write(b'{"status":"ok","message":"Webhook received"}')
+            def do_git_pull():
+                import subprocess
+                try:
+                    subprocess.run(['git', 'config', '--global', '--add', 'safe.directory', DIR], check=False)
+                    subprocess.run(['git', 'fetch', '--all'], cwd=DIR, check=False)
+                    res = subprocess.run(['git', 'reset', '--hard', 'origin/main'], cwd=DIR, capture_output=True, text=True, check=False)
+                    print(f"✅ GitHub Webhook 触发代码自动重置更新: {res.stdout.strip()}", flush=True)
+                except Exception as e:
+                    print(f"❌ Webhook 自动拉取失败: {e}", flush=True)
+            threading.Thread(target=do_git_pull).start()
+            return
+
         if '/api/snapshot' in self.path:
             groupId = 'group_1'
             if 'groupId=' in self.path:
