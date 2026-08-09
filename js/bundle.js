@@ -868,6 +868,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       const snapshot = {
         timestamp: Date.now(),
         groupId: groupId,
+        activeSessions: this.app.state.activeSessions || {},
         members: this.app.state.members,
         chatLogs: this.app.state.chatLogs,
         stage1: this.app.state.stage1,
@@ -1080,7 +1081,11 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       e.preventDefault();
       const res = authManager.login(accountInput.value, passwordInput.value);
       if (res.success) onLoginSuccess();
-      else { errorMsg.innerText = res.message; errorMsg.style.display = 'block'; }
+      else {
+        alert(res.message);
+        errorMsg.innerText = res.message;
+        errorMsg.style.display = 'block';
+      }
     });
 
     container.querySelectorAll('.quick-login-btn').forEach(btn => {
@@ -1088,6 +1093,11 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         const acc = btn.dataset.account;
         const res = authManager.login(acc, '123');
         if (res.success) onLoginSuccess();
+        else {
+          alert(res.message);
+          errorMsg.innerText = res.message;
+          errorMsg.style.display = 'block';
+        }
       });
     });
   }
