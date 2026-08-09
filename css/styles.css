@@ -1166,21 +1166,46 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: rgba(255, 255, 255, 0.45); }
 
 /* ==========================================================================
-   PERSONA 3 RELOAD (P3R) BLUE-WHITE ART & UI SYSTEM OVERRIDES
+   PERSONA 3 RELOAD (P3R) + PERSONA 5 ROYAL (P5R) BLUE-WHITE INK-PAPER SYSTEM
    ========================================================================== */
+body, #app {
+  background: radial-gradient(circle at 20% 10%, #e2eeff 0%, #f4f8fc 45%, #e6f0fa 90%) !important;
+  color: #001e4d !important;
+}
+
+/* P5R Angled Graphic Cut Cards & Badges */
+.p5r-cut-badge {
+  background: linear-gradient(135deg, #0052cc 0%, #00d2ff 100%) !important;
+  color: #ffffff !important;
+  font-weight: 900 !important;
+  padding: 4px 16px !important;
+  clip-path: polygon(0 0, 100% 0, 94% 100%, 0 100%) !important;
+  box-shadow: 0 4px 14px rgba(0, 210, 255, 0.4) !important;
+  letter-spacing: 0.5px !important;
+}
+
+/* Suimoku Rice-Paper White Cards with Ink-drop Shadows & P3R Blue Cut Accents */
 .card {
   background: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
-  border-left: 5px solid #0052cc !important;
-  box-shadow: 0 8px 25px rgba(0, 82, 204, 0.08) !important;
-  color: #0f172a !important;
+  border-top: 4px solid #0052cc !important;
   border-radius: 12px !important;
+  box-shadow: 0 10px 30px rgba(0, 82, 204, 0.08), 0 2px 6px rgba(0, 0, 0, 0.03) !important;
+  color: #001e4d !important;
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.2s ease !important;
+}
+
+.card:hover {
+  transform: translateY(-2px) !important;
+  box-shadow: 0 14px 35px rgba(0, 82, 204, 0.12), 0 4px 12px rgba(0, 210, 255, 0.2) !important;
 }
 
 .card-title {
-  color: #001e4d !important;
-  font-weight: 800 !important;
-  letter-spacing: 0.5px !important;
+  color: #001233 !important;
+  font-weight: 900 !important;
+  font-size: 16px !important;
+  border-bottom: 2px solid #e2e8f0 !important;
+  padding-bottom: 10px !important;
 }
 
 .chat-panel {
@@ -1196,7 +1221,7 @@ body {
 
 .chat-title {
   color: #ffffff !important;
-  font-weight: 800 !important;
+  font-weight: 900 !important;
   text-shadow: 0 0 10px rgba(0, 210, 255, 0.5) !important;
 }
 
@@ -1221,10 +1246,30 @@ body {
   box-shadow: 0 4px 14px rgba(0, 210, 255, 0.4) !important;
 }
 
-.proposal-card {
-  background: #f8fafc !important;
+/* Chat Stream Bubble Styling with Ink Paper Accent */
+.msg-bubble {
+  background: #ffffff !important;
+  color: #001e4d !important;
   border: 1px solid #cbd5e1 !important;
-  color: #0f172a !important;
+  box-shadow: 0 3px 10px rgba(0, 82, 204, 0.05) !important;
+  border-radius: 10px !important;
+  padding: 10px 14px !important;
+  font-size: 13px !important;
+  line-height: 1.6 !important;
+}
+
+.chat-message.me .msg-bubble {
+  background: #eff6ff !important;
+  border-color: #93c5fd !important;
+  border-left: 4px solid #0052cc !important;
+}
+
+.proposal-card {
+  background: #ffffff !important;
+  border: 1px solid #cbd5e1 !important;
+  border-top: 3px solid #0052cc !important;
+  color: #001e4d !important;
+  box-shadow: 0 4px 12px rgba(0, 82, 204, 0.05) !important;
 }
 
 .proposal-card.voted {
