@@ -389,12 +389,12 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         } catch (e) {}
 
         const active = serverActiveSessions[user.id] || (window.app && window.app.state && window.app.state.activeSessions ? window.app.state.activeSessions[user.id] : null);
-        let currentToken = sessionStorage.getItem('jizhi_session_token');
-        if (!currentToken) {
-          currentToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
-          sessionStorage.setItem('jizhi_session_token', currentToken);
+        if (!window.__jizhi_tab_token) {
+          window.__jizhi_tab_token = 'tab_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
         }
-        if (active && active.token && active.token !== currentToken && (Date.now() - (active.lastActive || 0)) < 180000) {
+        let currentToken = window.__jizhi_tab_token;
+
+        if (active && active.token && active.token !== currentToken && (Date.now() - (active.lastActive || 0)) < 300000) {
           return {
             success: false,
             message: `⚠️ 账号 [${user.name}] 此时正在其他设备/浏览器上登录使用中！\n为避免两人同时操作同一个账号产生冲突，请使用您个人的独立账号登录 (如：王芳 / 陈强)。`
@@ -421,6 +421,17 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       sessionStorage.removeItem(STORAGE_KEY_USER);
       localStorage.removeItem(STORAGE_KEY_USER);
       sessionStorage.removeItem('jizhi_session_token');
+    }
+
+    refreshHeartbeat() {
+      const user = this.getCurrentUser();
+      if (user && window.app && window.app.state) {
+        if (!window.app.state.activeSessions) window.app.state.activeSessions = {};
+        if (!window.__jizhi_tab_token) {
+          window.__jizhi_tab_token = 'tab_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+        }
+        window.app.state.activeSessions[user.id] = { token: window.__jizhi_tab_token, lastActive: Date.now(), userName: user.name };
+      }
     }
 
     createClass(className, classCode = null) {
@@ -781,6 +792,16 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       this.lastTimestamp = 0;
       this.isPushing = false;
       this.updateScopeKeys();
+
+      if (!this.heartbeatTimer) {
+        this.heartbeatTimer = setInterval(() => {
+          if (this.app.authManager && this.app.authManager.getCurrentUser()) {
+            this.app.authManager.refreshHeartbeat();
+            this.pushSnapshot();
+          }
+        }, 10000);
+      }
+      
       this.initWebSocket();
       this.initPolling();
     }
