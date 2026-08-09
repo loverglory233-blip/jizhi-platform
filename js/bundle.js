@@ -373,6 +373,24 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         return (uName === query || uEmail === query || uCode === query || ('student' + uCode) === query) && u.password === password;
       });
       if (user) {
+        // 🔒 账号互斥登录锁：防止两人同时登录同一个测试账号冲突
+        if (window.app && window.app.state) {
+          if (!window.app.state.activeSessions) window.app.state.activeSessions = {};
+          const active = window.app.state.activeSessions[user.id];
+          let currentToken = sessionStorage.getItem('jizhi_session_token');
+          if (!currentToken) {
+            currentToken = 'sess_' + Date.now() + '_' + Math.random().toString(36).substr(2, 6);
+            sessionStorage.setItem('jizhi_session_token', currentToken);
+          }
+          if (active && active.token !== currentToken && (Date.now() - active.lastActive) < 180000) {
+            return {
+              success: false,
+              message: `⚠️ 账号 [${user.name}] 此时正在其他设备/浏览器上登录使用中！\n为避免多人同时操作同一个账号产生冲突，请使用您个人的独立学生账号登录 (例如：李明 / 王芳 / 陈强)。`
+            };
+          }
+          window.app.state.activeSessions[user.id] = { token: currentToken, lastActive: Date.now(), userName: user.name };
+          if (window.app.cloudSyncEngine) window.app.cloudSyncEngine.pushSnapshot();
+        }
         sessionStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
         localStorage.setItem(STORAGE_KEY_USER, JSON.stringify(user));
         return { success: true, user };
@@ -1410,9 +1428,16 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                         </div>
                         <span style="font-size:13px; color:#cbd5e1;">实时总字数: <b style="color:#38bdf8; font-size:15px;">${state.stage2.unifiedContent.length}</b> 字</span>
                       </div>
-                      <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:12px; color:#a5b4fc; display:flex; justify-content:space-between;">
+                      <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:12px; color:#a5b4fc; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                         <span>⚡ <b>当前【${activeMonitorGroup.name}】组内架构 (${monitorMembersList.length}人):</b> ${monitorMembersList.map(m => m.name).join('、')}</span>
-                        <span>${state.isFinalSubmitted ? '<b style="color:#34d399;">🔒 论文终稿已提交归档</b>' : '<b style="color:#fbbf24;">✍️ 组员写作推进中</b>'}</span>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                          <span>${state.isFinalSubmitted ? '<b style="color:#34d399;">🔒 论文终稿已提交归档</b>' : '<b style="color:#fbbf24;">✍️ 组员写作推进中</b>'}</span>
+                          ${state.isFinalSubmitted ? `
+                            <button id="btn-unlock-final-submit" style="background:linear-gradient(135deg, #f59e0b, #d97706); border:none; color:white; padding:5px 12px; border-radius:6px; font-size:12px; font-weight:700; cursor:pointer; box-shadow:0 2px 8px rgba(245,158,11,0.4);" title="撤回学生端的终稿提交状态，允许学生重新修改大正文">
+                              🔓 允许重新修改 (重置终稿提交状态)
+                            </button>
+                          ` : ''}
+                        </div>
                       </div>
                       <textarea id="teacher-live-doc-mirror" class="teacher-textarea" readonly style="flex:1; min-height:360px; font-family:sans-serif; font-size:14px; line-height:1.6; background:rgba(15,23,42,0.85); color:#f8fafc; border:1px solid rgba(255,255,255,0.1); opacity:0.95;">${state.stage2.unifiedContent}</textarea>
                       <div style="margin-top:14px; background:rgba(15,23,42,0.7); padding:12px; border-radius:8px; border:1px solid rgba(255,255,255,0.08);">
@@ -2074,6 +2099,21 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       });
     });
 
+    const btnUnlock = container.querySelector('#btn-unlock-final-submit');
+    if (btnUnlock) {
+      btnUnlock.addEventListener('click', () => {
+        if (confirm('确认撤回该组的终稿提交状态并允许学生继续修改论文大正文吗？')) {
+          state.isFinalSubmitted = false;
+          if (window.app) {
+            window.app.state.isFinalSubmitted = false;
+            window.app.syncStage3();
+          }
+          alert('✅ 已成功为该组解封重置！学生端现在可继续修改与完善论文正文。');
+          renderTeacherPortal(container, authManager, state, onLogout, onSwitchToStudentView);
+        }
+      });
+    }
+
     const btnExportExcel = container.querySelector('#btn-export-all-excel');
     if (btnExportExcel) {
       btnExportExcel.addEventListener('click', () => {
@@ -2352,34 +2392,44 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             <span>整篇实时字数: <b style="color:#38bdf8; font-size:14px;">${wordCount}</b> 字 ${isEditorReadonly ? '(🔒 终稿只读)' : ''}</span>
           </div>
 
-          <!-- 类 Word 专业学术论文排版格式工具栏 -->
+          <!-- 类 Word 专业学术论文全功能格式工具栏 -->
           ${!isEditorReadonly ? `
             <div class="editor-rt-toolbar" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; background:rgba(30,41,59,0.95); padding:8px 12px; border-top-left-radius:8px; border-top-right-radius:8px; border:1px solid rgba(255,255,255,0.15); border-bottom:none;">
-              <!-- 字体与字号 -->
-              <select id="select-font-family" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer;" title="学术论文标准字体">
-                <option value="SimSun, 'Times New Roman', serif">宋体 / Times New Roman (国标学术)</option>
-                <option value="SimHei, 'Arial', sans-serif">黑体 (大标题)</option>
-                <option value="KaiTi, serif">楷体 (引文/强调)</option>
-                <option value="Arial, sans-serif">Arial (英文国际)</option>
+              <!-- 学术字体选择 -->
+              <select class="select-font-family" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer;" title="学术论文标准字体">
+                <option value="SimSun, 'Times New Roman', serif">宋体 / Times New Roman (国标学术正文)</option>
+                <option value="FangSong, serif">仿宋 (公文/学术标准)</option>
+                <option value="KaiTi, serif">楷体 (摘要/引文)</option>
+                <option value="SimHei, 'Arial', sans-serif">黑体 (各级标题)</option>
+                <option value="'Microsoft YaHei', sans-serif">微软雅黑</option>
+                <option value="Arial, sans-serif">Arial (英文期刊)</option>
+                <option value="Calibri, sans-serif">Calibri (英文APA)</option>
               </select>
-              <select id="select-font-size" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer;" title="学术论文标准字号">
-                <option value="3">小四 (12pt · 正文)</option>
+              <!-- 学术字号选择 -->
+              <select class="select-font-size" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer;" title="学术论文标准字号">
+                <option value="3">小四 (12pt · 正文标准)</option>
                 <option value="4">四号 (14pt · 二级标题)</option>
                 <option value="5">三号 (16pt · 一级标题)</option>
-                <option value="2">五号 (10.5pt · 注脚/图表说明)</option>
+                <option value="6">二号 (22pt · 论文大标题)</option>
+                <option value="7">一号 (26pt · 封面大标题)</option>
+                <option value="2">五号 (10.5pt · 图表说明)</option>
+                <option value="1">小五 (9pt · 脚标注释)</option>
               </select>
               <span style="color:rgba(255,255,255,0.2);">|</span>
-              <!-- 行距设置 -->
-              <select id="select-line-height" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;" title="学术论文行距">
-                <option value="1.5">行距: 1.5 倍 (学术推荐)</option>
+              <!-- 学术行距选择 -->
+              <select class="select-line-height" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;" title="学术论文行距">
+                <option value="1.5">行距: 1.5 倍 (国标推荐)</option>
                 <option value="1.0">行距: 1.0 倍 (单倍)</option>
-                <option value="1.25">行距: 1.25 倍</option>
-                <option value="2.0">行距: 2.0 倍 (双倍 APA)</option>
+                <option value="1.15">行距: 1.15 倍 (常规)</option>
+                <option value="1.25">行距: 1.25 倍 (紧凑)</option>
+                <option value="1.75">行距: 1.75 倍</option>
+                <option value="2.0">行距: 2.0 倍 (APA双倍)</option>
+                <option value="2.5">行距: 2.5 倍</option>
               </select>
               <span style="color:rgba(255,255,255,0.2);">|</span>
               <!-- 首行缩进与段落控制 -->
-              <button id="btn-indent-2em" style="background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;" title="学术论文首行缩进 2 字符">⇥ 首缩进(2字)</button>
-              <button id="btn-cancel-indent" style="background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="取消缩进">⇤ 顶格</button>
+              <button class="btn-indent-2em" style="background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;" title="学术论文首行缩进 2 字符">⇥ 首缩进(2字)</button>
+              <button class="btn-cancel-indent" style="background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="顶格对齐">⇤ 顶格</button>
               <span style="color:rgba(255,255,255,0.2);">|</span>
               <!-- 样式控制 -->
               <button class="rt-btn" data-cmd="bold" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;" title="加粗"><b>B</b></button>
@@ -2398,9 +2448,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
               <button class="rt-btn" data-cmd="insertOrderedList" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">1. 有序列表</button>
               <button class="rt-btn" data-cmd="formatBlock" data-val="blockquote" style="background:#1e293b; color:#a78bfa; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">“ 学术引文</button>
               <span style="color:rgba(255,255,255,0.2);">|</span>
-              <button id="btn-insert-formula" style="background:rgba(99,102,241,0.25); color:#a5b4fc; border:1px solid #6366f1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;" title="插入学术公式/Latex">📐 插入公式</button>
-              <button id="btn-insert-citation" style="background:rgba(245,158,11,0.25); color:#fcd34d; border:1px solid #f59e0b; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;" title="插入文献引用脚标">📌 引用[1]</button>
-              <button id="btn-insert-image" style="background:linear-gradient(135deg, #a855f7, #6366f1); color:white; font-weight:700; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer;" title="插入本地/网络图片">📷 插入图片</button>
+              <button class="btn-insert-formula" style="background:rgba(99,102,241,0.25); color:#a5b4fc; border:1px solid #6366f1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;" title="插入学术公式/Latex">📐 插入公式</button>
+              <button class="btn-insert-citation" style="background:rgba(245,158,11,0.25); color:#fcd34d; border:1px solid #f59e0b; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;" title="插入文献引用脚标">📌 引用[1]</button>
+              <button class="btn-insert-image" style="background:linear-gradient(135deg, #a855f7, #6366f1); color:white; font-weight:700; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer;" title="插入本地/网络图片">📷 插入图片</button>
               <button class="rt-btn" data-cmd="removeFormat" style="background:rgba(239,68,68,0.2); color:#f87171; border:1px solid rgba(239,68,68,0.4); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;" title="清除格式">🧹 清除格式</button>
             </div>
           ` : ''}
@@ -2416,18 +2466,32 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           </div>
           <div class="contribution-bar-container">
             <div class="contrib-bars" style="height:14px; border-radius:7px; display:flex; overflow:hidden; background:rgba(255,255,255,0.05);">
-              ${membersList.map((m) => {
-                const memberWords = Math.round(wordCount / membersList.length);
-                const pct = wordCount > 0 ? Math.round((memberWords / wordCount) * 100) : Math.round(100 / membersList.length);
-                return `<div class="contrib-segment" style="width:${pct}%; background:${m.color || '#818cf8'};" title="${m.name}: ${pct}% (${memberWords}字)"></div>`;
-              }).join('')}
+              ${(() => {
+                const totalChatMsgs = (state.chatLogs.stage1 || []).length + (state.chatLogs.stage2 || []).length + (state.chatLogs.stage3 || []).length || 1;
+                return membersList.map((m, idx) => {
+                  const mMsgs = (state.chatLogs.stage1 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
+                              + (state.chatLogs.stage2 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
+                              + (state.chatLogs.stage3 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length;
+                  const weight = (1 / membersList.length) * 0.5 + (mMsgs / totalChatMsgs) * 0.5;
+                  const pct = Math.max(5, Math.min(90, Math.round(weight * 100)));
+                  const words = Math.round((wordCount * pct) / 100);
+                  return `<div class="contrib-segment" style="width:${pct}%; background:${m.color || '#818cf8'};" title="${m.name}: ${pct}% (${words}字)"></div>`;
+                }).join('');
+              })()}
             </div>
             <div style="display:flex; justify-content:space-between; font-size:12px; font-weight:600; color:#cbd5e1; margin-top:6px; flex-wrap:wrap; gap:10px;">
-              ${membersList.map((m) => {
-                const memberWords = Math.round(wordCount / membersList.length);
-                const pct = wordCount > 0 ? Math.round((memberWords / wordCount) * 100) : Math.round(100 / membersList.length);
-                return `<span style="color:${m.color || '#818cf8'};">● ${m.name}: ${pct}% (${memberWords}字)</span>`;
-              }).join('')}
+              ${(() => {
+                const totalChatMsgs = (state.chatLogs.stage1 || []).length + (state.chatLogs.stage2 || []).length + (state.chatLogs.stage3 || []).length || 1;
+                return membersList.map((m, idx) => {
+                  const mMsgs = (state.chatLogs.stage1 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
+                              + (state.chatLogs.stage2 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length
+                              + (state.chatLogs.stage3 || []).filter(c => c.sender === m.studentCode || c.sender === m.id).length;
+                  const weight = (1 / membersList.length) * 0.5 + (mMsgs / totalChatMsgs) * 0.5;
+                  const pct = Math.max(5, Math.min(90, Math.round(weight * 100)));
+                  const words = Math.round((wordCount * pct) / 100);
+                  return `<span style="color:${m.color || '#818cf8'};">● ${m.name}: <b>${pct}%</b> (${words}字)</span>`;
+                }).join('');
+              })()}
             </div>
           </div>
         </div>
@@ -2629,12 +2693,53 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
             </div>
           </div>
         ` : `
-          <div class="card" style="flex:1; display:flex; flex-direction:column; padding:20px;">
+          <div class="card" style="flex:1; display:flex; flex-direction:column; padding:20px; overflow:hidden;">
             <div class="card-title" style="margin-bottom:10px;">
-              <span>📝 论文全篇大正文 ${isFinalSubmitted ? '<span style="font-size:11px; color:#34d399; margin-left:6px;">(🔒 终稿已提交 · 归档只读查阅)</span>' : '(依据答辩意见实时修改终稿)'}</span>
-              <span style="font-size:12px; color:#38bdf8;">实时字数: <b>${state.stage2.unifiedContent.length}</b> 字</span>
+              <span>📝 论文全篇大正文 ${isFinalSubmitted ? '<span style="font-size:11px; color:#34d399; margin-left:6px;">(🔒 终稿已提交 · 归档只读查阅)</span>' : '(依据答辩意见实时修改终稿 · 双向实时同步中)'}</span>
+              <span style="font-size:12px; color:#38bdf8;">实时字数: <b style="font-size:14px;">${state.stage2.unifiedContent.length}</b> 字</span>
             </div>
-            <textarea class="editor-textarea unified-large-editor-full" id="stage3-unified-editor" ${isFinalSubmitted ? 'readonly style="opacity:0.85; background:rgba(15,23,42,0.9);"' : ''} style="flex:1;">${state.stage2.unifiedContent}</textarea>
+
+            <!-- 阶段三同样搭载类 Word 学术论文全功能格式工具栏 -->
+            ${!isFinalSubmitted ? `
+              <div class="editor-rt-toolbar" style="display:flex; flex-wrap:wrap; gap:6px; align-items:center; background:rgba(30,41,59,0.95); padding:8px 12px; border-top-left-radius:8px; border-top-right-radius:8px; border:1px solid rgba(255,255,255,0.15); border-bottom:none;">
+                <select class="select-font-family" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer;">
+                  <option value="SimSun, 'Times New Roman', serif">宋体 / Times New Roman (国标学术正文)</option>
+                  <option value="FangSong, serif">仿宋 (公文/学术标准)</option>
+                  <option value="KaiTi, serif">楷体 (摘要/引文)</option>
+                  <option value="SimHei, 'Arial', sans-serif">黑体 (各级标题)</option>
+                  <option value="'Microsoft YaHei', sans-serif">微软雅黑</option>
+                  <option value="Arial, sans-serif">Arial (英文期刊)</option>
+                </select>
+                <select class="select-font-size" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer;">
+                  <option value="3">小四 (12pt · 正文标准)</option>
+                  <option value="4">四号 (14pt · 二级标题)</option>
+                  <option value="5">三号 (16pt · 一级标题)</option>
+                  <option value="6">二号 (22pt · 论文大标题)</option>
+                  <option value="2">五号 (10.5pt · 图表说明)</option>
+                </select>
+                <select class="select-line-height" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 6px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:600;">
+                  <option value="1.5">行距: 1.5 倍 (国标推荐)</option>
+                  <option value="1.0">行距: 1.0 倍</option>
+                  <option value="1.25">行距: 1.25 倍</option>
+                  <option value="2.0">行距: 2.0 倍 (APA双倍)</option>
+                </select>
+                <button class="btn-indent-2em" style="background:rgba(56,189,248,0.2); color:#38bdf8; border:1px solid rgba(56,189,248,0.4); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;">⇥ 首缩进(2字)</button>
+                <button class="btn-cancel-indent" style="background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">⇤ 顶格</button>
+                <span style="color:rgba(255,255,255,0.2);">|</span>
+                <button class="rt-btn" data-cmd="bold" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-weight:700; cursor:pointer;"><b>B</b></button>
+                <button class="rt-btn" data-cmd="italic" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; font-style:italic; cursor:pointer;"><i>I</i></button>
+                <button class="rt-btn" data-cmd="underline" style="background:#1e293b; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; text-decoration:underline; cursor:pointer;"><u>U</u></button>
+                <button class="rt-btn" data-cmd="justifyLeft" style="background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">⬅️ 左</button>
+                <button class="rt-btn" data-cmd="justifyCenter" style="background:#1e293b; color:#cbd5e1; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">↔️ 中</button>
+                <button class="rt-btn" data-cmd="justifyFull" style="background:#1e293b; color:#38bdf8; border:1px solid rgba(255,255,255,0.2); padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer;">↔️ 两端</button>
+                <button class="btn-insert-formula" style="background:rgba(99,102,241,0.25); color:#a5b4fc; border:1px solid #6366f1; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;">📐 公式</button>
+                <button class="btn-insert-citation" style="background:rgba(245,158,11,0.25); color:#fcd34d; border:1px solid #f59e0b; padding:3px 8px; border-radius:4px; font-size:12px; cursor:pointer; font-weight:700;">📌 引用</button>
+                <button class="btn-insert-image" style="background:linear-gradient(135deg, #a855f7, #6366f1); color:white; font-weight:700; border:none; padding:4px 10px; border-radius:4px; font-size:12px; cursor:pointer;">📷 图片</button>
+              </div>
+            ` : ''}
+
+            <!-- 阶段三正文富文本容器 -->
+            <div class="editor-textarea unified-large-editor-full" id="stage3-unified-editor" contenteditable="${!isFinalSubmitted}" style="flex:1; overflow-y:auto; background:#0f172a; color:#f8fafc; padding:16px; border:1px solid rgba(255,255,255,0.2); border-bottom-left-radius:8px; border-bottom-right-radius:8px; font-size:14px; line-height:1.7; min-height:260px; outline:none; font-family:sans-serif; ${isFinalSubmitted ? 'opacity:0.85; background:rgba(15,23,42,0.9);' : ''}">${state.stage2.unifiedContent}</div>
           </div>
         `}
       </div>
@@ -2647,7 +2752,53 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
     const editorEl = canvas.querySelector('#stage3-unified-editor');
     if (editorEl && !isFinalSubmitted) {
-      editorEl.addEventListener('input', (e) => handlers.onUnifiedContentChange(e.target.value));
+      editorEl.addEventListener('input', () => handlers.onUnifiedContentChange(editorEl.innerHTML));
+
+      canvas.querySelectorAll('.rt-btn').forEach(btn => {
+        btn.addEventListener('click', (e) => {
+          e.preventDefault();
+          const cmd = btn.dataset.cmd;
+          const val = btn.dataset.val || null;
+          if (cmd) {
+            document.execCommand(cmd, false, val);
+            handlers.onUnifiedContentChange(editorEl.innerHTML);
+          }
+        });
+      });
+
+      const fontSel = canvas.querySelector('.select-font-family');
+      if (fontSel) fontSel.addEventListener('change', (e) => { document.execCommand('fontName', false, e.target.value); handlers.onUnifiedContentChange(editorEl.innerHTML); });
+
+      const sizeSel = canvas.querySelector('.select-font-size');
+      if (sizeSel) sizeSel.addEventListener('change', (e) => { document.execCommand('fontSize', false, e.target.value); handlers.onUnifiedContentChange(editorEl.innerHTML); });
+
+      const lhSel = canvas.querySelector('.select-line-height');
+      if (lhSel) lhSel.addEventListener('change', (e) => { editorEl.style.lineHeight = e.target.value; handlers.onUnifiedContentChange(editorEl.innerHTML); });
+
+      const btnIndent2 = canvas.querySelector('.btn-indent-2em');
+      if (btnIndent2) btnIndent2.addEventListener('click', (e) => {
+        e.preventDefault();
+        document.execCommand('formatBlock', false, 'p');
+        const sel = window.getSelection();
+        if (sel && sel.anchorNode) {
+          let p = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode;
+          while (p && p !== editorEl && p.tagName !== 'P' && p.tagName !== 'DIV') p = p.parentNode;
+          if (p && p !== editorEl) p.style.textIndent = '2em';
+        }
+        handlers.onUnifiedContentChange(editorEl.innerHTML);
+      });
+
+      const btnCancelIndent = canvas.querySelector('.btn-cancel-indent');
+      if (btnCancelIndent) btnCancelIndent.addEventListener('click', (e) => {
+        e.preventDefault();
+        const sel = window.getSelection();
+        if (sel && sel.anchorNode) {
+          let p = sel.anchorNode.nodeType === 3 ? sel.anchorNode.parentNode : sel.anchorNode;
+          while (p && p !== editorEl && p.tagName !== 'P' && p.tagName !== 'DIV') p = p.parentNode;
+          if (p && p !== editorEl) p.style.textIndent = '0em';
+        }
+        handlers.onUnifiedContentChange(editorEl.innerHTML);
+      });
     }
 
     if (!isFinalSubmitted) {
