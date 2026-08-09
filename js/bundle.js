@@ -2336,48 +2336,48 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         </div>
       </div>
 
-      <!-- 一整个统一下致的合作学术合约公约框架卡片 (一整块外框) -->
-      <div class="contract-card" style="margin-top:20px; border:2px solid rgba(168,85,247,0.5); border-radius:16px; background:radial-gradient(circle at 50% 10%, rgba(30,27,75,0.95) 0%, rgba(15,23,42,0.95) 100%); padding:24px; box-shadow:0 15px 45px rgba(0,0,0,0.6); width:100%; box-sizing:border-box;">
+      <!-- 一整个统一一致的合作学术合约公约框架卡片 (北欧 INS 清爽浅蓝风格) -->
+      <div class="contract-card" style="margin-top:20px; border:1px solid #bae6fd; border-radius:16px; background:linear-gradient(135deg, #ffffff 0%, #f0f9ff 100%); padding:24px; box-shadow:0 8px 25px rgba(2,132,199,0.08); width:100%; box-sizing:border-box;">
         
-        <div style="text-align:center; margin-bottom:20px; border-bottom:1px solid rgba(255,255,255,0.1); padding-bottom:16px;">
-          <div style="font-size:20px; font-weight:800; background:linear-gradient(135deg, #c084fc, #38bdf8); -webkit-background-clip:text; -webkit-text-fill-color:transparent;">
+        <div style="text-align:center; margin-bottom:20px; border-bottom:1px solid #e2e8f0; padding-bottom:16px;">
+          <div style="font-size:20px; font-weight:800; color:#0284c7;">
             📜 团队协同合作学术公约与规范合约
           </div>
-          <div style="font-size:12px; color:#cbd5e1; margin-top:4px;">
-            ${isContractLocked ? `<span style="color:#34d399; font-weight:700;">🔒 全员 ${confirmedCount}/${totalMembersCount} 人完成签署 · 归档生效中</span>` : '依据团队竞拍与讨论实时提取生成 · 全员按键确认签署后生效'}
+          <div style="font-size:12.5px; color:#64748b; margin-top:4px;">
+            ${isContractLocked ? `<span style="color:#059669; font-weight:700;">🔒 全员 ${confirmedCount}/${totalMembersCount} 人完成签署 · 归档生效中</span>` : '依据团队竞拍与讨论实时提取生成 · 全员按键确认签署后生效'}
           </div>
         </div>
 
-        <div style="display:flex; flex-direction:column; gap:8px; width:100%; margin-bottom:20px; background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border:1px solid rgba(56,189,248,0.3); box-sizing:border-box;">
-          <label style="font-size:14px; font-weight:800; color:#38bdf8;">📌 确认融合论文研究主题:</label>
-          <input type="text" id="contract-topic-input" class="large-contract-input" value="${s1.mergedTitle}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''} style="width:100%; box-sizing:border-box; background:#0f172a; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); border-radius:8px; padding:12px 14px; font-size:14px; font-weight:700; font-family:sans-serif;">
+        <div style="display:flex; flex-direction:column; gap:8px; width:100%; margin-bottom:20px; background:#ffffff; padding:16px; border-radius:12px; border:1px solid #e2e8f0; box-sizing:border-box;">
+          <label style="font-size:14px; font-weight:800; color:#0284c7;">📌 确认融合论文研究主题:</label>
+          <input type="text" id="contract-topic-input" class="large-contract-input" value="${s1.mergedTitle}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed; background:#f8fafc;"' : ''} style="width:100%; box-sizing:border-box; background:#f8fafc; color:#0f172a; border:1px solid #cbd5e1; border-radius:8px; padding:12px 14px; font-size:14px; font-weight:700; font-family:sans-serif;">
         </div>
 
         <div style="display:flex; flex-direction:column; gap:20px; width:100%;">
-          <div style="background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); width:100%; box-sizing:border-box;">
-            <div style="font-weight:700; color:#a78bfa; margin-bottom:10px; font-size:14px;">⏱️ 从聊天提取的 150分钟时间预算 (单位: 分钟):</div>
-            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:10px; font-size:13px; color:#cbd5e1;">
-              <label style="display:flex; align-items:center; gap:6px;">背景: <input type="number" class="contract-time-input large" data-key="background" value="${s1.contract.timeAllocations.background}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''}></label>
-              <label style="display:flex; align-items:center; gap:6px;">问题: <input type="number" class="contract-time-input large" data-key="questions" value="${s1.contract.timeAllocations.questions}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''}></label>
-              <label style="display:flex; align-items:center; gap:6px;">文献: <input type="number" class="contract-time-input large" data-key="literature" value="${s1.contract.timeAllocations.literature}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''}></label>
-              <label style="display:flex; align-items:center; gap:6px;">方法: <input type="number" class="contract-time-input large" data-key="method" value="${s1.contract.timeAllocations.method}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''}></label>
-              <label style="display:flex; align-items:center; gap:6px;">反思: <input type="number" class="contract-time-input large" data-key="reflection" value="${s1.contract.timeAllocations.reflection}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''}></label>
-              <label style="display:flex; align-items:center; gap:6px;">文献表: <input type="number" class="contract-time-input large" data-key="references" value="${s1.contract.timeAllocations.references}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''}></label>
+          <div style="background:#ffffff; padding:16px; border-radius:12px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
+            <div style="font-weight:700; color:#0284c7; margin-bottom:10px; font-size:14px;">⏱️ 从聊天提取的 150分钟时间预算 (单位: 分钟):</div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(130px, 1fr)); gap:10px; font-size:13px; color:#334155;">
+              <label style="display:flex; align-items:center; gap:6px;">背景: <input type="number" class="contract-time-input large" data-key="background" value="${s1.contract.timeAllocations.background}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed; background:#f8fafc;"' : ''} style="width:60px; padding:4px 8px; border:1px solid #cbd5e1; border-radius:6px; background:#f8fafc; color:#0f172a; font-weight:700;"></label>
+              <label style="display:flex; align-items:center; gap:6px;">问题: <input type="number" class="contract-time-input large" data-key="questions" value="${s1.contract.timeAllocations.questions}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed; background:#f8fafc;"' : ''} style="width:60px; padding:4px 8px; border:1px solid #cbd5e1; border-radius:6px; background:#f8fafc; color:#0f172a; font-weight:700;"></label>
+              <label style="display:flex; align-items:center; gap:6px;">文献: <input type="number" class="contract-time-input large" data-key="literature" value="${s1.contract.timeAllocations.literature}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed; background:#f8fafc;"' : ''} style="width:60px; padding:4px 8px; border:1px solid #cbd5e1; border-radius:6px; background:#f8fafc; color:#0f172a; font-weight:700;"></label>
+              <label style="display:flex; align-items:center; gap:6px;">方法: <input type="number" class="contract-time-input large" data-key="method" value="${s1.contract.timeAllocations.method}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed; background:#f8fafc;"' : ''} style="width:60px; padding:4px 8px; border:1px solid #cbd5e1; border-radius:6px; background:#f8fafc; color:#0f172a; font-weight:700;"></label>
+              <label style="display:flex; align-items:center; gap:6px;">反思: <input type="number" class="contract-time-input large" data-key="reflection" value="${s1.contract.timeAllocations.reflection}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed; background:#f8fafc;"' : ''} style="width:60px; padding:4px 8px; border:1px solid #cbd5e1; border-radius:6px; background:#f8fafc; color:#0f172a; font-weight:700;"></label>
+              <label style="display:flex; align-items:center; gap:6px;">文献表: <input type="number" class="contract-time-input large" data-key="references" value="${s1.contract.timeAllocations.references}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed; background:#f8fafc;"' : ''} style="width:60px; padding:4px 8px; border:1px solid #cbd5e1; border-radius:6px; background:#f8fafc; color:#0f172a; font-weight:700;"></label>
             </div>
           </div>
 
-          <div style="background:rgba(15,23,42,0.6); padding:16px; border-radius:12px; border:1px solid rgba(255,255,255,0.08); width:100%; box-sizing:border-box;">
-            <div style="font-weight:700; color:#a78bfa; margin-bottom:12px; font-size:14px; display:flex; justify-content:space-between; align-items:center;">
+          <div style="background:#ffffff; padding:16px; border-radius:12px; border:1px solid #e2e8f0; width:100%; box-sizing:border-box;">
+            <div style="font-weight:700; color:#0284c7; margin-bottom:12px; font-size:14px; display:flex; justify-content:space-between; align-items:center;">
               <span>👥 本组小组成员分工:</span>
             </div>
             <div style="display:flex; flex-direction:column; gap:12px; width:100%;">
               ${membersList.map(m => {
-                const defaultTask = m.id === 'A' ? '一、研究背景与意义；二、研究问题与假设' : m.id === 'B' ? '三、文献综述与 SSRL 共享调节框架' : '四、研究设计与方法；五、不足与反思；六、参考文献';
+                const defaultTask = m.id === 'A' || m.id === 'liming' ? '一、研究背景与意义；二、研究问题与假设' : m.id === 'B' || m.id === 'wangfang' ? '三、文献综述与 SSRL 共享调节框架' : '四、研究设计与方法；五、不足与反思；六、参考文献';
                 const taskVal = (s1.contract.taskAssignments && s1.contract.taskAssignments[m.id] !== undefined) ? s1.contract.taskAssignments[m.id] : defaultTask;
                 return `
-                  <div style="display:flex; flex-direction:column; gap:6px; width:100%; background:rgba(30,41,59,0.5); padding:12px 14px; border-radius:8px; border:1px solid rgba(255,255,255,0.08); box-sizing:border-box;">
-                    <span style="font-weight:800; color:${m.color || '#818cf8'}; font-size:13px;">${m.avatar || '👤'} ${m.name} (${m.roleTitle || '组员'}):</span>
-                    <input type="text" class="large-contract-input task-assignment-input" data-mid="${m.id}" value="${taskVal}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed;"' : ''} style="width:100%; box-sizing:border-box; background:#0f172a; color:#f8fafc; border:1px solid rgba(255,255,255,0.2); border-radius:6px; padding:10px 14px; font-size:13px; font-family:sans-serif;" placeholder="分配具体负责的写作章节与任务">
+                  <div style="display:flex; flex-direction:column; gap:6px; width:100%; background:#f8fafc; padding:12px 14px; border-radius:8px; border:1px solid #e2e8f0; box-sizing:border-box;">
+                    <span style="font-weight:800; color:${m.color || '#0284c7'}; font-size:13px;">${m.avatar || '👤'} ${m.name} (${m.roleTitle || '组员'}):</span>
+                    <input type="text" class="large-contract-input task-assignment-input" data-mid="${m.id}" value="${taskVal}" ${isContractLocked ? 'disabled readonly style="opacity:0.8; cursor:not-allowed; background:#ffffff;"' : ''} style="width:100%; box-sizing:border-box; background:#ffffff; color:#0f172a; border:1px solid #cbd5e1; border-radius:6px; padding:10px 14px; font-size:13px; font-family:sans-serif;" placeholder="分配具体负责的写作章节与任务">
                   </div>
                 `;
               }).join('')}
@@ -3206,10 +3206,10 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         `;
       }
 
-      const myUserObj = state.authManager ? state.authManager.getCurrentUser() : null;
-      const myId = myUserObj ? myUserObj.id : state.currentUser;
-      const myCode = myUserObj ? myUserObj.studentCode : 'A';
-      const isMe = msg.sender === currentUser || msg.sender === myId || msg.sender === myCode;
+      const myUserObj = (typeof window !== 'undefined' && window.__jizhi_app) ? window.__jizhi_app.authManager.getCurrentUser() : null;
+      const myId = myUserObj ? (myUserObj.id || myUserObj.studentCode) : (state.currentUser || 'liming');
+      const myCode = myUserObj ? (myUserObj.studentCode || 'A') : 'A';
+      const isMe = (msg.sender === myId || msg.sender === myCode || msg.sender === state.currentUser);
 
       const isAgent = AgentProfiles[msg.sender] !== undefined;
       let profile = isAgent ? AgentProfiles[msg.sender] : (state.members[msg.sender] || Object.values(state.members || {}).find(m => m.id === msg.sender || m.studentCode === msg.sender));
@@ -3217,24 +3217,25 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         if (msg.sender === 'A' || msg.sender === 'liming') profile = { name: '李明', avatar: '👨‍🎓', color: '#0284c7' };
         else if (msg.sender === 'B' || msg.sender === 'wangfang') profile = { name: '王芳', avatar: '👩‍🎓', color: '#059669' };
         else if (msg.sender === 'C' || msg.sender === 'chenqiang') profile = { name: '陈强', avatar: '👨‍🎓', color: '#7c3aed' };
+        else profile = { name: msg.sender, avatar: '👤', color: '#0284c7' };
       }
 
       const avatar = profile ? profile.avatar : '👤';
-      const name = profile ? (profile.name || profile.roleTitle) : msg.sender;
-      const color = profile ? profile.color : '#0284c7';
+      const name = profile ? (profile.name || profile.roleTitle || msg.sender) : msg.sender;
+      const color = profile ? (profile.color || '#0284c7') : '#0284c7';
 
       let formattedText = msg.text || '';
-      formattedText = formattedText.replace(/(@[^\s@]+)/g, '<span class="mention-tag">$1</span>');
+      formattedText = formattedText.replace(/(@[^\s@]+)/g, '<span class="mention-tag" style="background:#e0f2fe; color:#0284c7; padding:2px 6px; border-radius:4px; font-weight:700;">$1</span>');
 
       return `
-        <div class="chat-message ${isMe ? 'me' : 'other'}">
-          <div class="msg-avatar" style="background:${color}22; border:1px solid ${color}; color:${color};">${avatar}</div>
-          <div class="msg-body">
-            <div class="msg-meta">
-              <span class="msg-sender" style="color:${color};">${name} ${isMe ? '(我)' : ''}</span>
-              <span style="font-size:10px; color:#64748b; margin-left:6px;">${msg.timestamp || ''}</span>
+        <div class="chat-message ${isMe ? 'me' : 'other'}" style="margin-bottom:12px; display:flex; gap:10px; ${isMe ? 'flex-direction:row-reverse;' : ''}">
+          <div class="msg-avatar" style="width:36px; height:36px; border-radius:50%; background:${color}15; border:1px solid ${color}; color:${color}; display:flex; align-items:center; justify-content:center; font-size:18px; flex-shrink:0;">${avatar}</div>
+          <div class="msg-body" style="max-width:80%; ${isMe ? 'display:flex; flex-direction:column; align-items:flex-end;' : ''}">
+            <div class="msg-meta" style="font-size:11px; margin-bottom:3px; display:flex; gap:6px; align-items:center; ${isMe ? 'justify-content:flex-end;' : ''}">
+              <span class="msg-sender" style="color:${color}; font-weight:700;">${name} ${isMe ? '(我)' : ''}</span>
+              <span style="font-size:10px; color:#94a3b8;">${msg.timestamp || ''}</span>
             </div>
-            <div class="msg-bubble">${formattedText}</div>
+            <div class="msg-bubble" style="background:${isMe ? '#e0f2fe' : '#ffffff'}; color:${isMe ? '#0369a1' : '#1e293b'}; border:${isMe ? '1px solid #bae6fd' : '1px solid #e2e8f0'}; padding:10px 14px; border-radius:12px; font-size:13.5px; line-height:1.5; box-shadow:0 2px 8px rgba(15,23,42,0.04); word-break:break-word;">${formattedText}</div>
           </div>
         </div>
       `;
@@ -3247,6 +3248,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
      ========================================================================== */
   class App {
     constructor() {
+      window.__jizhi_app = this;
       this.authManager = new AuthManager();
       this.state = JSON.parse(JSON.stringify(InitialState));
       this.studentMsgCountSinceLastAgent = 0;

@@ -1109,11 +1109,12 @@ body {
   width: calc(100% - 360px) !important;
   height: 100% !important;
   overflow-y: auto !important;
-  padding: 20px 24px !important;
+  padding: 20px 24px 0 24px !important;
   background: #f8fafc !important;
   display: flex !important;
   flex-direction: column !important;
   gap: 16px !important;
+  box-sizing: border-box !important;
 }
 
 /* Restore Classic Original Chat Panel Styling */
