@@ -99,24 +99,6 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         super().do_GET()
 
     def do_POST(self):
-        # 🚀 直连 GitHub 原生 Webhook 自动部署接口 (8088 端口原生支持)
-        if '/api/webhook' in self.path or '/webhook' in self.path:
-            self.send_response(200)
-            self.send_header('Content-Type', 'application/json')
-            self.end_headers()
-            self.wfile.write(b'{"status":"ok","message":"Webhook received"}')
-            def do_git_pull():
-                import subprocess
-                try:
-                    subprocess.run(['git', 'config', '--global', '--add', 'safe.directory', DIR], check=False)
-                    subprocess.run(['git', 'fetch', '--all'], cwd=DIR, check=False)
-                    res = subprocess.run(['git', 'reset', '--hard', 'origin/main'], cwd=DIR, capture_output=True, text=True, check=False)
-                    print(f"✅ GitHub Webhook 触发代码自动重置更新: {res.stdout.strip()}", flush=True)
-                except Exception as e:
-                    print(f"❌ Webhook 自动拉取失败: {e}", flush=True)
-            threading.Thread(target=do_git_pull).start()
-            return
-
         if '/api/snapshot' in self.path:
             groupId = 'group_1'
             if 'groupId=' in self.path:
