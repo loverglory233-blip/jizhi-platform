@@ -981,24 +981,22 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
 
       // ⚡ 全量深度同步 Stage 2（协同写作/贡献度/半程编辑清单）
       if (remoteData.stage2) {
-        const localS2Json = JSON.stringify(this.app.state.stage2);
-        const remoteS2Json = JSON.stringify(remoteData.stage2);
-        if (localS2Json !== remoteS2Json) {
-          this.app.state.stage2 = remoteData.stage2;
-          updated = true;
+        const newContent = remoteData.stage2.unifiedContent;
+        if (newContent !== undefined && newContent !== this.app.state.stage2.unifiedContent) {
+          this.app.state.stage2.unifiedContent = newContent;
           const editor = document.getElementById('main-unified-editor') || document.getElementById('stage3-unified-editor');
-          if (editor && remoteData.stage2.unifiedContent !== undefined) {
-            const newContent = remoteData.stage2.unifiedContent;
-            if (editor.isContentEditable) {
-              if (editor.innerHTML !== newContent && document.activeElement !== editor) {
-                editor.innerHTML = newContent;
-              }
-            } else {
-              if (editor.value !== newContent) {
-                editor.value = newContent;
-              }
-            }
+          if (editor && editor.innerHTML !== newContent) {
+            // 保存光标并动态赋予新文本
+            editor.innerHTML = newContent;
           }
+        }
+
+        // 同步除正文以外的其他 stage2 属性（如半程编辑清单）
+        const { unifiedContent: localUC, ...localRestS2 } = this.app.state.stage2;
+        const { unifiedContent: remoteUC, ...remoteRestS2 } = remoteData.stage2;
+        if (JSON.stringify(localRestS2) !== JSON.stringify(remoteRestS2)) {
+          this.app.state.stage2 = { ...remoteData.stage2, unifiedContent: this.app.state.stage2.unifiedContent };
+          updated = true;
         }
       }
 
@@ -3684,8 +3682,20 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         onUnifiedContentChange: (newContent) => {
           if (this.state.isFinalSubmitted) return;
           this.state.stage2.unifiedContent = newContent;
-          this.syncStage2();
-          this.checkAgentTriggersOnContent(newContent);
+
+          // ⚡ 1. 广播通知同设备 BroadcastChannel
+          if (this.cloudSyncEngine && this.cloudSyncEngine.bc) {
+            try {
+              this.cloudSyncEngine.pushSnapshot();
+            } catch (e) {}
+          }
+
+          // ⚡ 2. 250ms 节流提交 Server API
+          clearTimeout(this._editorSyncDebounce);
+          this._editorSyncDebounce = setTimeout(() => {
+            this.syncStage2();
+            this.checkAgentTriggersOnContent(newContent);
+          }, 250);
         },
         onOpenCaseModal: () => {
           downloadFileBlob('编辑会议规范与范例模板文件.pdf');
