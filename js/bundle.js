@@ -2420,7 +2420,15 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
           </div>
         </div>
         <div class="proposals-grid" style="display:grid; grid-template-columns:repeat(auto-fit, minmax(280px, 1fr)); gap:20px; align-items:stretch; margin-top:14px;">
-          ${s1.proposals.map((p, idx) => {
+          ${(!s1.proposals || s1.proposals.length === 0) ? `
+            <div style="grid-column: 1 / -1; background:#ffffff; border:2px dashed #cbd5e1; border-radius:12px; padding:36px 20px; text-align:center; color:#64748b;">
+              <div style="font-size:32px; margin-bottom:10px;">💡</div>
+              <div style="font-size:15px; font-weight:700; color:#0f172a; margin-bottom:6px;">提案池目前为空，等待组员通过右侧管道研讨生成！</div>
+              <div style="font-size:12.5px; color:#64748b; max-width:500px; margin:0 auto; line-height:1.6;">
+                请组员在右侧聊天窗口中自由研讨选题方向（输入满 8 字且包含观点即可自动提炼为专属卡片，或直接输入 <b>@拍卖师</b> 寻求大模型智能体选题指导）。
+              </div>
+            </div>
+          ` : s1.proposals.map((p, idx) => {
             const isThisVoted = userVotedProposalId === p.id;
             let btnText = '🗳️ 投票支持此提案';
             let btnClass = 'vote-btn';
@@ -2444,9 +2452,9 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
                   <b>理论与事实依据:</b><br>${p.rationale}
                 </div>
                 <div class="metrics-row" style="display:flex; justify-content:space-between; font-size:11.5px; color:#64748b; background:#f1f5f9; padding:6px 10px; border-radius:6px; margin-bottom:12px;">
-                  <span>文献: <b style="color:#0284c7;">${p.metrics.literature}</b></span>
-                  <span>新意: <b style="color:#16a34a;">${p.metrics.innovation}</b></span>
-                  <span>风险: <b style="color:#d97706;">${p.metrics.risk}</b></span>
+                  <span>文献: <b style="color:#0284c7;">${(p.metrics && p.metrics.literature) || '良好'}</b></span>
+                  <span>新意: <b style="color:#16a34a;">${(p.metrics && p.metrics.innovation) || '高'}</b></span>
+                  <span>风险: <b style="color:#d97706;">${(p.metrics && p.metrics.risk) || '低'}</b></span>
                 </div>
                 <button class="${btnClass}" data-id="${p.id}" ${isContractLocked || userHasVoted ? 'disabled' : ''} style="width:100%; margin-top:auto;">${btnText}</button>
               </div>
