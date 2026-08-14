@@ -631,7 +631,7 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
     getGroupMembersForWorkspace(groupId = 'group_1') {
       const users = this.getUsers();
       const groupUsers = users.filter(u => u.groupId === groupId && u.role !== 'teacher');
-      const colors = ['#818cf8', '#22d3ee', '#fbbf24', '#ec4899', '#34d399', '#f97316', '#a78bfa'];
+      const colors = ['#0284c7', '#059669', '#7c3aed', '#d97706', '#ec4899', '#14b8a6', '#6366f1', '#84cc16'];
       const avatars = ['👨‍🎓', '👩‍🎓', '🧑‍🎓', '🎓', '📚', '🌟'];
 
       const membersObj = {};
@@ -639,26 +639,32 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
         groupUsers.forEach((u, idx) => {
           const letterCode = (u.studentCode && u.studentCode.length === 1) ? u.studentCode.toUpperCase() : String.fromCharCode(65 + idx);
           const cleanName = (u.name || '').replace(/\s*\([^)]*\)/g, '');
-          const mInfo = {
-            id: u.id || u.username || letterCode,
-            name: cleanName || (letterCode === 'A' ? '李明' : letterCode === 'B' ? '王芳' : '陈强'),
-            roleTitle: (u.studentCode === 'A' || letterCode === 'A' || idx === 0) ? '组长 · 论文结构与概览' : `组员 · 核心章节撰写`,
+          const uniqueKey = u.id || u.username || letterCode;
+          membersObj[uniqueKey] = {
+            id: uniqueKey,
+            name: `${cleanName} (学生${letterCode})`,
+            roleTitle: (u.studentCode === 'A' || letterCode === 'A' || idx === 0) ? '组长 · 论文结构与统筹' : `组员 · 章节撰写与研讨`,
             avatar: u.avatar || avatars[idx % avatars.length],
             color: colors[idx % colors.length],
             studentCode: letterCode
           };
-          membersObj[letterCode] = mInfo;
-          membersObj[letterCode.toLowerCase()] = mInfo;
-          if (u.id) membersObj[u.id] = mInfo;
-          if (u.username) membersObj[u.username] = mInfo;
         });
       } else {
-        const mA = { id: 'liming', name: '李明', roleTitle: '组长 · 论文结构', avatar: '👨‍🎓', color: '#0284c7', studentCode: 'A' };
-        const mB = { id: 'wangfang', name: '王芳', roleTitle: '组员 · 文献综述', avatar: '👩‍🎓', color: '#059669', studentCode: 'B' };
-        const mC = { id: 'chenqiang', name: '陈强', roleTitle: '组员 · 研究设计', avatar: '🧑‍🎓', color: '#7c3aed', studentCode: 'C' };
-        membersObj['A'] = mA; membersObj['liming'] = mA;
-        membersObj['B'] = mB; membersObj['wangfang'] = mB;
-        membersObj['C'] = mC; membersObj['chenqiang'] = mC;
+        const defaultList = [
+          { id: 'u_studentA', name: '李明', code: 'A', role: '组长 · 论文结构', color: '#0284c7' },
+          { id: 'u_studentB', name: '王芳', code: 'B', role: '组员 · 文献综述', color: '#059669' },
+          { id: 'u_studentC', name: '陈强', code: 'C', role: '组员 · 研究设计', color: '#7c3aed' }
+        ];
+        defaultList.forEach(m => {
+          membersObj[m.code] = {
+            id: m.code,
+            name: `${m.name} (学生${m.code})`,
+            roleTitle: m.role,
+            avatar: '👨‍🎓',
+            color: m.color,
+            studentCode: m.code
+          };
+        });
       }
       return membersObj;
     }
