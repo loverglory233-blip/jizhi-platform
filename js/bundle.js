@@ -1472,7 +1472,7 @@
                           <span style="font-size:16px; font-weight:800; color:#34d399;">📝 实时写作大正文镜像 (Live Document Stream - ${activeMonitorGroup.name})</span>
                           <span style="font-size:11px; background:rgba(52,211,153,0.15); color:#34d399; padding:2px 8px; border-radius:10px; font-weight:700; border:1px solid rgba(52,211,153,0.3);">🟢 实时同步键入中</span>
                         </div>
-                        <span style="font-size:13px; color:#cbd5e1;">实时总字数: <b style="color:#38bdf8; font-size:15px;">${state.stage2.unifiedContent.length}</b> 字</span>
+                        <span style="font-size:13px; color:#cbd5e1;">实时总字数: <b style="color:#38bdf8; font-size:15px;">${((state.stage2 && state.stage2.unifiedContent) ? state.stage2.unifiedContent.length : 0)}</b> 字</span>
                       </div>
                       <div style="background:rgba(15,23,42,0.8); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:10px 14px; margin-bottom:12px; font-size:12px; color:#a5b4fc; display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                         <span>⚡ <b>当前【${activeMonitorGroup.name}】组内架构 (${monitorMembersList.length}人):</b> ${monitorMembersList.map(m => m.name).join('、')}</span>
@@ -3017,7 +3017,7 @@
           <div class="card" style="flex:1; display:flex; flex-direction:column; padding:0; background:none; border:none; box-shadow:none;">
             <div style="font-size:13px; font-weight:700; color:#0f172a; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; background:#ffffff; padding:10px 16px; border-radius:10px; border:1px solid #e2e8f0;">
               <span>📝 论文全篇大正文 ${isFinalSubmitted ? '<span style="font-size:11px; color:#34d399; margin-left:6px;">(🔒 终稿已提交 · 归档只读查阅)</span>' : '(依据答辩质询意见修改终稿)'}</span>
-              <span style="font-size:12px; color:#0284c7;">整篇实时字数: <b style="font-size:14px; color:#0284c7;">${state.stage2.unifiedContent.length}</b> 字</span>
+              <span style="font-size:12px; color:#0284c7;">整篇实时字数: <b style="font-size:14px; color:#0284c7;">${((state.stage2 && state.stage2.unifiedContent) ? state.stage2.unifiedContent.length : 0)}</b> 字</span>
             </div>
 
             <!-- 阶段三全量搭载 Nordic INS 极简 Ribbon Word 工具栏 -->
@@ -3370,12 +3370,33 @@
       }
 
       const savedS2 = localStorage.getItem(`jizhi_sync_s2_v9_${groupId}`);
-      if (savedS2) { try { this.state.stage2 = { ...defaultState.stage2, ...JSON.parse(savedS2) }; } catch (e) {} }
-      else { this.state.stage2 = defaultState.stage2; }
+      if (savedS2) { 
+        try { 
+          const p2 = JSON.parse(savedS2);
+          this.state.stage2 = { 
+            ...defaultState.stage2, 
+            ...p2,
+            actionPlan: (p2 && p2.actionPlan) || { isGenerated: false, items: [] },
+            memberContributions: (p2 && p2.memberContributions) || {}
+          }; 
+        } catch (e) { this.state.stage2 = defaultState.stage2; } 
+      } else { 
+        this.state.stage2 = defaultState.stage2; 
+      }
 
       const savedS3 = localStorage.getItem(`jizhi_sync_s3_v9_${groupId}`);
-      if (savedS3) { try { this.state.stage3 = { ...defaultState.stage3, ...JSON.parse(savedS3) }; } catch (e) {} }
-      else { this.state.stage3 = defaultState.stage3; }
+      if (savedS3) { 
+        try { 
+          const p3 = JSON.parse(savedS3);
+          this.state.stage3 = { 
+            ...defaultState.stage3, 
+            ...p3,
+            feedbackItems: (p3 && p3.feedbackItems) || []
+          }; 
+        } catch (e) { this.state.stage3 = defaultState.stage3; } 
+      } else { 
+        this.state.stage3 = defaultState.stage3; 
+      }
 
       const savedStage = localStorage.getItem(`jizhi_sync_current_stage_v9_${groupId}`);
       this.state.currentStage = savedStage || 'stage1';
