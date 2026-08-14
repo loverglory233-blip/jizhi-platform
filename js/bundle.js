@@ -39,36 +39,12 @@
         taskAssignments: {}
       }
     },
-    stage2: {
-      unifiedContent: `《协作学习中的“搭便车”现象：基于注意力分配与AI感知视角》
-
-一、研究背景与意义
-在高等教育的混合式与在线协作学习场景中，“搭便车”（Free-riding）现象长期困扰着小组学习的质量与公平性。生成式AI技术（如智谱AI、ChatGPT）的引入为协同写作带来了新的可能性，但也引发了关于社会惰化与感知沉溺的新问题。本研究基于共享调节学习（SSRL）理论，旨在探索群体感知可视化对搭便车行为的干预机制。
-
-二、研究问题与假设
-H1：显性化群体感知反馈能够显著降低小组写作中的搭便车发生率。
-H2：注意力分配透明化在群体感知与认知投入之间起显著的中介作用。
-
-三、文献综述
-协作学习中的社会惰化理论表明，当个人贡献难以被感知和评价时，个体的努力程度会下降。SSRL 理论强调通过团队共享目标与过程监控来实现自律。引用 2024 年最新教育技术实证研究，过程性评价能有效改善参与平衡度。
-
-四、研究设计与方法
-本研究拟采用准实验设计，选择某高校《现代教育技术》课程 150 名本科生作为研究样本。通过集成化平台实时采集字数贡献比、互动频率与注意力分布，采用 Facione 经典量表进行前后测评价。
-
-五、不足与反思
-本研究样本局限于单一专业，未来需扩大样本代表性；同时需防范显性感知带来的评价焦虑。
-
-六、参考文献
-[1] Hadley, G., et al. (2024). Socially Shared Regulation in AI-assisted Collaborative Writing. Computers & Education.
-[2] Johnson, D. W., & Johnson, R. T. (2019). Cooperation and Competition: Theory and Research.`,
+        stage2: {
+      unifiedContent: `<h2>一、研究背景与意义</h2><p>请在此处撰写正文...</p><h2>二、研究问题与假设</h2><p>请在此处撰写正文...</p><h2>三、文献综述</h2><p>请在此处撰写正文...</p><h2>四、研究设计与方法</h2><p>请在此处撰写正文...</p><h2>五、不足与反思</h2><p>请在此处撰写正文...</p><h2>六、参考文献</h2><p>请在此处撰写正文...</p>`,
       memberContributions: {},
       actionPlan: {
-        isGenerated: true,
-        items: [
-          '修订项① (逻辑与方法): 在“二、研究问题与假设”末尾补齐与“四、研究设计”操作化变量的对应说明。',
-          '修订项② (瓶颈突破): 针对【假设与研究设计工具对应不明确】，参照《编辑会议规范与范例模板文件.pdf》补充相关文献引用。',
-          '修订项③ (团队协调): 维持当前平衡贡献比率，在后45分钟内重点完成“五、反思”。'
-        ]
+        isGenerated: false,
+        items: []
       }
     },
 
@@ -4550,35 +4526,4 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
   window.addEventListener('DOMContentLoaded', () => {
     window.app = new App();
   });
-})();getGroupMembersForWorkspace(groupId) {
-      const cls = this.getClassConfig();
-      if (!cls || !cls.groups || !cls.groups[groupId]) {
-        return {
-          'A': { id: 'A', name: '李明 (学生A)', roleTitle: '组长 · 论文结构', avatar: '👨‍🎓', color: '#0284c7', studentCode: 'A' },
-          'B': { id: 'B', name: '王芳 (学生B)', roleTitle: '组员 · 文献综述', avatar: '👩‍🎓', color: '#059669', studentCode: 'B' },
-          'C': { id: 'C', name: '陈强 (学生C)', roleTitle: '组员 · 研究设计', avatar: '🧑‍🎓', color: '#7c3aed', studentCode: 'C' }
-        };
-      }
-      const g = cls.groups[groupId];
-      const members = {};
-      const colors = ['#0284c7', '#059669', '#7c3aed', '#d97706', '#ec4899', '#14b8a6'];
-      const defaultRoles = ['组长 · 论文结构', '组员 · 文献综述', '组员 · 研究设计', '组员 · 数据分析', '组员 · 讨论撰写'];
-
-      (g.members || []).forEach((m, idx) => {
-        const studentCode = String.fromCharCode(65 + idx);
-        members[studentCode] = {
-          id: studentCode,
-          realId: m.id,
-          name: `${m.name} (学生${studentCode})`,
-          roleTitle: m.role || defaultRoles[idx] || '研究组员',
-          avatar: m.avatar || (idx % 2 === 0 ? '👨‍🎓' : '👩‍🎓'),
-          color: colors[idx % colors.length],
-          studentCode: studentCode
-        };
-      });
-      return members;
-    }lti-Agent Collaborative Writing Platform
- * Quad-Redundant Real-Time Cloud Sync Engine v6
- * (Supports Chrome, Safari, Edge, Firefox, Incognito Mode & Multi-Device Real-Time Sync)
- * (Zero Backend / Zero server.py Modification Required)
- */
+})();
