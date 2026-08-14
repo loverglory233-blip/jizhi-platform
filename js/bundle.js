@@ -3422,8 +3422,29 @@ H2：注意力分配透明化在群体感知与认知投入之间起显著的中
       }
 
       const savedS1 = localStorage.getItem(`jizhi_sync_s1_v8_${groupId}`);
-      if (savedS1) { try { this.state.stage1 = { ...defaultState.stage1, ...JSON.parse(savedS1) }; } catch (e) {} }
-      else { this.state.stage1 = defaultState.stage1; }
+      if (savedS1) { 
+        try { 
+          const parsed = JSON.parse(savedS1);
+          this.state.stage1 = { 
+            ...defaultState.stage1, 
+            ...parsed,
+            contract: {
+              ...defaultState.stage1.contract,
+              ...(parsed.contract || {}),
+              timeAllocations: {
+                ...defaultState.stage1.contract.timeAllocations,
+                ...((parsed.contract && parsed.contract.timeAllocations) || {})
+              },
+              confirmedMembers: (parsed.contract && parsed.contract.confirmedMembers) || {},
+              taskAssignments: (parsed.contract && parsed.contract.taskAssignments) || {}
+            }
+          }; 
+        } catch (e) {
+          this.state.stage1 = defaultState.stage1;
+        } 
+      } else { 
+        this.state.stage1 = defaultState.stage1; 
+      }
 
       const savedS2 = localStorage.getItem(`jizhi_sync_s2_v8_${groupId}`);
       if (savedS2) { try { this.state.stage2 = { ...defaultState.stage2, ...JSON.parse(savedS2) }; } catch (e) {} }
