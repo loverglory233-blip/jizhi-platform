@@ -39,8 +39,8 @@
         taskAssignments: {}
       }
     },
-        stage2: {
-      unifiedContent: `<h2>一、研究背景与意义</h2><p>请在此处撰写正文...</p><h2>二、研究问题与假设</h2><p>请在此处撰写正文...</p><h2>三、文献综述</h2><p>请在此处撰写正文...</p><h2>四、研究设计与方法</h2><p>请在此处撰写正文...</p><h2>五、不足与反思</h2><p>请在此处撰写正文...</p><h2>六、参考文献</h2><p>请在此处撰写正文...</p>`,
+            stage2: {
+      unifiedContent: "",
       memberContributions: {},
       actionPlan: {
         isGenerated: false,
@@ -55,33 +55,9 @@
           id: 'fb-1',
           role: 'opponent',
           speaker: '反方委员 Agent',
-          title: '显性感知反馈可能诱发评价焦虑的心理负面效应',
-          content: '文献中有实证研究表明显性群体感知反馈会引发评价焦虑 (Evaluation Anxiety)，研究假设 H1 是否忽略了这一心理负面效应？',
-          neutralGuidance: '🟡 中间委员裁决引导：请团队评估该质疑。你们认为这是应该在正文第四章补充的限制条件，还是可以通过“过程性提示而非结果排名”进行辩护？请讨论并录入结论。',
-          status: 'pending',
-          response: ''
-        },
-        {
-          id: 'fb-2',
-          role: 'opponent',
-          speaker: '反方委员 Agent',
-          title: '问卷量表维度缺失（未涵盖行为投入与情绪投入）',
-          content: '现有研究设计的问卷仅测量了认知投入，缺失了情绪投入与行为投入维度，如何确保测量完整性？',
-          neutralGuidance: '🟡 中间委员裁决引导：该质疑涉及测量效度。请团队讨论是否需要在研究设计中将问卷扩展为“认知、情绪、行为”三维量表？',
-          status: 'pending',
-          response: ''
-        },
-        {
-          id: 'fb-3',
-          role: 'proponent',
-          speaker: '正方委员 Agent',
-          title: 'SSRL 共享调节与 AI 群体感知的切入点极具创新性',
-          content: '将注意力分配可视化作为中介变量，巧妙破解了搭便车干预的传统死板局限，理论价值极高。',
-          neutralGuidance: '🟡 中间委员裁决引导：正方委员给予了充分肯定。请团队讨论如何在终稿的“六、反思与意义”中进一步深化此理论贡献。',
-          status: 'pending',
-          response: ''
-        }
-      ]
+          title: '显性感知反馈可    stage3: {
+      activeTab: 'defense',
+      feedbackItems: []
     },
 
     chatLogs: {
@@ -181,49 +157,12 @@
     neutral: { id: 'neutral', name: '中间委员 Agent', roleTitle: '答辩委员会 · 裁决引导者', avatar: '🟡', color: '#eab308', stage: 'stage3' }
   };
 
-  const PresetMessages = {
+    const PresetMessages = {
     stage1: [
-      { sender: 'auctioneer', text: `🎪 【学术拍卖会启动】各位研究者，欢迎来到学术选题拍卖会！在接下来的 25 分钟里，我们需要共同确定最具学术价值且可行的研究选题，并签署合作合约。\n\n请注意：提交提案时不仅要写明【观点/主题】，更要清晰阐述选择该主题的【学术理由与背景】。请学习伙伴在左侧提交各自的提案！`, timestamp: '14:00' },
-      { sender: 'A', text: '我提交了【观点】：生成式AI工具对大学生协作学习投入度的影响机制；【理由】：当前生成式AI在教育中普及迅速，但学生容易产生认知依赖，探索其行为与情感投入机制具有极高的实践教育意义！', timestamp: '14:02' },
-      { sender: 'B', text: '我提交了【观点】：在线协作写作中的“搭便车”现象及其干预策略研究；【理由】：搭便车是小组写作中最突出的痛点，基于群体感知可视化进行干预，理论成熟且有强烈的实证需求。', timestamp: '14:03' },
-      { sender: 'C', text: '我提交了【观点】：短视频使用对大学生课堂注意力持续时间的影响；【理由】：大学生普遍存在短视频带来的注意力碎片化问题，从认知心理学角度切入非常有新意！', timestamp: '14:04' },
-      { sender: 'auctioneer', text: `📋 【拍卖师深度鉴定与评估】三件拍品及其理由已收齐！我将从文献成熟度、创新性与实践可行性三方面进行深度鉴定：\n\n1️⃣ 《生成式AI对投入度的影响》（观点+理由）：选题切中前沿，理由充分，但“投入度”涵盖认知、情感、行为三维，概念较大，需要明确具体测量工具；\n2️⃣ 《协作写作搭便车干预》（观点+理由）：经典稳妥，契合本课SSRL主旨，文献极其丰富，但需注意避免落入传统干预范式，需寻找新的中介变量；\n3️⃣ 《短视频对注意力影响》（观点+理由）：极具现实针对性，新意强，但文献较分散，在150分钟内完成严密的实验设计难度较高。\n\n请大家在聊天框中深入讨论各自理由，并在左侧完成单选投票！`, timestamp: '14:06' },
-      { sender: 'A', text: '我投票给了《搭便车干预策略研究》，因为文献丰富，150分钟内能做出完整的实验方案。', timestamp: '14:08' },
-      { sender: 'B', text: '我也赞成《搭便车干预策略研究》，符合我们课程要求。', timestamp: '14:09' },
-      { sender: 'C', text: '我投了《短视频注意力》，不过我也理解搭便车更稳妥。', timestamp: '14:10' },
-      { sender: 'auctioneer', text: `🔨 【竞拍投票计票与分歧引导】投票完毕：2票支持《搭便车干预》，1票支持《短视频注意力》。\n\n注意！存在意见分歧！C同学的“注意力分配”切入点非常优秀。建议将“注意力分配”作为搭便车的一个核心成因进行融合。请小组成员在聊天框中沟通，当全员表达认可同意后，才算正式锁定研究主题！`, timestamp: '14:11' },
-      { sender: 'C', text: '我赞成融合！把主题定位《协作学习中的“搭便车”现象：基于注意力分配与AI感知视角》，我认可这个主题！', timestamp: '14:12' },
-      { sender: 'A', text: '我也完全认可这个融合主题！', timestamp: '14:13' },
-      { sender: 'B', text: '我也同意！全员已表达认可。', timestamp: '14:14' },
-      { sender: 'auctioneer', text: `🔨 【主题确认与分工讨论引导】小组成员已全员表达认可！研究主题正式锁定为：《协作学习中的“搭便车”现象：基于注意力分配与AI感知视角》。\n\n现在请大家在聊天框中明确两件事：1. 150分钟在6个部分中具体怎么分配时间？2. 谁具体负责写哪几个部分？商量好后告诉我，系统将实时抽取生成合约卡片！`, timestamp: '14:15' },
-      { sender: 'A', text: '我提议：总共150分钟。研究背景分配20分钟，研究问题25分钟，文献综述30分钟，研究方法40分钟，不足反思15分钟，参考文献10分钟，正好150分钟！', timestamp: '14:17' },
-      { sender: 'B', text: '时间分配很合理！分工方面：我负责撰写【文献综述】板块。', timestamp: '14:18' },
-      { sender: 'C', text: '那我负责【研究设计与方法】、【不足与反思】和【参考文献】。', timestamp: '14:19' },
-      { sender: 'A', text: '剩下的【研究背景与意义】和【研究问题与假设】由我（组长）负责撰写。', timestamp: '14:20' },
-      { sender: 'auctioneer', text: `📜 【从聊天记录中成功抽取合约卡片】收到！拍卖师已从聊天文本中成功提取时间预算（背景20m/问题25m/文献30m/方法40m/反思15m/参考文献10m）与分工名单。\n\n合作卡片已呈递在左侧！大家可以继续在卡片中进行微调修改，全员点击【确认签署】后即可开启阶段二写作！`, timestamp: '14:21' }
+      { sender: 'auctioneer', text: '🎪 欢迎来到阶段一【学术拍卖会】！请组员积极研讨选题方向，形成提案并在合作合约中明确分工！', timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
     ],
-    stage2: [
-      { sender: 'managingEditor', text: `🤝 【学术编辑部接管】合作合约已全员签署生效！学术编辑部全面上线。\n\n根据分工，目前进入上半程写作（45分钟）。我将实时监控字数贡献比与同伴互动！`, timestamp: '14:25' },
-      { sender: 'reviewingEditor', text: `📝 【审稿编辑范例文件推送通知】：各位作者，为了帮助大家顺利开展中途检查，我已呈递了《编辑会议规范与范例模板文件.pdf》（见上方按钮与弹窗文件）。\n\n该范例规范展示了标准学术论文的结构自查指标，请大家在撰写过程中点击查阅参考！`, timestamp: '14:28' },
-      { sender: 'A', text: '组员们，我已经把研究背景和 RQ1、RQ2 核心框架写在大正文里了！大家看一下大文本框的“一、研究背景与意义”部分，看看思路顺不顺？', timestamp: '14:32' },
-      { sender: 'B', text: '收到！我正在大正文中补充“三、文献综述”里关于 SSRL 共享调节与生成式 AI 结合的部分，引用了 2024 年最新文献。', timestamp: '14:35' },
-      { sender: 'reviewingEditor', text: `📝 【审稿编辑实时提问】：查阅到 A 同学在“研究问题”中提出了 RQ1 关于群体感知对搭便车干预的作用。请问 B 同学在文献综述中，是否提供了对应的测量量表来源？`, timestamp: '14:38' },
-      { sender: 'C', text: '我正在撰写“四、研究设计与方法”，打算采用准实验设计，样本选 150 名大学生。针对审稿编辑的问题，我们可以在文献里加上 Facione 经典量表！', timestamp: '14:40' },
-      { sender: 'managingEditor', text: `⏰ 【过程监控提醒】上半程写作已进行 20 分钟。当前整篇大正文已达到 1100 字，组内写作节奏非常均衡！`, timestamp: '14:45' },
-      { sender: 'A', text: '大家太棒了！B 同学，文献部分写完后可以帮忙看下“假设 H1”的文字连贯性吗？', timestamp: '14:48' },
-      { sender: 'B', text: '没问题，我已经接入修改了，文字承接得很顺畅！', timestamp: '14:52' },
-      { sender: 'C', text: '我也把研究方法部分的自变量控制逻辑写清楚了，组长可以帮忙检查一下。', timestamp: '14:56' },
-      { sender: 'managingEditor', text: `📢 【编辑会议① 触发】上半程45分钟写作节点已到！发起【编辑会议①】——请组员在弹窗中进行“内容逻辑、团队分工、瓶颈难点”三维评价，并查阅审稿编辑推送的范例文件！`, timestamp: '15:10' },
-      { sender: 'reviewingEditor', text: `📝 【审稿编辑结合范例文件深度反馈】：阅览了组内自评与正文初稿，整体符合《编辑会议规范与范例模板文件.pdf》的基础规范。但发现一个关键逻辑缺陷：在“二、研究问题与假设”中提出的 H2 假设未在“四、研究设计”中给出操作化变量说明。\n\n已自动生成【半程编辑修正清单】置于左侧，请团队在后半程聚焦修正！`, timestamp: '15:15' }
-    ],
-    stage3: [
-      { sender: 'proponent', text: `🟢 【正方委员·正面评价】恭喜研究团队完成方案初稿！从学术创新性来看，本研究将 SSRL 理论、AI 群体感知与注意力分配结合，提出了极具应用价值的假设体系。`, timestamp: '16:10' },
-      { sender: 'opponent', text: `🔴 【反方委员·尖锐质疑】作为反方审稿人，我提出两个核心学术质疑：\n1️⃣ 显性感知反馈可能诱发评价焦虑的心理负面效应，如何辩护？\n2️⃣ 问卷仅测量了认知投入，缺失了情绪与行为投入维度，测量效度不足！`, timestamp: '16:13' },
-      { sender: 'neutral', text: `🟡 【中间委员·第①条裁决引导 (1/3)】答辩委员会正反方意见已呈递！我将按顺序逐条引导组内开展研讨。\n\n👉 **首先研讨第①条质询**【反方委员: 显性感知反馈可能诱发评价焦虑】：\n请团队评估，你们认为这是应该在正文第四章补充的限制条件，还是可以通过“过程性提示而非结果排名”进行辩护？请讨论并录入结论。`, timestamp: '16:15' },
-      { sender: 'A', text: `👨‍🎓 【组员协同研讨例】组员们，中间委员针对反方的【评价焦虑】质疑给了明确方向。我建议在“四、研究设计”中强调我们系统使用的是“过程性协同提示”而非“公开竞争排名”，这样就能有效缓解评价焦虑！`, timestamp: '16:16' },
-      { sender: 'B', text: `👩‍🎓 【组员协同研讨例】赞成组长的思路！同时在“五、不足与反思”部分，我们也可以把“防范评价焦虑”明确写为研究的边界限制条件，这样回答反方就很圆满了！`, timestamp: '16:17' },
-      { sender: 'C', text: `🧑‍🎓 【组员协同研讨例】同意！我已经在左侧点击【研讨与裁决】录入了咱们组的统一辩护结论。接下来咱们可以点击【返回协作写作大正文】把这段话补全！`, timestamp: '16:18' }
-    ]
+    stage2: [],
+    stage3: []
   };
 
   /* ==========================================================================
@@ -711,7 +650,7 @@
     }
 
     exportGroupChatLogsToExcel(groupId = 'group_1', chatLogsState = null) {
-      const currentChatLogs = chatLogsState || JSON.parse(localStorage.getItem(`jizhi_sync_chat_v8_${groupId}`)) || {};
+      const currentChatLogs = chatLogsState || JSON.parse(localStorage.getItem(`jizhi_sync_chat_v9_${groupId}`)) || {};
       let csvContent = '\uFEFF名字,时间,内容\n';
       const stageNames = { stage1: '阶段一：学术拍卖会', stage2: '阶段二：学术编辑部', stage3: '阶段三：答辩擂台' };
       const users = this.getUsers();
@@ -3036,7 +2975,15 @@
               <span style="font-size:12px; color:#38bdf8;">正反方提意见 ➔ 中间委员逐条引导 ➔ 学生研讨裁决</span>
             </div>
             <div style="display:flex; flex-direction:column; gap:16px;">
-              ${s3.feedbackItems.map((item, idx) => `
+              ${(!s3.feedbackItems || s3.feedbackItems.length === 0) ? `
+                <div style="background:#ffffff; border:2px dashed #cbd5e1; border-radius:12px; padding:36px 20px; text-align:center; color:#64748b;">
+                  <div style="font-size:32px; margin-bottom:10px;">⚖️</div>
+                  <div style="font-size:15px; font-weight:700; color:#0f172a; margin-bottom:6px;">答辩委员会质询点等待生成！</div>
+                  <div style="font-size:12.5px; color:#64748b; max-width:500px; margin:0 auto; line-height:1.6;">
+                    进入阶段三【答辩擂台】后，答辩委员会正反方委员 Agent 将根据本组阶段二撰写的实际正文自动提出针对性质询点与改进意见。
+                  </div>
+                </div>
+              ` : s3.feedbackItems.map((item, idx) => `
                 <div style="background:rgba(15,23,42,0.7); padding:16px; border-radius:12px; border:1px solid ${item.role === 'opponent' ? 'rgba(239,68,68,0.4)' : 'rgba(34,197,94,0.4)'}; box-shadow:0 4px 12px rgba(0,0,0,0.3);">
                   <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
                     <div style="display:flex; align-items:center; gap:8px;">
@@ -3385,7 +3332,7 @@
       const defaultState = JSON.parse(JSON.stringify(InitialState));
       this.state.members = this.authManager.getGroupMembersForWorkspace(groupId);
 
-      const savedChat = localStorage.getItem(`jizhi_sync_chat_v8_${groupId}`);
+      const savedChat = localStorage.getItem(`jizhi_sync_chat_v9_${groupId}`);
       if (savedChat) { 
         try { 
           this.state.chatLogs = JSON.parse(savedChat);
@@ -3397,7 +3344,7 @@
         this.initPresetMessagesForGroup(groupId); 
       }
 
-      const savedS1 = localStorage.getItem(`jizhi_sync_s1_v8_${groupId}`);
+      const savedS1 = localStorage.getItem(`jizhi_sync_s1_v9_${groupId}`);
       if (savedS1) { 
         try { 
           const parsed = JSON.parse(savedS1);
@@ -3422,33 +3369,33 @@
         this.state.stage1 = defaultState.stage1; 
       }
 
-      const savedS2 = localStorage.getItem(`jizhi_sync_s2_v8_${groupId}`);
+      const savedS2 = localStorage.getItem(`jizhi_sync_s2_v9_${groupId}`);
       if (savedS2) { try { this.state.stage2 = { ...defaultState.stage2, ...JSON.parse(savedS2) }; } catch (e) {} }
       else { this.state.stage2 = defaultState.stage2; }
 
-      const savedS3 = localStorage.getItem(`jizhi_sync_s3_v8_${groupId}`);
+      const savedS3 = localStorage.getItem(`jizhi_sync_s3_v9_${groupId}`);
       if (savedS3) { try { this.state.stage3 = { ...defaultState.stage3, ...JSON.parse(savedS3) }; } catch (e) {} }
       else { this.state.stage3 = defaultState.stage3; }
 
-      const savedStage = localStorage.getItem(`jizhi_sync_current_stage_v8_${groupId}`);
+      const savedStage = localStorage.getItem(`jizhi_sync_current_stage_v9_${groupId}`);
       this.state.currentStage = savedStage || 'stage1';
 
-      const savedSubmitted = localStorage.getItem(`jizhi_sync_final_submitted_v8_${groupId}`);
+      const savedSubmitted = localStorage.getItem(`jizhi_sync_final_submitted_v9_${groupId}`);
       this.state.isFinalSubmitted = (savedSubmitted === 'true');
     }
 
     initPresetMessagesForGroup(groupId) {
       this.state.chatLogs = JSON.parse(JSON.stringify(PresetMessages));
-      localStorage.setItem(`jizhi_sync_chat_v8_${groupId}`, JSON.stringify(this.state.chatLogs));
+      localStorage.setItem(`jizhi_sync_chat_v9_${groupId}`, JSON.stringify(this.state.chatLogs));
     }
 
     saveGroupState(groupId) {
-      localStorage.setItem(`jizhi_sync_chat_v8_${groupId}`, JSON.stringify(this.state.chatLogs));
-      localStorage.setItem(`jizhi_sync_s1_v8_${groupId}`, JSON.stringify(this.state.stage1));
-      localStorage.setItem(`jizhi_sync_s2_v8_${groupId}`, JSON.stringify(this.state.stage2));
-      localStorage.setItem(`jizhi_sync_s3_v8_${groupId}`, JSON.stringify(this.state.stage3));
-      localStorage.setItem(`jizhi_sync_current_stage_v8_${groupId}`, this.state.currentStage);
-      localStorage.setItem(`jizhi_sync_final_submitted_v8_${groupId}`, this.state.isFinalSubmitted ? 'true' : 'false');
+      localStorage.setItem(`jizhi_sync_chat_v9_${groupId}`, JSON.stringify(this.state.chatLogs));
+      localStorage.setItem(`jizhi_sync_s1_v9_${groupId}`, JSON.stringify(this.state.stage1));
+      localStorage.setItem(`jizhi_sync_s2_v9_${groupId}`, JSON.stringify(this.state.stage2));
+      localStorage.setItem(`jizhi_sync_s3_v9_${groupId}`, JSON.stringify(this.state.stage3));
+      localStorage.setItem(`jizhi_sync_current_stage_v9_${groupId}`, this.state.currentStage);
+      localStorage.setItem(`jizhi_sync_final_submitted_v9_${groupId}`, this.state.isFinalSubmitted ? 'true' : 'false');
     }
 
     syncChatLogs() {
