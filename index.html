@@ -3,9 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>集智 (JIZHI) - 多智能体支持的协作写作平台</title>
+  <title>集智 (JIZHI) - 多智能体支持的在线协作写作平台</title>
   
-  <!-- Critical Anti-FOUC Layout Guard (防止网络慢时页面布局闪烁错乱) -->
+  <!-- Anti-FOUC Guard -->
   <style>
     html, body {
       width: 100vw !important;
@@ -47,11 +47,10 @@
 
   <div id="app"></div>
 
-  <!-- Pure Standalone Bundle -->
-  <script src="js/bundle.js"></script>
+  <!-- Standard Modular ES6 Application Script -->
+  <script type="module" src="js/app.js"></script>
 
   <script>
-    // 监听全量 JS/CSS 加载完毕后平滑关闭加载保驾屏
     window.addEventListener('load', function() {
       var loader = document.getElementById('app-loading-screen');
       if (loader) {

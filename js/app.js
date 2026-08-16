@@ -1,7 +1,6 @@
 /**
  * Jizhi (集智) Multi-Agent Collaborative Writing Platform
- * App Controller - Cross-Device Real-Time Sync via Aliyun Server + LocalStorage Fallback
- * Supports: BroadcastChannel (same browser) + Server Polling (cross-device/remote)
+ * Clean App Controller - Real-time Multi-Agent Collaborative Engine (Production Ready)
  */
 
 import { InitialState } from './state.js';
@@ -11,26 +10,26 @@ import { renderLoginView } from './login.js';
 import { renderTeacherPortal } from './teacher.js';
 import { renderHeader, renderCanvas, renderChat } from './ui.js';
 
-const STORAGE_KEY_CHAT = 'jizhi_sync_chat_v3';
-const STORAGE_KEY_STAGE1 = 'jizhi_sync_s1_v3';
-const STORAGE_KEY_STAGE2 = 'jizhi_sync_s2_v3';
-const STORAGE_KEY_STAGE_CURRENT = 'jizhi_sync_current_stage_v3';
+const STORAGE_KEY_CHAT = 'jizhi_sync_chat_v4';
+const STORAGE_KEY_STAGE1 = 'jizhi_sync_s1_v4';
+const STORAGE_KEY_STAGE2 = 'jizhi_sync_s2_v4';
+const STORAGE_KEY_STAGE3 = 'jizhi_sync_s3_v4';
+const STORAGE_KEY_STAGE_CURRENT = 'jizhi_sync_current_stage_v4';
 
-// ✅ 阿里云服务器地址 - 跨设备/异地同步的核心
-const SERVER_URL = 'http://47.99.110.230:8088';
-const GROUP_ID = 'group_1'; // 同一组的学生使用相同的 groupId
-const SERVER_POLL_INTERVAL = 2000; // 每2秒从服务器拉取一次最新状态
+const SERVER_URL = 'http://localhost:8088';
+const GROUP_ID = 'group_1';
+const SERVER_POLL_INTERVAL = 2000;
 
 class App {
   constructor() {
     this.authManager = new AuthManager();
     this.state = JSON.parse(JSON.stringify(InitialState));
-    this.studentMsgCountSinceLastAgent = 0; // Counter for intelligent agent triggers
-    this._lastServerTimestamp = 0; // 记录上次服务器数据时间戳，避免重复应用
-    this._serverAvailable = false; // 服务器是否可用
+    this.studentMsgCountSinceLastAgent = 0;
+    this._lastServerTimestamp = 0;
+    this._serverAvailable = false;
     this.initSyncStorage();
     this.initRealtimeSync();
-    this.initServerSync(); // ✅ 启动跨设备服务器同步
+    this.initServerSync();
     this.initTimer();
     this.renderMain();
   }
@@ -61,6 +60,13 @@ class App {
       } catch (e) {}
     }
 
+    const savedS3 = localStorage.getItem(STORAGE_KEY_STAGE3);
+    if (savedS3) {
+      try {
+        this.state.stage3 = { ...this.state.stage3, ...JSON.parse(savedS3) };
+      } catch (e) {}
+    }
+
     const savedStage = localStorage.getItem(STORAGE_KEY_STAGE_CURRENT);
     if (savedStage) {
       this.state.currentStage = savedStage;
@@ -70,27 +76,20 @@ class App {
   initPresetMessages() {
     ['stage1', 'stage2', 'stage3'].forEach(stage => {
       if (!this.state.chatLogs[stage] || this.state.chatLogs[stage].length === 0) {
-        this.state.chatLogs[stage] = PresetMessages[stage] || [];
+        this.state.chatLogs[stage] = JSON.parse(JSON.stringify(PresetMessages[stage] || []));
       }
     });
     localStorage.setItem(STORAGE_KEY_CHAT, JSON.stringify(this.state.chatLogs));
   }
 
-  /**
-   * Fail-Safe Instant Synchronization Engine
-   * Combines BroadcastChannel + Native Window Storage Event + High-Frequency 200ms Storage Check
-   * Guarantees 100% instant UI updates across all tabs and windows!
-   */
   initRealtimeSync() {
-    // 1. Native BroadcastChannel
     if ('BroadcastChannel' in window) {
-      this.bc = new BroadcastChannel('jizhi_pure_sync_channel');
+      this.bc = new BroadcastChannel('jizhi_pure_sync_channel_v4');
       this.bc.onmessage = (e) => {
         this.handleSyncMessage(e.data);
       };
     }
 
-    // 2. Storage Event Listener
     window.addEventListener('storage', (e) => {
       if (e.key === STORAGE_KEY_CHAT && e.newValue) {
         try {
@@ -107,13 +106,17 @@ class App {
           this.state.stage2 = JSON.parse(e.newValue);
           if (this.state.currentStage === 'stage2') this.renderStudentWorkspace();
         } catch (err) {}
+      } else if (e.key === STORAGE_KEY_STAGE3 && e.newValue) {
+        try {
+          this.state.stage3 = JSON.parse(e.newValue);
+          if (this.state.currentStage === 'stage3') this.renderStudentWorkspace();
+        } catch (err) {}
       } else if (e.key === STORAGE_KEY_STAGE_CURRENT && e.newValue) {
         this.state.currentStage = e.newValue;
         this.renderStudentWorkspace();
       }
     });
 
-    // 3. 200ms High-Speed LocalStorage Polling Fallback (Guarantees instant sync even if events are blocked by browser tabs)
     setInterval(() => {
       const latestChat = localStorage.getItem(STORAGE_KEY_CHAT);
       if (latestChat && latestChat !== JSON.stringify(this.state.chatLogs)) {
@@ -158,6 +161,9 @@ class App {
     } else if (data.type === 'STAGE2_UPDATE') {
       this.state.stage2 = data.stage2;
       if (this.state.currentStage === 'stage2') this.renderStudentWorkspace();
+    } else if (data.type === 'STAGE3_UPDATE') {
+      this.state.stage3 = data.stage3;
+      if (this.state.currentStage === 'stage3') this.renderStudentWorkspace();
     } else if (data.type === 'STAGE_CHANGE') {
       this.state.currentStage = data.stage;
       this.renderStudentWorkspace();
@@ -169,7 +175,7 @@ class App {
     if (this.bc) {
       this.bc.postMessage({ type: 'CHAT_UPDATE', chatLogs: this.state.chatLogs });
     }
-    this.pushToServer(); // ✅ 同步推送到服务器，让其他设备可以拉取
+    this.pushToServer();
   }
 
   syncStage1() {
@@ -177,7 +183,7 @@ class App {
     if (this.bc) {
       this.bc.postMessage({ type: 'STAGE1_UPDATE', stage1: this.state.stage1 });
     }
-    this.pushToServer(); // ✅ 同步推送到服务器
+    this.pushToServer();
   }
 
   syncStage2() {
@@ -185,7 +191,15 @@ class App {
     if (this.bc) {
       this.bc.postMessage({ type: 'STAGE2_UPDATE', stage2: this.state.stage2 });
     }
-    this.pushToServer(); // ✅ 同步推送到服务器
+    this.pushToServer();
+  }
+
+  syncStage3() {
+    localStorage.setItem(STORAGE_KEY_STAGE3, JSON.stringify(this.state.stage3));
+    if (this.bc) {
+      this.bc.postMessage({ type: 'STAGE3_UPDATE', stage3: this.state.stage3 });
+    }
+    this.pushToServer();
   }
 
   syncStageChange(stage) {
@@ -193,13 +207,9 @@ class App {
     if (this.bc) {
       this.bc.postMessage({ type: 'STAGE_CHANGE', stage });
     }
-    this.pushToServer(); // ✅ 同步推送到服务器
+    this.pushToServer();
   }
 
-  /**
-   * ✅ 推送当前完整状态到阿里云服务器
-   * 其他设备通过 pollFromServer() 拉取此数据实现跨设备同步
-   */
   async pushToServer() {
     if (!this._serverAvailable) return;
     const payload = {
@@ -207,6 +217,7 @@ class App {
       chatLogs: this.state.chatLogs,
       stage1: this.state.stage1,
       stage2: this.state.stage2,
+      stage3: this.state.stage3,
       currentStage: this.state.currentStage
     };
     try {
@@ -216,16 +227,10 @@ class App {
         body: JSON.stringify(payload)
       });
     } catch (e) {
-      // 服务器不可达时静默失败，本地依然正常运行
       this._serverAvailable = false;
-      console.warn('[Jizhi] 服务器推送失败，切换为本地模式:', e.message);
     }
   }
 
-  /**
-   * ✅ 从阿里云服务器拉取最新状态，应用到本地
-   * 是实现异地/跨设备同步的核心机制
-   */
   async pollFromServer() {
     try {
       const res = await fetch(`${SERVER_URL}/api/snapshot?groupId=${GROUP_ID}`, {
@@ -235,7 +240,6 @@ class App {
       const data = await res.json();
       this._serverAvailable = true;
 
-      // 只有服务器数据比本地更新时才应用，避免覆盖自己刚发送的数据
       if (!data || !data.timestamp || data.timestamp <= this._lastServerTimestamp) return;
       this._lastServerTimestamp = data.timestamp;
 
@@ -271,6 +275,16 @@ class App {
         }
       }
 
+      if (data.stage3) {
+        const localJson = JSON.stringify(this.state.stage3);
+        const remoteJson = JSON.stringify(data.stage3);
+        if (localJson !== remoteJson) {
+          this.state.stage3 = data.stage3;
+          localStorage.setItem(STORAGE_KEY_STAGE3, remoteJson);
+          changed = true;
+        }
+      }
+
       if (data.currentStage && data.currentStage !== this.state.currentStage) {
         this.state.currentStage = data.currentStage;
         localStorage.setItem(STORAGE_KEY_STAGE_CURRENT, data.currentStage);
@@ -281,35 +295,25 @@ class App {
         this.renderStudentWorkspace();
       }
     } catch (e) {
-      // 网络超时或服务器不可达，静默失败
       if (this._serverAvailable) {
         this._serverAvailable = false;
-        console.warn('[Jizhi] 服务器不可达，使用本地模式');
       }
     }
   }
 
-  /**
-   * ✅ 初始化服务器同步：先检测连通性，再启动轮询
-   */
   async initServerSync() {
-    // 先检测服务器是否可达
     try {
       const res = await fetch(`${SERVER_URL}/api/snapshot?groupId=${GROUP_ID}`, {
-        signal: AbortSignal.timeout(4000)
+        signal: AbortSignal.timeout(3000)
       });
       if (res.ok) {
         this._serverAvailable = true;
-        console.log('[Jizhi] ✅ 服务器连接成功，已启用跨设备同步！');
-        // 首次连接后立即拉取最新状态
         await this.pollFromServer();
       }
     } catch (e) {
       this._serverAvailable = false;
-      console.warn('[Jizhi] ⚠️ 服务器不可达（', SERVER_URL, '），使用本地模式。检查服务器是否运行、端口8088是否开放。');
     }
 
-    // 启动定时轮询（无论服务器是否可达都保持轮询，以便自动恢复）
     setInterval(() => this.pollFromServer(), SERVER_POLL_INTERVAL);
   }
 
@@ -343,6 +347,7 @@ class App {
   renderMain() {
     const currentUser = this.authManager.getCurrentUser();
     const appEl = document.getElementById('app');
+    if (!appEl) return;
 
     if (!currentUser) {
       appEl.className = 'app-login-mode';
@@ -379,15 +384,15 @@ class App {
                 <span>💬 多智能体协同对话管道</span>
               </div>
               <div class="active-agent-pills">
-                <span class="agent-pill" style="color:#a78bfa; border-color:#8b5cf6;">🎪 拍卖师</span>
-                <span class="agent-pill" style="color:#34d399; border-color:#10b981;">🤝 责任编辑</span>
-                <span class="agent-pill" style="color:#60a5fa; border-color:#3b82f6;">📝 审稿编辑</span>
+                <span class="agent-pill" style="color:#8b5cf6; border-color:#8b5cf6;">🎪 拍卖师</span>
+                <span class="agent-pill" style="color:#10b981; border-color:#10b981;">🤝 责任编辑</span>
+                <span class="agent-pill" style="color:#0284c7; border-color:#0284c7;">📝 审稿编辑</span>
               </div>
             </div>
 
             <div class="chat-stream" id="chat-stream"></div>
 
-            <!-- @ Mention Popover Dropdown Menu -->
+            <!-- @ Mention Popover Menu -->
             <div class="at-mention-menu" id="at-mention-menu" style="display:none;">
               <div class="at-menu-header">👥 提示：选择需要 @ 的同学或 AI 智能体</div>
               <div class="at-menu-list">
@@ -404,35 +409,21 @@ class App {
               </div>
             </div>
 
-            <!-- Expanded 24 Emoji Picker Bar -->
+            <!-- Emoji Picker Bar -->
             <div class="emoji-bar" id="emoji-bar">
               <span class="emoji-btn" data-emoji="😊">😊</span>
-              <span class="emoji-btn" data-emoji="😂">😂</span>
               <span class="emoji-btn" data-emoji="👍">👍</span>
-              <span class="emoji-btn" data-emoji="👏">👏</span>
-              <span class="emoji-btn" data-emoji="🎉">🎉</span>
-              <span class="emoji-btn" data-emoji="💯">💯</span>
-              <span class="emoji-btn" data-emoji="🔥">🔥</span>
-              <span class="emoji-btn" data-emoji="❤️">❤️</span>
-              <span class="emoji-btn" data-emoji="📝">📝</span>
               <span class="emoji-btn" data-emoji="💡">💡</span>
+              <span class="emoji-btn" data-emoji="📝">📝</span>
               <span class="emoji-btn" data-emoji="📚">📚</span>
-              <span class="emoji-btn" data-emoji="🔍">🔍</span>
-              <span class="emoji-btn" data-emoji="📊">📊</span>
               <span class="emoji-btn" data-emoji="🎓">🎓</span>
-              <span class="emoji-btn" data-emoji="🎯">🎯</span>
-              <span class="emoji-btn" data-emoji="📌">📌</span>
-              <span class="emoji-btn" data-emoji="❓">❓</span>
-              <span class="emoji-btn" data-emoji="🤔">🤔</span>
-              <span class="emoji-btn" data-emoji="💬">💬</span>
               <span class="emoji-btn" data-emoji="🤝">🤝</span>
               <span class="emoji-btn" data-emoji="✅">✅</span>
-              <span class="emoji-btn" data-emoji="⚠️">⚠️</span>
+              <span class="emoji-btn" data-emoji="❓">❓</span>
               <span class="emoji-btn" data-emoji="🚀">🚀</span>
-              <span class="emoji-btn" data-emoji="⚡">⚡</span>
             </div>
 
-            <!-- Redesigned Spacious & Modern Chat Input Bar -->
+            <!-- Chat Input Bar -->
             <div class="chat-input-bar">
               <input type="text" class="chat-input modern-spacious-input" id="chat-input" placeholder="输入 @ 提及同学或智能体，或输入学术讨论..." autocomplete="off">
               <button class="send-btn modern-send-btn" id="send-btn" title="发送消息">
@@ -487,8 +478,7 @@ class App {
 
         <div class="ann-modal-body">
           <div class="ann-meta-bar">
-            <span>发布教师: <b>${ann.author || '张教授'}</b></span>
-            <span>关联任务: <b>${ann.taskTitle || '协作写作'}</b></span>
+            <span>发布教师: <b>${ann.author || '主讲教师'}</b></span>
             <span>发布时间: <b>${ann.time}</b></span>
           </div>
 
@@ -561,7 +551,7 @@ class App {
       });
     }
 
-    input.addEventListener('input', (e) => {
+    input.addEventListener('input', () => {
       const val = input.value;
       const lastChar = val.slice(-1);
       if (lastChar === '@' || (val.includes('@') && !val.includes(' '))) {
@@ -620,19 +610,11 @@ class App {
     });
   }
 
-  /**
-   * Smart AI Agent Trigger Logic (智能体智能触发逻辑)
-   * Rules:
-   * 1. Direct @ Mentions -> Agent replies immediately.
-   * 2. Un-@mentioned Messages -> Agent DOES NOT reply to every single message!
-   *    Triggers only after students have sent 3+ discussion messages OR when milestone keywords (分工, 确定, 结论, 方案) are used.
-   */
   triggerAgentReplyIfNeeded(userMsg) {
     const isExplicitMention = userMsg.includes('@');
-    const isMilestoneKeyword = userMsg.includes('分工') || userMsg.includes('确定') || userMsg.includes('结论') || userMsg.includes('方案') || userMsg.includes('意见');
+    const isMilestoneKeyword = userMsg.includes('分工') || userMsg.includes('确定') || userMsg.includes('结论') || userMsg.includes('方案') || userMsg.includes('意见') || userMsg.includes('提案');
     const hasEnoughDiscussion = this.studentMsgCountSinceLastAgent >= 3;
 
-    // Do NOT reply to simple short chatter unless @mentioned or enough discussion accumulated
     if (!isExplicitMention && !isMilestoneKeyword && !hasEnoughDiscussion) {
       return;
     }
@@ -644,31 +626,29 @@ class App {
 
       if (userMsg.includes('@审稿编辑') || userMsg.includes('@审稿编辑 Agent')) {
         replyAgent = 'reviewingEditor';
-        replyText = `📝 【审稿编辑针对性指导】：收到你的求助问询！在写作过程中，关于《编辑会议规范与范例模板文件.pdf》提倡的规范：必须确保“三、文献综述”中提出的学术概念与“四、研究设计与方法”中的测量量表（如 FacioneSSR框架）实现 1 对 1 精确匹配。只提供结构建议，请组员自行讨论填补具体文本！`;
+        replyText = `📝 【审稿编辑针对性指导】：收到你的求助！在撰写时，请确保“三、文献综述”中提炼的核心概念与“四、研究设计与方法”中的测量量表形成严密的对应关系。审稿编辑只提供逻辑架构建议，请组员通力协作完善具体正文！`;
       } else if (userMsg.includes('@责任编辑') || userMsg.includes('@责任编辑 Agent')) {
         replyAgent = 'managingEditor';
-        replyText = `🤝 【责任编辑过程学伴回复】：收到 @ 呼叫！目前小组字数分配与协同节奏良好（A:42%, B:31%, C:27%）。如果个别组员遇到撰写卡顿，建议组长 A 在大文本框中先列出二级标题子纲，协助同伴拆解任务。`;
+        replyText = `🤝 【责任编辑过程学伴回复】：收到 @ 呼叫！目前小组正在积极协同。请大家注意各章节进度衔接，遇到分工难题可随时讨论拆解。`;
       } else if (userMsg.includes('@拍卖师') || userMsg.includes('@拍卖师 Agent')) {
         replyAgent = 'auctioneer';
-        replyText = `🎪 【拍卖师选题顾问回复】：收到 @ 呼叫！针对课题《协作学习中的“搭便车”现象：基于注意力分配与AI感知视角》，建议将重点聚焦在“注意力分配可视化”作为干预中介变量，以提升学术新意与可操作性！`;
+        replyText = `🎪 【拍卖师选题顾问回复】：收到 @ 呼叫！建议从小组成员提出的提案中提取最具有创新性与可行性的核心观点，协商融合为统一主题并在合约中确认！`;
       } else if (userMsg.includes('@反方委员') || userMsg.includes('@反方委员 Agent')) {
         replyAgent = 'opponent';
-        replyText = `🔴 【反方委员预演提醒】：收到 @ 呼叫！提前提醒团队：在答辩阶段我将重点攻防“150人样本量的 G*Power 统计效力分析”以及“显性感知是否会诱发评价焦虑”。请务必在正文第四与第五章做好学术防御准备！`;
+        replyText = `🔴 【反方委员预演提醒】：收到 @ 呼叫！在答辩阶段，我们将重点质询研究假设的操作化定义、样本统计效力及文献逻辑冲突。请在方案中做好学术防御！`;
       } else {
-        // Smart automatic milestone reply (only triggered after full round of discussion!)
         if (stage === 'stage1') {
           replyAgent = 'auctioneer';
-          replyText = `🎪 【拍卖师评估与总结】注意到组内已完成一轮关于选题与任务分工的讨论！建议组员在提案面板中投票并按键确认签署合作学术合约！`;
+          replyText = `🎪 【拍卖师阶段引导】组内讨论正在进行中！请大家在左侧提交各自的选题提案，并尽快完成投票与合作合约签署！`;
         } else if (stage === 'stage2') {
           replyAgent = 'reviewingEditor';
-          replyText = `📝 【审稿编辑高阶引导】关注到组内针对大正文与文献框架的讨论。请参考《编辑会议规范与范例模板文件.pdf》，在研究设计章节，必须明确自变量（AI干预模式）与因变量（SSRL得分）之间的因果链条！`;
+          replyText = `📝 【审稿编辑高阶引导】关注到组内的写作进展。请在研究方法章节明确变量定义，确保研究设计具备可重复性与内部效度！`;
         } else if (stage === 'stage3') {
           replyAgent = 'neutral';
-          replyText = `🟡 【中间委员裁决提示】针对意见，请小组在修改稿中补充一段限定说明，并在左侧确认采纳！`;
+          replyText = `🟡 【中间委员裁决提示】针对委员会的意见，请小组在左侧面板记录采纳方案，并对终稿完成最终校订！`;
         }
       }
 
-      // Reset discussion counter after agent intervention
       this.studentMsgCountSinceLastAgent = 0;
 
       const agentMsgObj = {
@@ -695,10 +675,11 @@ class App {
     }
 
     if (!s1.hasVoted) s1.hasVoted = {};
+    if (!s1.votes) s1.votes = {};
     s1.votes[user] = proposalId;
     s1.hasVoted[user] = true;
 
-    const proposal = s1.proposals.find(p => p.id === proposalId);
+    const proposal = (s1.proposals || []).find(p => p.id === proposalId);
     const votesCastCount = Object.values(s1.hasVoted).filter(Boolean).length;
 
     const voteMsg = {
@@ -707,6 +688,7 @@ class App {
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
     };
 
+    if (!this.state.chatLogs.stage1) this.state.chatLogs.stage1 = [];
     this.state.chatLogs.stage1.push(voteMsg);
     this.syncStage1();
     this.syncChatLogs();
@@ -718,11 +700,11 @@ class App {
           if (pId) tally[pId] = (tally[pId] || 0) + 1;
         });
 
-        let summaryText = '🎪 【拍卖师宣布最终计票结果】：全员投票已完毕！\n';
-        s1.proposals.forEach(p => {
+        let summaryText = '🎪 【拍卖师宣布计票结果】：全员投票已完毕！\n';
+        (s1.proposals || []).forEach(p => {
           summaryText += `• 《${p.title}》得票: ${tally[p.id] || 0} 票\n`;
         });
-        summaryText += `\n🔨 结果表明：《搭便车干预》高票胜出！注意，C同学支持《短视频注意力》，建议将“注意力分配视角”融入最终主题中，请组员讨论并更新合作卡片！`;
+        summaryText += `\n🔨 拍卖师建议：请组长与组员根据投票结果在下方【合作学术合约卡片】中确认最终融合主题与分工细则，全员签署后即可解锁阶段二！`;
 
         const summaryMsg = {
           sender: 'auctioneer',
@@ -738,9 +720,145 @@ class App {
     this.renderStudentWorkspace();
   }
 
+  showProposalSubmissionModal() {
+    document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+
+    const modal = document.createElement('div');
+    modal.className = 'modal-overlay';
+    modal.innerHTML = `
+      <div class="teacher-modal-card" style="width:560px;">
+        <div class="teacher-modal-header task-theme-gradient">
+          <div class="modal-header-title">
+            <span class="modal-icon">💡</span>
+            <div>
+              <h3>提交我的选题提案 (拍品)</h3>
+              <p>陈述你的研究观点与学术理由，供拍卖师鉴定与组内竞拍</p>
+            </div>
+          </div>
+          <button class="modal-close-btn" id="btn-close-prop-modal">✕</button>
+        </div>
+
+        <div class="teacher-modal-body">
+          <div class="teacher-form-group">
+            <label><span class="req">*</span> 研究观点 / 拟定课题名称</label>
+            <input type="text" id="prop-title-input" class="teacher-input fancy" placeholder="例如：生成式AI对大学生协作学习投入度的影响机制研究">
+          </div>
+
+          <div class="teacher-form-group">
+            <label><span class="req">*</span> 选题分类方向</label>
+            <select id="prop-category-select" class="teacher-input fancy">
+              <option value="前沿探索">🌟 前沿探索 (结合最新AI/技术)</option>
+              <option value="经典实证">📑 经典实证 (聚焦学习机制/痛点)</option>
+              <option value="跨界交叉">🔬 跨界交叉 (心理学/教育技术融合)</option>
+            </select>
+          </div>
+
+          <div class="teacher-form-group">
+            <label><span class="req">*</span> 学术理由与背景依据 (阐明选题的价值与必要性)</label>
+            <textarea id="prop-rationale-input" class="teacher-textarea fancy" style="min-height:90px;" placeholder="说明选择该主题的现实背景、理论价值与实践意义..."></textarea>
+          </div>
+        </div>
+
+        <div class="teacher-modal-footer">
+          <button class="modal-btn cancel" id="btn-cancel-prop">取消</button>
+          <button class="modal-btn submit task-theme" id="btn-submit-proposal">🚀 确认提交提案</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(modal);
+
+    const closeModal = () => document.body.removeChild(modal);
+    modal.querySelector('#btn-close-prop-modal').addEventListener('click', closeModal);
+    modal.querySelector('#btn-cancel-prop').addEventListener('click', closeModal);
+
+    modal.querySelector('#btn-submit-proposal').addEventListener('click', () => {
+      const title = modal.querySelector('#prop-title-input').value.trim();
+      const category = modal.querySelector('#prop-category-select').value;
+      const rationale = modal.querySelector('#prop-rationale-input').value.trim();
+
+      if (!title || !rationale) {
+        alert('⚠️ 请填齐提案标题与学术理由！');
+        return;
+      }
+
+      const currentUser = this.authManager.getCurrentUser();
+      const studentCode = currentUser ? (currentUser.studentCode || 'A') : 'A';
+      const studentName = currentUser ? currentUser.name : '学生';
+
+      const newProposal = {
+        id: 'prop_' + Date.now(),
+        author: studentCode,
+        title,
+        category,
+        rationale,
+        metrics: { literature: '丰富', innovation: '高', risk: '中' }
+      };
+
+      if (!this.state.stage1.proposals) this.state.stage1.proposals = [];
+      this.state.stage1.proposals.push(newProposal);
+
+      const msg = {
+        sender: studentCode,
+        text: `💡 我提交了提案【观点】：${title}\n【学术理由】：${rationale}`,
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      };
+      if (!this.state.chatLogs.stage1) this.state.chatLogs.stage1 = [];
+      this.state.chatLogs.stage1.push(msg);
+
+      closeModal();
+      this.syncStage1();
+      this.syncChatLogs();
+      this.renderStudentWorkspace();
+
+      setTimeout(() => {
+        const agentMsg = {
+          sender: 'auctioneer',
+          text: `🎪 【拍卖师深度鉴定】：收到 ${studentName} 提交的拍品《${title}》！选题切中【${category}】方向，理由充分。请其他伙伴继续提交提案或在提案卡片上开展竞拍投票！`,
+          timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+        };
+        this.state.chatLogs.stage1.push(agentMsg);
+        this.syncChatLogs();
+        renderChat(this.state);
+      }, 800);
+    });
+  }
+
   switchStage(newStage) {
     this.state.currentStage = newStage;
     this.syncStageChange(newStage);
+
+    // If entering Stage 3 and feedback is empty, generate dynamic defense review questions
+    if (newStage === 'stage3' && (!this.state.stage3.feedbackItems || this.state.stage3.feedbackItems.length === 0)) {
+      this.state.stage3.feedbackItems = [
+        {
+          id: 'f1',
+          role: 'opponent',
+          title: '测量量表效度与变量匹配质疑',
+          content: '请说明方案中提出的研究假设与测量量表之间是否存在 1 对 1 精确映射关系？如何避免自编问卷带来的效度威胁？',
+          status: 'pending',
+          response: ''
+        },
+        {
+          id: 'f2',
+          role: 'opponent',
+          title: '样本量与统计检验力分析',
+          content: '研究设计中的样本量是否经过严格的统计效力分析（如 G*Power 分析）？如何确保能够检测出预期的中等效应量？',
+          status: 'pending',
+          response: ''
+        },
+        {
+          id: 'f3',
+          role: 'proponent',
+          title: '方案结构严密性肯定',
+          content: '研究方案整体框架符合 SSRL 协作规范，概念界定与研究问题设计具有良好的学术探索价值。',
+          status: 'acknowledged',
+          response: '感谢肯定，小组将保持该核心设计。'
+        }
+      ];
+      this.syncStage3();
+    }
+
     this.renderStudentWorkspace();
   }
 
@@ -778,8 +896,20 @@ class App {
       onVote: (propId) => {
         this.handleVoteCast(propId);
       },
-      onRefresh: () => {
-        this.renderStudentWorkspace();
+      onOpenProposalModal: () => {
+        this.showProposalSubmissionModal();
+      },
+      onContractTopicChange: (topic) => {
+        if (!this.state.stage1.contract) this.state.stage1.contract = {};
+        this.state.stage1.mergedTitle = topic;
+        this.state.stage1.contract.topic = topic;
+        this.syncStage1();
+      },
+      onContractTaskChange: (code, text) => {
+        if (!this.state.stage1.contract) this.state.stage1.contract = {};
+        if (!this.state.stage1.contract.taskAssignments) this.state.stage1.contract.taskAssignments = {};
+        this.state.stage1.contract.taskAssignments[code] = text;
+        this.syncStage1();
       },
       onConfirmContract: () => {
         const user = this.state.currentUser;
@@ -794,29 +924,29 @@ class App {
 
         const confirmMsg = {
           sender: user,
-          text: `📢 [合约签署告知]: 我 (${memberName}) 已按键确认签署合作学术合约！（全组确认进度: ${confirmedCount}/3 人）`,
+          text: `📢 [合约签署告知]: 我 (${memberName}) 已确认签署合作学术合约！（全组签署进度: ${confirmedCount}/3 人）`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
 
+        if (!this.state.chatLogs.stage1) this.state.chatLogs.stage1 = [];
         this.state.chatLogs.stage1.push(confirmMsg);
         this.syncStage1();
         this.syncChatLogs();
 
         if (confirmedCount < 3) {
-          alert(`✅ 你 (${memberName}) 已成功按键确认签署合约！\n\n目前组内签署进度：${confirmedCount}/3 人。\n需全组 3 名成员全部按键确认后方可解锁阶段二！\n\n💡 提示：在 VS Code 中新建一个 Simple Browser 窗口或右键标签页，登录 wangfang 或 chenqiang 按键确认即可体验多窗口实时同步！`);
+          alert(`✅ 你 (${memberName}) 已成功签署合约！\n\n目前组内签署进度：${confirmedCount}/3 人。\n需全组 3 名成员全部签署后方可解锁阶段二！`);
         } else {
           s1.contract.isConfirmed = true;
           this.syncStage1();
-          this.syncStageChange('stage2');
           setTimeout(() => {
             const finalMsg = {
               sender: 'auctioneer',
-              text: `🎪 【拍卖师宣布】：恭喜！组内全员 3/3 名成员已全部完成按键确认签署！学术合作合约正式生效，阶段一圆满结束，系统自动解锁【阶段二：学术编辑部】！`,
+              text: `🎪 【拍卖师宣布】：全员 3/3 名成员已全部完成签署！学术合作合约正式生效，阶段一圆满结束，系统自动解锁【阶段二：学术编辑部】！`,
               timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             };
             this.state.chatLogs.stage1.push(finalMsg);
             this.syncChatLogs();
-            alert('🎉 恭喜！组内 3 位成员全部完成按键确认签署！学术合作合约生效，系统解锁【阶段二：学术编辑部】！');
+            alert('🎉 恭喜！组内 3 位成员全部完成签署！学术合作合约生效，系统解锁【阶段二：学术编辑部】！');
             this.switchStage('stage2');
           }, 600);
         }
@@ -825,33 +955,56 @@ class App {
       },
       onUnifiedContentChange: (newContent) => {
         this.state.stage2.unifiedContent = newContent;
-        let total = newContent.length || 1;
+        const user = this.state.currentUser || 'A';
+        if (!this.state.stage2.memberTypedCounts) this.state.stage2.memberTypedCounts = { 'A': 0, 'B': 0, 'C': 0 };
+        this.state.stage2.memberTypedCounts[user] = (this.state.stage2.memberTypedCounts[user] || 0) + 1;
+
+        const cleanText = newContent.replace(/<[^>]*>/g, '');
+        const totalWords = cleanText.length || 1;
+
+        const countA = (this.state.stage2.memberTypedCounts.A || 0) + 1;
+        const countB = (this.state.stage2.memberTypedCounts.B || 0) + 1;
+        const countC = (this.state.stage2.memberTypedCounts.C || 0) + 1;
+        const totalTyped = countA + countB + countC;
+
+        const pctA = Math.round((countA / totalTyped) * 100);
+        const pctB = Math.round((countB / totalTyped) * 100);
+        const pctC = 100 - pctA - pctB;
+
         this.state.stage2.memberContributions = {
-          'A': { words: Math.round(total * 0.42), percentage: 42 },
-          'B': { words: Math.round(total * 0.31), percentage: 31 },
-          'C': { words: Math.round(total * 0.27), percentage: 27 }
+          'A': { words: Math.round(totalWords * pctA / 100), percentage: pctA },
+          'B': { words: Math.round(totalWords * pctB / 100), percentage: pctB },
+          'C': { words: Math.round(totalWords * pctC / 100), percentage: pctC }
         };
+
         this.syncStage2();
       },
       onOpenCaseModal: () => {
-        alert('📖 审稿编辑推送的【编辑会议规范与范例模板文件.pdf】：\n\n标题: 《生成式AI感知视角下的协作写作干预实证研究》\n规范指引: 准实验设计，样本量N=150。采用SSRL共享调节量表进行前后测评估，重点包含：明确的研究假设、自变量控制与混合定量定性分析。');
+        alert('📖 审稿编辑推送的【学术方案规范指南】：\n\n1. 标题与摘要：明确课题核心变量与理论切入点；\n2. 研究问题与假设：自变量与因变量形成逻辑因果闭环；\n3. 研究设计：阐述准实验/实证设计、样本抽样、测量工具与统计方法；\n4. 反思与局限：坦诚剖析威胁效度的因素并给出应对方案。');
       },
       onOpenMeetingModal: () => {
         this.showMeetingModal();
       },
       onAdoptFeedback: (id) => {
-        const item = this.state.stage3.feedbackItems.find(f => f.id === id);
+        const item = (this.state.stage3.feedbackItems || []).find(f => f.id === id);
         if (item) {
-          const resp = prompt(`请代表小组输入针对【${item.title}】的统一裁决方案：`, '已补充说明并纠正维偏差。');
+          const resp = prompt(`请代表小组输入针对【${item.title}】的统一裁决回复/修改对策：`, item.response || '已在正文中补充说明与相关文献支持。');
           if (resp) {
             item.status = 'adopted';
             item.response = resp;
+            this.syncStage3();
             this.renderStudentWorkspace();
           }
         }
       },
       onFinalSubmit: () => {
-        alert('🚀 恭喜小组！《协作学习中的“搭便车”现象：基于注意力分配与AI感知视角》最终方案与评估报告已提交至教师端！');
+        if (confirm('🚀 确认提交最终研究设计方案并归档呈递给教师端吗？提交后正文将进入只读保护状态。')) {
+          this.state.stage3.finalSubmitted = true;
+          this.state.stage3.finalSubmissionTime = new Date().toLocaleTimeString();
+          this.syncStage3();
+          alert('🎉 恭喜小组！研究方案已成功呈递至教师端！');
+          this.renderStudentWorkspace();
+        }
       }
     });
 
@@ -859,32 +1012,24 @@ class App {
   }
 
   showMeetingModal() {
+    document.querySelectorAll('.modal-overlay').forEach(el => el.remove());
+
     const modal = document.createElement('div');
     modal.className = 'modal-overlay';
     modal.innerHTML = `
-      <div class="teacher-modal-card" style="width:620px;">
+      <div class="teacher-modal-card" style="width:600px;">
         <div class="teacher-modal-header ann-theme">
           <div class="modal-header-title">
             <span class="modal-icon">📢</span>
             <div>
               <h3>学术编辑部【半程编辑会议】</h3>
-              <p>共享调节 3 维评价与半程修正清单生成</p>
+              <p>共享调节 3 维自评与半程修正清单动态生成</p>
             </div>
           </div>
           <button class="modal-close-btn" id="btn-close-meeting">✕</button>
         </div>
 
         <div class="teacher-modal-body">
-          <div style="background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.3); border-radius:10px; padding:12px 16px; display:flex; justify-content:space-between; align-items:center;">
-            <div>
-              <div style="font-size:13px; font-weight:700; color:#a5b4fc;">📎 审稿编辑推送范例文件:</div>
-              <div style="font-size:12px; color:#cbd5e1;">《编辑会议规范与范例模板文件.pdf》 (1.8 MB)</div>
-            </div>
-            <button onclick="alert('📖 已打开审稿编辑推送的《编辑会议规范与范例模板文件.pdf》')" style="background:var(--accent-indigo); border:none; color:white; padding:6px 12px; border-radius:6px; font-size:12px; cursor:pointer;">
-              查阅范例文件
-            </button>
-          </div>
-
           <div class="teacher-form-group">
             <label style="font-size:13px;">🌟 维度 ①：内容逻辑与学术严谨度打分 (1-5星)</label>
             <div class="rating-stars" id="star-rating-logic" style="margin:4px 0;">
@@ -908,18 +1053,18 @@ class App {
           </div>
 
           <div class="teacher-form-group">
-            <label style="font-size:13px;">⚠️ 维度 ③：当前组内面临的最大难点瓶颈</label>
-            <select id="meeting-bottleneck-select" class="teacher-input">
-              <option value="假设与研究设计工具对应不明确">假设与研究设计工具对应不明确</option>
-              <option value="相关文献支撑力度不足">相关文献支撑力度不足</option>
-              <option value="时间分配紧张，进度滞后">时间分配紧张，进度滞后</option>
-              <option value="章节之间过渡衔接缺乏逻辑">章节之间过渡衔接缺乏逻辑</option>
+            <label style="font-size:13px;">⚠️ 维度 ③：当前组内面临的核心瓶颈难点</label>
+            <select id="meeting-bottleneck-select" class="teacher-input fancy">
+              <option value="假设与研究设计测量工具对应不明确">假设与研究设计测量工具对应不明确</option>
+              <option value="相关理论支撑与参考文献力度不足">相关理论支撑与参考文献力度不足</option>
+              <option value="时间分配紧张，后半程写作进度滞后">时间分配紧张，后半程写作进度滞后</option>
+              <option value="章节之间过渡衔接缺乏逻辑闭环">章节之间过渡衔接缺乏逻辑闭环</option>
             </select>
           </div>
 
           <div class="teacher-form-group">
-            <label style="font-size:13px;">✍️ 组内自评与补充修正说明</label>
-            <textarea id="meeting-input-text" class="teacher-textarea" style="min-height:80px;" placeholder="请输入组内自我检讨或需要审稿编辑解答的问题...">背景与问题部分已完成，请审稿编辑评价假设与方法的衔接。</textarea>
+            <label style="font-size:13px;">✍️ 组内自评与补充说明</label>
+            <textarea id="meeting-input-text" class="teacher-textarea fancy" style="min-height:75px;" placeholder="请输入组内的自评反思或需要审稿编辑解答的问题..."></textarea>
           </div>
         </div>
 
@@ -959,24 +1104,25 @@ class App {
 
     modal.querySelector('#btn-submit-meeting').addEventListener('click', () => {
       const bottleneck = modal.querySelector('#meeting-bottleneck-select').value;
-      const userText = modal.querySelector('#meeting-input-text').value;
+      const userText = modal.querySelector('#meeting-input-text').value.trim() || '组内已完成前半程撰写，正积极推进。';
       closeModal();
 
       this.state.stage2.actionPlan = {
         isGenerated: true,
         items: [
-          `修订项① (逻辑与方法): 在“二、研究问题与假设”末尾补齐与“四、研究设计”操作化变量的对应说明。`,
-          `修订项② (瓶颈突破): 针对【${bottleneck}】，参照《编辑会议规范与范例模板文件.pdf》补充相关文献引用。`,
-          `修订项③ (团队协调): 维持当前平衡贡献 (A:42%, B:31%, C:27%)，在后45分钟内重点完成“五、反思”。`
+          `修订项①: 针对【${bottleneck}】，在第四节研究设计中强化自变量与量表工具的对应说明。`,
+          `修订项②: 依据逻辑严谨度（${logicRating}星）自评结果，梳理一至三节的因果推理链条。`,
+          `修订项③: 维持当前团队协同节奏（分工评价 ${balanceRating}星），在后半程重点攻克不足反思与文献表。`
         ]
       };
 
       const meetingMsg = {
         sender: 'managingEditor',
-        text: `📢 【编辑会议① 汇总】：全员完成 3 维打分（逻辑严谨度 ${logicRating}星，分工平衡度 ${balanceRating}星，核心瓶颈：${bottleneck}）。组员自评：“${userText}”。`,
+        text: `📢 【编辑会议① 汇总】：全员完成 3 维评价（逻辑严谨度 ${logicRating}星，分工平衡度 ${balanceRating}星，核心瓶颈：${bottleneck}）。组内自评：“${userText}”。`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       };
 
+      if (!this.state.chatLogs.stage2) this.state.chatLogs.stage2 = [];
       this.state.chatLogs.stage2.push(meetingMsg);
       this.syncStage2();
       this.syncChatLogs();
@@ -984,14 +1130,14 @@ class App {
       setTimeout(() => {
         const feedbackMsg = {
           sender: 'reviewingEditor',
-          text: `📝 【审稿编辑深度反馈与范例指引】：结合《编辑会议规范与范例模板文件.pdf》中的标准指标，正文整体连贯。针对你们提出的瓶颈：“${bottleneck}”，系统已在锁定的半程清单中展现，请组员按清单逐项修正！`,
+          text: `📝 【审稿编辑针对性反馈】：结合大家的自评，针对瓶颈“${bottleneck}”，建议对照学术规范，在方法部分明确操作化测量指标。请大家按照生成的修正清单分工修改！`,
           timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
         this.state.chatLogs.stage2.push(feedbackMsg);
         this.syncChatLogs();
         renderChat(this.state);
         this.renderStudentWorkspace();
-      }, 1200);
+      }, 1000);
 
       renderChat(this.state);
       this.renderStudentWorkspace();
